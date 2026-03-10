@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+config/mosquitto-passwords
+
+# Mosquitto runtime (referenced by config)
+data/
+logs/
+
+# OS and editors
+.DS_Store
+*.log
+*.swp
+*~
+
+# Optional: uncomment if you want to keep ledger out of version control
+# identity/bot-identity-ledger.json

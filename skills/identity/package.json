@@ -1,0 +1,13 @@
+{
+  "name": "identity-skill",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenClaw skill for identity service (init, get-bot, sign). Depends on identity-node-client from this repo.",
+  "scripts": {
+    "postinstall": "cd ../../identity-node-client && npm run build 2>/dev/null || true"
+  },
+  "dependencies": {
+    "identity-node-client": "file:../../identity-node-client"
+  }
+}
