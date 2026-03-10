@@ -9,23 +9,76 @@ metadata:
 
 Use this skill when:
 
-- **Initializing this bot** on first run or after a reset: register the bot and its public key with the identity service so other bots can verify signatures.
+- **Bootstrapping or restarting a bot**: verify that the operator and bot exist in the identity service and that this bot’s public key is registered, so other bots can verify its signatures.
 - **Sending a signed message** to another bot over MQTT (or any channel): produce a signed envelope so the recipient can verify authenticity.
 - **Looking up a bot’s record** (e.g. public keys, operator, status) for debugging or coordination.
+
+This skill is a thin wrapper around the `identity-node-client` library and expects the underlying clanker-chain identity service to use **proof-based authorization** (Ed25519 signatures). No Bearer admin token is required in the default setup.
+
+---
+
+## Configuration
+
+At minimum, you must configure:
+
+- **Identity service URL**:
+  - Env: `IDENTITY_SERVICE_URL`
+  - Example: `http://localhost:8080` or `http://identity-service:8080`
+- **Bot identity**:
+  - `bot_id`: canonical bot id, for example: `openclaw.france.prod-1`
+  - Local private key path: `~/.openclaw/keys/{bot_id}.key`
+- **Operator identity**:
+  - `operator_id`: operator that owns the bot, for example: `org.openclaw.pat`
+
+The default key path is derived from `bot_id`:
+
+- `~/.openclaw/keys/{bot_id}.key` (e.g. `~/.openclaw/keys/openclaw.france.prod-1.key`)
+
+The **mint / registration step is performed by the operator**, not by this skill:
+
+1. The operator uses the identity-service CLI to generate a **mint-bot token**:
+
+   ```bash
+   cd identity-service
+   bun run src/cli.ts mint-bot-token openclaw.france.prod-1 org.openclaw.pat "France Bot"
+   ```
+
+2. The CLI:
+   - Ensures the operator key exists (and creates it if missing).
+   - Generates a new bot keypair and writes the private key to `~/.openclaw/keys/openclaw.france.prod-1.key`.
+   - Prints a JSON payload that can be POSTed directly to `POST /v1/bots` on the identity service.
+
+3. The operator (or deployment pipeline) POSTs that payload once:
+
+   ```bash
+   curl -X POST "$IDENTITY_SERVICE_URL/v1/bots" \
+     -H "content-type: application/json" \
+     -d '@mint-bot-payload.json'
+   ```
+
+4. The private key file is then securely copied to the bot host and kept at `~/.openclaw/keys/openclaw.france.prod-1.key` (mode `0600`).
+
+After this one-time registration, the **bot** uses this skill to verify its identity and sign messages; it does not perform registration itself.
+
+---
 
 ## Commands
 
 Run these from the workspace root. Replace `{baseDir}` with the path to this skill folder (e.g. `skills/identity`).
 
-### identity_init — register bot and key
+### identity_init — verify bot and key
 
-Call once per bot at startup (idempotent). Ensures the operator and bot exist in the identity service and registers this bot’s Ed25519 public key.
+Call once per bot at startup (idempotent). Ensures:
+
+- The operator exists in the identity service.
+- The bot exists in the identity service.
+- This bot’s local Ed25519 public key (derived from `~/.openclaw/keys/{bot_id}.key`) is present and active in the bot record.
 
 ```bash
 node {baseDir}/run.mjs init <bot_id> <operator_id>
 ```
 
-Example:
+Example (canonical pairing from this repo):
 
 ```bash
 node skills/identity/run.mjs init openclaw.france.prod-1 org.openclaw.pat
@@ -34,7 +87,42 @@ node skills/identity/run.mjs init openclaw.france.prod-1 org.openclaw.pat
 - **bot_id**: Canonical bot ID (e.g. `openclaw.france.prod-1`).
 - **operator_id**: Operator that owns the bot (e.g. `org.openclaw.pat`).
 
-Requires `IDENTITY_SERVICE_URL` (and `IDENTITY_ADMIN_TOKEN` if the identity service enforces auth).
+Requires `IDENTITY_SERVICE_URL`. The default identity service in this repo does **not** use `IDENTITY_ADMIN_TOKEN`; all writes are authorized by Ed25519 signatures.
+
+On **success**, `identity_init` prints JSON to stdout:
+
+```json
+{
+  "ok": true,
+  "bot_id": "openclaw.france.prod-1",
+  "operator_id": "org.openclaw.pat",
+  "identity_service_url": "http://localhost:8080",
+  "public_key": "<base64-bot-public-key>",
+  "bot_has_active_key": true,
+  "bot": {
+    "bot_id": "openclaw.france.prod-1",
+    "operator_id": "org.openclaw.pat",
+    "public_keys": [
+      {
+        "key_id": "...",
+        "algorithm": "ed25519",
+        "public_key": "<base64-bot-public-key>",
+        "created": "...",
+        "status": "active"
+      }
+    ],
+    "status": "active",
+    "created": "...",
+    "updated": "..."
+  }
+}
+```
+
+On **failure**, it writes a JSON error to stderr and exits with a non‑zero code:
+
+```json
+{ "error": "Operator not registered. Operator must be minted first (genesis or mint-operator)." }
+```
 
 ### identity_get_bot — fetch bot record
 
@@ -68,9 +156,71 @@ node skills/identity/run.mjs sign '{"from":"france-bot","from_id":"openclaw.fran
 
 Output is JSON with `signature`, `signature_scheme`, and `envelope` (the full signed envelope to publish).
 
+### identity_verify — detailed registration check
+
+Runs a non‑throwing health check against the identity service for a given bot/operator pair.
+
+```bash
+node {baseDir}/run.mjs verify <bot_id> <operator_id>
+```
+
+Example:
+
+```bash
+node skills/identity/run.mjs verify openclaw.france.prod-1 org.openclaw.pat
+```
+
+On **success**, it prints a summary JSON object and exits with code 0:
+
+```json
+{
+  "ok": true,
+  "bot_id": "openclaw.france.prod-1",
+  "operator_id": "org.openclaw.pat",
+  "identity_service_url": "http://localhost:8080",
+  "operator": { "exists": true },
+  "bot": { "exists": true },
+  "key": {
+    "matches": true,
+    "public_key": "<base64-bot-public-key>"
+  },
+  "error": null
+}
+```
+
+If something is wrong (operator missing, bot missing, or key mismatch), it still exits with code 0 but sets `ok: false` and populates `error`:
+
+```json
+{
+  "ok": false,
+  "bot_id": "openclaw.france.prod-1",
+  "operator_id": "org.openclaw.pat",
+  "identity_service_url": "http://localhost:8080",
+  "operator": { "exists": true },
+  "bot": { "exists": true },
+  "key": {
+    "matches": false,
+    "public_key": "<base64-bot-public-key>"
+  },
+  "error": "bot exists but does not have an active public key matching the local key"
+}
+```
+
+This makes `identity_verify` a good choice for periodic health checks or diagnostics, while `identity_init` is best for strict startup gating.
+
 ## Environment
 
 - **IDENTITY_SERVICE_URL** (required): Base URL of the identity service (e.g. `http://localhost:8080`).
-- **IDENTITY_ADMIN_TOKEN** (optional): Admin bearer token for init; required if the identity service protects write endpoints.
 
 Keys are stored under `~/.openclaw/keys/<bot_id>.key`. Do not share or commit this file.
+
+---
+
+## Error handling
+
+Common failure modes and what they mean:
+
+- **Service unreachable / connection error**: treat as infrastructure outage; retry with backoff, and surface that the identity service is offline.
+- **\"Operator not registered\"** from `identity_init`: the operator has not been minted into the ledger; run genesis or `mint-operator` first.
+- **\"Bot not registered or key not found\"** from `identity_init`: the bot has not been minted with this public key; rerun the operator-side mint-bot-token flow and POST to `/v1/bots`.
+- **Missing key file**: if `~/.openclaw/keys/{bot_id}.key` does not exist or is unreadable, the bot cannot sign; fix key provisioning rather than silently generating a new key.

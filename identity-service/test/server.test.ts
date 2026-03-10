@@ -81,3 +81,71 @@ test("verifyEd25519 rejects invalid signature", async () => {
   expect(ok).toBe(false);
 });
 
+test("POST /v1/bots accepts mint-bot-token payload and GET /v1/bots returns bot record", async () => {
+  // Arrange: create an operator with a real keypair so we can sign a mint-bot payload.
+  const operatorPriv = ed25519.utils.randomPrivateKey();
+  const operatorPub = await ed25519.getPublicKeyAsync(operatorPriv);
+  const operatorPublicKeyB64 = Buffer.from(operatorPub).toString("base64");
+  const operatorId = "org.openclaw.test-operator";
+
+  const ledger = await getLedgerSnapshot();
+  ledger.operators[operatorId] = {
+    operator_id: operatorId,
+    display_name: "Test Operator",
+    public_keys: [
+      {
+        key_id: `${operatorId}-test-key`,
+        algorithm: "ed25519",
+        public_key: operatorPublicKeyB64,
+        created: new Date().toISOString(),
+        status: "active",
+      },
+    ],
+    status: "active",
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+  };
+
+  // Persist the operator into the real ledger used by the server.
+  await loadLedger();
+
+  const botId = "openclaw.test-bot";
+  const botPriv = ed25519.utils.randomPrivateKey();
+  const botPub = await ed25519.getPublicKeyAsync(botPriv);
+  const botPublicKeyB64 = Buffer.from(botPub).toString("base64");
+  const timestamp = new Date().toISOString();
+  const message = `mint-bot:${botId}:${operatorId}:${botPublicKeyB64}:${timestamp}`;
+  const msgBytes = new TextEncoder().encode(message);
+  const operatorSig = await ed25519.signAsync(msgBytes, operatorPriv);
+  const operatorSignatureB64 = Buffer.from(operatorSig).toString("base64");
+
+  const payload = {
+    bot_id: botId,
+    operator_id: operatorId,
+    display_name: "Test Bot",
+    bot_public_key: botPublicKeyB64,
+    operator_signature: operatorSignatureB64,
+    message,
+  };
+
+  const baseUrl = "http://localhost:8080";
+
+  // Act: POST the mint-bot payload to /v1/bots.
+  const postRes = await fetch(`${baseUrl}/v1/bots`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  expect(postRes.status).toBe(201);
+  const createdBot = (await postRes.json()) as { bot_id: string };
+  expect(createdBot.bot_id).toBe(botId);
+
+  // Act: GET the bot back.
+  const getRes = await fetch(`${baseUrl}/v1/bots/${encodeURIComponent(botId)}`);
+  expect(getRes.status).toBe(200);
+  const fetchedBot = (await getRes.json()) as { bot_id: string; operator_id: string };
+  expect(fetchedBot.bot_id).toBe(botId);
+  expect(fetchedBot.operator_id).toBe(operatorId);
+});
+

@@ -4,6 +4,7 @@
  *
  * Usage:
  *   node run.mjs init <bot_id> <operator_id>
+ *   node run.mjs verify <bot_id> <operator_id>
  *   node run.mjs get-bot <bot_id>
  *   node run.mjs sign '<envelope_json>'
  *
@@ -17,6 +18,7 @@ const [,, cmd, ...args] = process.argv;
 function usage() {
   console.error(`Usage:
   node run.mjs init <bot_id> <operator_id>
+  node run.mjs verify <bot_id> <operator_id>
   node run.mjs get-bot <bot_id>
   node run.mjs sign '<envelope_json>'
 `);
@@ -37,9 +39,101 @@ async function main() {
         process.exit(1);
       }
       const client = new IdentityClient({ botId, operatorId });
+      const identityServiceUrl = process.env.IDENTITY_SERVICE_URL ?? "http://localhost:8080";
+
+      const publicKey = await client.getPublicKeyBase64();
       await client.init();
-      console.log(JSON.stringify({ ok: true, bot_id: botId, operator_id: operatorId }));
+      const bot = await client.getBot();
+      const hasActiveKey =
+        Array.isArray(bot.public_keys) &&
+        bot.public_keys.some((k) => k.public_key === publicKey && k.status === "active");
+
+      console.log(
+        JSON.stringify({
+          ok: true,
+          bot_id: botId,
+          operator_id: operatorId,
+          identity_service_url: identityServiceUrl,
+          public_key: publicKey,
+          bot_has_active_key: hasActiveKey,
+          bot,
+        }),
+      );
       return;
+    }
+
+    if (cmd === "verify") {
+      const [botId, operatorId] = args;
+      if (!botId || !operatorId) {
+        console.error("identity verify requires bot_id and operator_id");
+        usage();
+        process.exit(1);
+      }
+
+      const identityServiceUrl = process.env.IDENTITY_SERVICE_URL ?? "http://localhost:8080";
+      const client = new IdentityClient({ botId, operatorId });
+
+      const result = {
+        ok: false,
+        bot_id: botId,
+        operator_id: operatorId,
+        identity_service_url: identityServiceUrl,
+        operator: { exists: false },
+        bot: { exists: false },
+        key: { matches: false, public_key: undefined },
+        error: undefined,
+      };
+
+      try {
+        const publicKey = await client.getPublicKeyBase64();
+        result.key.public_key = publicKey;
+
+        const opRes = await fetch(
+          `${identityServiceUrl}/v1/operators/${encodeURIComponent(operatorId)}`,
+        );
+        if (!opRes.ok) {
+          const text = await opRes.text();
+          result.error =
+            text || `operator lookup failed with status ${opRes.status}`;
+          console.log(JSON.stringify(result));
+          return;
+        }
+        result.operator.exists = true;
+
+        const botRes = await fetch(
+          `${identityServiceUrl}/v1/bots/${encodeURIComponent(botId)}`,
+        );
+        if (!botRes.ok) {
+          const text = await botRes.text();
+          result.error = text || `bot lookup failed with status ${botRes.status}`;
+          console.log(JSON.stringify(result));
+          return;
+        }
+        const bot = await botRes.json();
+        result.bot.exists = true;
+
+        const hasKey =
+          Array.isArray(bot.public_keys) &&
+          bot.public_keys.some(
+            (k) => k.public_key === publicKey && k.status === "active",
+          );
+        result.key.matches = hasKey;
+
+        if (!hasKey) {
+          result.error =
+            "bot exists but does not have an active public key matching the local key";
+          console.log(JSON.stringify(result));
+          return;
+        }
+
+        result.ok = true;
+        console.log(JSON.stringify(result));
+        return;
+      } catch (err) {
+        result.error = (err && err.message) || String(err);
+        console.log(JSON.stringify(result));
+        return;
+      }
     }
 
     if (cmd === "get-bot") {

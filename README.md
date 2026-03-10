@@ -2,7 +2,7 @@
 
 **Purpose:** `clanker-chain` is a small development project for building and testing a secure, identity-aware messaging mesh for bots and humans. It uses an MQTT broker plus a simple identity ledger so multiple agents (like `france-bot` and `tooter-bot`) can coordinate work without stepping on each other.
 
-**Clone and run (identity service):** After cloning, `cd identity-service`, set `IDENTITY_ADMIN_TOKEN`, then `bun run src/server.ts` to run the identity API locally. See `identity/SERVICE.md` for the full API.
+**Clone and run (identity service):** After cloning, `cd identity-service` and run `bun run src/server.ts` to start the identity API locally. See `identity/SERVICE.md` for the full API and Docker notes. No `IDENTITY_ADMIN_TOKEN` is required; all writes are authorized by Ed25519 signatures.
 
 ---
 
