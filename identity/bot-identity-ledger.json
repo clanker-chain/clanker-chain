@@ -1,0 +1,72 @@
+{
+  "$schema": "https://example.com/schemas/bot-identity-ledger.schema.json",
+  "version": 1,
+  "created": "2026-03-09T00:00:00Z",
+  "updated": "2026-03-09T00:00:00Z",
+  "operators": {
+    "org.openclaw.pat": {
+      "operator_id": "org.openclaw.pat",
+      "display_name": "Pat (local dev operator)",
+      "public_keys": [
+        {
+          "key_id": "org.openclaw.pat-dev-1",
+          "algorithm": "ed25519",
+          "public_key": "<base64-operator-public-key>",
+          "created": "2026-03-09T00:00:00Z",
+          "status": "active"
+        }
+      ],
+      "status": "active",
+      "created": "2026-03-09T00:00:00Z",
+      "updated": "2026-03-09T00:00:00Z",
+      "metadata": {
+        "environment": "dev"
+      }
+    }
+  },
+  "bots": {
+    "openclaw.france.prod-1": {
+      "bot_id": "openclaw.france.prod-1",
+      "display_name": "france-bot",
+      "operator_id": "org.openclaw.pat",
+      "aliases": ["france-bot"],
+      "public_keys": [
+        {
+          "key_id": "france-bot-dev-1",
+          "algorithm": "ed25519",
+          "public_key": "<base64-france-bot-public-key>",
+          "created": "2026-03-09T00:00:00Z",
+          "status": "active"
+        }
+      ],
+      "status": "active",
+      "created": "2026-03-09T00:00:00Z",
+      "updated": "2026-03-09T00:00:00Z",
+      "metadata": {
+        "environment": "dev"
+      }
+    },
+    "openclaw.tooter.prod-1": {
+      "bot_id": "openclaw.tooter.prod-1",
+      "display_name": "tooter-bot",
+      "operator_id": "org.openclaw.pat",
+      "aliases": ["tooter-bot"],
+      "public_keys": [
+        {
+          "key_id": "tooter-bot-dev-1",
+          "algorithm": "ed25519",
+          "public_key": "<base64-tooter-bot-public-key>",
+          "created": "2026-03-09T00:00:00Z",
+          "status": "active"
+        }
+      ],
+      "status": "active",
+      "created": "2026-03-09T00:00:00Z",
+      "updated": "2026-03-09T00:00:00Z",
+      "metadata": {
+        "environment": "dev"
+      }
+    }
+  }
+}
+
