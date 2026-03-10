@@ -119,53 +119,43 @@ export class IdentityClient {
   }
 
   /**
-   * Ensure operator, bot, and public key are registered in the identity service.
+   * Verify that the operator and bot exist in the identity service and that
+   * this instance's public key is registered on the bot. Does not create
+   * operator or bot; they must be minted by the operator first.
    * Safe to call multiple times.
    */
   async init(): Promise<void> {
-    const requireAuth = true;
-    // Create operator if missing
     try {
-      await this.postJson<OperatorRecord>(
-        "/v1/operators",
-        { operator_id: this.operatorId },
-        requireAuth,
+      await this.getJson<OperatorRecord>(
+        `/v1/operators/${encodeURIComponent(this.operatorId)}`,
       );
-    } catch (err) {
-      const msg = String((err as Error).message || "");
-      if (!msg.includes("already exists")) {
-        throw err;
-      }
+    } catch {
+      throw new Error(
+        "Operator not registered. Operator must be minted first (genesis or mint-operator).",
+      );
     }
 
-    // Create bot if missing
+    let bot: BotRecord;
     try {
-      await this.postJson<BotRecord>(
-        "/v1/bots",
-        {
-          bot_id: this.botId,
-          operator_id: this.operatorId,
-          display_name: this.botId,
-        },
-        requireAuth,
+      bot = await this.getJson<BotRecord>(
+        `/v1/bots/${encodeURIComponent(this.botId)}`,
       );
-    } catch (err) {
-      const msg = String((err as Error).message || "");
-      if (!msg.includes("already exists")) {
-        throw err;
-      }
+    } catch {
+      throw new Error(
+        "Bot not registered or key not found; operator must mint this bot with your public key.",
+      );
     }
 
-    // Register key (idempotent on server side)
     const publicKey = await this.getPublicKeyBase64();
-    await this.postJson<BotRecord>(
-      `/v1/bots/${encodeURIComponent(this.botId)}/keys`,
-      {
-        algorithm: "ed25519",
-        public_key: publicKey,
-      },
-      requireAuth,
-    );
+    const hasKey =
+      bot.public_keys?.some(
+        (k) => k.public_key === publicKey && k.status === "active",
+      ) ?? false;
+    if (!hasKey) {
+      throw new Error(
+        "Bot not registered or key not found; operator must mint this bot with your public key.",
+      );
+    }
   }
 
   async getBot(): Promise<BotRecord> {

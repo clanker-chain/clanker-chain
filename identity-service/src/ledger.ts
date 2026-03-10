@@ -33,6 +33,21 @@ export interface BotRecord {
   metadata?: Record<string, unknown>;
 }
 
+export type OperationType = "mint-operator" | "mint-bot" | "add-bot-key";
+
+export interface OperationRecord {
+  op_id: string;
+  type: OperationType;
+  timestamp: string;
+  operator_id?: string;
+  public_key?: string;
+  signature?: string;
+  message?: string;
+  bot_id?: string;
+  bot_public_key?: string;
+  operator_signature?: string;
+}
+
 export interface IdentityLedger {
   $schema?: string;
   version: number;
@@ -40,10 +55,12 @@ export interface IdentityLedger {
   updated: string;
   operators: Record<string, OperatorRecord>;
   bots: Record<string, BotRecord>;
+  operations: OperationRecord[];
 }
 
-// Ledger file lives in the repo's `identity/` directory, one level above `identity-service/`.
-const ledgerPath = new URL("../../identity/bot-identity-ledger.json", import.meta.url).pathname;
+// Ledger file: use IDENTITY_LEDGER_PATH if set, else repo's identity/ directory.
+const defaultLedgerPath = new URL("../../identity/bot-identity-ledger.json", import.meta.url).pathname;
+const ledgerPath = Bun.env.IDENTITY_LEDGER_PATH ?? defaultLedgerPath;
 
 let ledger: IdentityLedger | null = null;
 
@@ -57,6 +74,7 @@ export async function loadLedger(): Promise<IdentityLedger> {
   // Basic shape checks; detailed validation happens elsewhere.
   if (!parsed.operators) parsed.operators = {};
   if (!parsed.bots) parsed.bots = {};
+  if (!Array.isArray(parsed.operations)) parsed.operations = [];
   ledger = parsed;
   return ledger;
 }
@@ -134,5 +152,17 @@ export async function getBot(botId: string): Promise<BotRecord | undefined> {
 export async function getOperator(operatorId: string): Promise<OperatorRecord | undefined> {
   const current = await loadLedger();
   return current.operators[operatorId];
+}
+
+function nextOpId(operations: OperationRecord[]): string {
+  const n = operations.length + 1;
+  return `op-${String(n).padStart(3, "0")}`;
+}
+
+export async function appendOperation(record: Omit<OperationRecord, "op_id">): Promise<void> {
+  await withWriteLock(async (current) => {
+    const opId = nextOpId(current.operations);
+    current.operations.push({ ...record, op_id: opId });
+  });
 }
 

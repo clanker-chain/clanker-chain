@@ -4,6 +4,35 @@ const OPERATOR_ID_REGEX = /^[a-z0-9_.-]+$/;
 // namespace.role.instance
 const BOT_ID_REGEX = /^[a-z0-9_.-]+\.[a-z0-9_.-]+\.[a-z0-9_.-]+$/;
 
+/** Timestamp window for replay protection (e.g. 5 minutes). */
+export const TIMESTAMP_WINDOW_MS = 5 * 60 * 1000;
+
+export interface MintOperatorBody {
+  operator_id: string;
+  display_name?: string;
+  public_key: string;
+  signature: string;
+  message: string;
+}
+
+export interface MintBotBody {
+  bot_id: string;
+  operator_id: string;
+  display_name?: string;
+  aliases?: string[];
+  metadata?: Record<string, unknown>;
+  bot_public_key: string;
+  operator_signature: string;
+  message: string;
+}
+
+export interface AddKeySignedBody {
+  public_key: string;
+  operator_signature: string;
+  message: string;
+}
+
+/** Legacy / unused; kept for reference. */
 export interface CreateOperatorBody {
   operator_id: string;
   display_name?: string;
@@ -35,6 +64,103 @@ export function validateBotId(id: string): void {
   if (!id || !BOT_ID_REGEX.test(id)) {
     throw new Error("invalid bot_id");
   }
+}
+
+export function isTimestampRecent(isoString: string): boolean {
+  const t = Date.parse(isoString);
+  if (Number.isNaN(t)) return false;
+  const now = Date.now();
+  return Math.abs(now - t) <= TIMESTAMP_WINDOW_MS;
+}
+
+function validatePublicKeyBase64(s: string): void {
+  try {
+    const decoded = Buffer.from(s, "base64");
+    if (decoded.length !== 32) throw new Error("must decode to 32 bytes");
+  } catch {
+    throw new Error("public_key must be valid base64 (32 bytes)");
+  }
+}
+
+function validateSignatureBase64(s: string): void {
+  try {
+    const decoded = Buffer.from(s, "base64");
+    if (decoded.length !== 64) throw new Error("must decode to 64 bytes");
+  } catch {
+    throw new Error("signature must be valid base64 (64 bytes)");
+  }
+}
+
+/** Parse timestamp from canonical message (last segment after colons; timestamp may contain colons). */
+export function parseTimestampFromMessage(message: string, expectedPrefix: string): string | null {
+  if (!message.startsWith(expectedPrefix + ":")) return null;
+  const rest = message.slice(expectedPrefix.length + 1);
+  const lastColon = rest.lastIndexOf(":");
+  if (lastColon === -1) return null;
+  return rest.slice(lastColon + 1);
+}
+
+export function validateMintOperator(body: unknown): MintOperatorBody {
+  if (typeof body !== "object" || body === null) throw new Error("body must be an object");
+  const { operator_id, display_name, public_key, signature, message } = body as MintOperatorBody;
+  if (typeof operator_id !== "string") throw new Error("operator_id is required");
+  if (typeof public_key !== "string") throw new Error("public_key is required");
+  if (typeof signature !== "string") throw new Error("signature is required");
+  if (typeof message !== "string") throw new Error("message is required");
+  validateOperatorId(operator_id);
+  validatePublicKeyBase64(public_key);
+  validateSignatureBase64(signature);
+  if (display_name !== undefined && typeof display_name !== "string") throw new Error("display_name must be a string");
+  const expected = `mint-operator:${operator_id}:${public_key}:`;
+  if (!message.startsWith(expected)) throw new Error("message does not match canonical format mint-operator:operator_id:public_key:timestamp");
+  const timestamp = message.slice(expected.length);
+  if (!timestamp || !isTimestampRecent(timestamp)) throw new Error("timestamp missing or not recent");
+  return { operator_id, display_name, public_key, signature, message };
+}
+
+export function validateMintBot(
+  body: unknown,
+  operators: Record<string, OperatorRecord>,
+  bots: Record<string, BotRecord>,
+): MintBotBody {
+  if (typeof body !== "object" || body === null) throw new Error("body must be an object");
+  const { bot_id, operator_id, display_name, aliases, metadata, bot_public_key, operator_signature, message } =
+    body as MintBotBody;
+  if (typeof bot_id !== "string") throw new Error("bot_id is required");
+  if (typeof operator_id !== "string") throw new Error("operator_id is required");
+  if (typeof bot_public_key !== "string") throw new Error("bot_public_key is required");
+  if (typeof operator_signature !== "string") throw new Error("operator_signature is required");
+  if (typeof message !== "string") throw new Error("message is required");
+  validateBotId(bot_id);
+  validateOperatorId(operator_id);
+  validatePublicKeyBase64(bot_public_key);
+  validateSignatureBase64(operator_signature);
+  if (!operators[operator_id]) throw new Error("operator_id does not exist");
+  if (bots[bot_id]) throw new Error("bot_id already exists");
+  if (display_name !== undefined && typeof display_name !== "string") throw new Error("display_name must be a string");
+  if (aliases !== undefined && !Array.isArray(aliases)) throw new Error("aliases must be an array of strings");
+  if (aliases && !aliases.every((a) => typeof a === "string")) throw new Error("aliases must be an array of strings");
+  if (metadata !== undefined && typeof metadata !== "object") throw new Error("metadata must be an object");
+  const expected = `mint-bot:${bot_id}:${operator_id}:${bot_public_key}:`;
+  if (!message.startsWith(expected)) throw new Error("message does not match canonical format mint-bot:bot_id:operator_id:bot_public_key:timestamp");
+  const timestamp = message.slice(expected.length);
+  if (!timestamp || !isTimestampRecent(timestamp)) throw new Error("timestamp missing or not recent");
+  return { bot_id, operator_id, display_name, aliases, metadata, bot_public_key, operator_signature, message };
+}
+
+export function validateAddKeySigned(body: unknown, botId: string): AddKeySignedBody {
+  if (typeof body !== "object" || body === null) throw new Error("body must be an object");
+  const { public_key, operator_signature, message } = body as AddKeySignedBody;
+  if (typeof public_key !== "string") throw new Error("public_key is required");
+  if (typeof operator_signature !== "string") throw new Error("operator_signature is required");
+  if (typeof message !== "string") throw new Error("message is required");
+  validatePublicKeyBase64(public_key);
+  validateSignatureBase64(operator_signature);
+  const expected = `add-bot-key:${botId}:${public_key}:`;
+  if (!message.startsWith(expected)) throw new Error("message does not match canonical format add-bot-key:bot_id:public_key:timestamp");
+  const timestamp = message.slice(expected.length);
+  if (!timestamp || !isTimestampRecent(timestamp)) throw new Error("timestamp missing or not recent");
+  return { public_key, operator_signature, message };
 }
 
 export function validateCreateOperator(body: unknown): CreateOperatorBody {

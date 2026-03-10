@@ -1,20 +1,6 @@
-export function requireAdmin(request: Request): Response | null {
-  const adminToken = Bun.env.IDENTITY_ADMIN_TOKEN;
-  if (!adminToken) {
-    // If no token is configured, treat all requests as unauthorized for safety.
-    return jsonError(500, "server_misconfigured", "IDENTITY_ADMIN_TOKEN is not set");
-  }
-
-  const header = request.headers.get("authorization") ?? request.headers.get("Authorization");
-  if (!header || !header.toLowerCase().startsWith("bearer ")) {
-    return jsonError(401, "unauthorized", "Missing or invalid Authorization header");
-  }
-
-  const token = header.slice("bearer ".length).trim();
-  if (token !== adminToken) {
-    return jsonError(403, "forbidden", "Invalid admin token");
-  }
-  return null;
+/** Returns 403 response for invalid or missing signature (auth-free mint flow). */
+export function signatureInvalid(message = "Invalid or missing signature"): Response {
+  return jsonError(403, "forbidden", message);
 }
 
 export function jsonResponse(status: number, body: unknown): Response {

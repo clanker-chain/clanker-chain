@@ -1,14 +1,26 @@
-### Identity Service (Phase 1)
+### Identity Service (Auth-Free Mint)
 
-This directory hosts a simple identity ledger (`bot-identity-ledger.json`) and a Bun-based HTTP service that exposes it to bots and tooling.
+This directory hosts the identity ledger (`bot-identity-ledger.json`) and a Bun-based HTTP service that exposes it. The service uses **proof-based authorization** (Ed25519 signatures); no Bearer token or shared secret is required.
 
 ---
 
-## Service overview
+## Bootstrap (Genesis)
 
-- **Service implementation**: `identity-service/` (Bun + TypeScript).
-- **Ledger storage**: `identity/bot-identity-ledger.json` (append-only JSON).
-- **Purpose**: Allow operators and bots to register identities and public keys via a stable HTTP API, without bots touching the ledger file directly.
+Before the service can run, the ledger must exist. To create a **genesis state** (one operator, no bots):
+
+```bash
+cd identity-service
+bun run bootstrap-genesis org.openclaw.pat "Pat"
+```
+
+This will:
+
+- **Refuse to run** if the ledger file already exists (delete it manually for a fresh genesis).
+- Generate an Ed25519 keypair for the genesis operator.
+- Write the ledger to `identity/bot-identity-ledger.json` with one operator and empty `bots` and `operations`.
+- Save the operator private key to `~/.openclaw/keys/operators/org.openclaw.pat.key` (mode 0o600).
+
+For a clean slate, remove the ledger file and run the script again.
 
 ---
 
@@ -18,121 +30,132 @@ From the repo root:
 
 ```bash
 cd identity-service
-export IDENTITY_ADMIN_TOKEN="changeme-admin-token"
-export IDENTITY_SERVICE_PORT=8080   # optional, defaults to 8080
-bun install   # if you later add dependencies
+bun install
 bun run src/server.ts
 ```
 
-The service will listen on `http://localhost:${IDENTITY_SERVICE_PORT:-8080}`.
+Optional env:
+
+- `IDENTITY_SERVICE_PORT` (default: 8080)
+- `IDENTITY_LEDGER_PATH` – override ledger file path (e.g. for tests)
+
+No `IDENTITY_ADMIN_TOKEN` is used; all write operations require valid signatures.
 
 ---
 
 ## HTTP API
 
-Base path: `/v1`
+Base path: `/v1`. **No endpoint requires Bearer auth.**
 
-### `POST /v1/operators`
+### Canonical message formats (replay protection)
 
-- **Auth**: Requires `Authorization: Bearer <IDENTITY_ADMIN_TOKEN>`.
+Every signed request includes a **message** and a **timestamp** (ISO 8601). The service rejects timestamps older than 5 minutes.
+
+- **Mint operator**: `mint-operator:${operator_id}:${public_key_base64}:${timestamp}`
+- **Mint bot**: `mint-bot:${bot_id}:${operator_id}:${bot_public_key_base64}:${timestamp}`
+- **Add bot key**: `add-bot-key:${bot_id}:${public_key_base64}:${timestamp}`
+
+### `POST /v1/operators` (mint operator)
+
+- **Auth**: None. Proof: self-signed (signature over the canonical message with the key being registered).
 - **Body**:
 
 ```json
 {
-  "operator_id": "org.openclaw.pat",
-  "display_name": "Pat"
+  "operator_id": "org.openclaw.alice",
+  "display_name": "Alice",
+  "public_key": "<base64-32-byte-ed25519-public-key>",
+  "signature": "<base64-64-byte-signature>",
+  "message": "mint-operator:org.openclaw.alice:<public_key>:<timestamp>"
 }
 ```
 
-- **Responses**:
-  - `201` with the created operator record.
-  - `409` if `operator_id` already exists.
+- **Responses**: `201` (created), `400` (invalid request or stale timestamp), `403` (signature invalid), `409` (operator_id exists).
 
-### `POST /v1/bots`
+### `GET /v1/operators/{operator_id}`
 
-- **Auth**: Requires admin bearer token.
+- **Auth**: None.
+- **Response**: `200` with operator record, or `404`.
+
+### `POST /v1/bots` (mint bot)
+
+- **Auth**: None. Proof: operator signs the canonical mint-bot message with their key (from the ledger).
 - **Body**:
 
 ```json
 {
   "bot_id": "openclaw.france.prod-1",
   "operator_id": "org.openclaw.pat",
-  "display_name": "france-bot"
+  "display_name": "france-bot",
+  "bot_public_key": "<base64-bot-ed25519-public-key>",
+  "operator_signature": "<base64-64-byte-signature>",
+  "message": "mint-bot:openclaw.france.prod-1:org.openclaw.pat:<bot_public_key>:<timestamp>"
 }
 ```
 
-- **Responses**:
-  - `201` with the created bot record.
-  - `400` if `operator_id` does not exist or IDs are invalid.
+- **Responses**: `201` (created, bot has one key), `400` (invalid or operator has no key), `403` (signature invalid), `409` (bot_id exists).
 
-### `POST /v1/bots/{bot_id}/keys`
+### `POST /v1/bots/{bot_id}/keys` (add key)
 
-- **Auth**: Requires admin bearer token.
+- **Auth**: None. Proof: operator (owner of the bot) signs the canonical add-bot-key message.
 - **Body**:
 
 ```json
 {
-  "algorithm": "ed25519",
-  "public_key": "<base64-encoded-32-byte-public-key>"
+  "public_key": "<base64-32-byte-ed25519-public-key>",
+  "operator_signature": "<base64-64-byte-signature>",
+  "message": "add-bot-key:<bot_id>:<public_key>:<timestamp>"
 }
 ```
 
-- **Responses**:
-  - `201` with the updated bot record (including keys).
-  - `400` if algorithm or public key are invalid.
-  - `404` if `bot_id` is unknown.
+- **Responses**: `201` (key added), `400` (invalid or stale), `403` (signature invalid), `404` (bot not found).
 
 ### `GET /v1/bots/{bot_id}`
 
-- **Auth**: None required in Phase 1 (can be tightened later).
-- **Response**:
-  - `200` with the full bot record (including `public_keys[]` and `operator_id`).
-  - `404` if `bot_id` is unknown.
+- **Auth**: None.
+- **Response**: `200` with full bot record (including `public_keys`), or `404`.
 
 ### Error model
 
-Errors are returned as JSON:
-
-```json
-{
-  "error": "not_found",
-  "message": "bot_id not found"
-}
-```
-
-Common error codes:
-
-- `invalid_request`
-- `not_found`
-- `conflict`
-- `unauthorized`
-- `forbidden`
-- `internal_error`
+Errors are JSON: `{ "error": "<code>", "message": "<text>" }`.  
+Common codes: `invalid_request`, `not_found`, `conflict`, `forbidden`, `internal_error`.
 
 ---
 
-## CLI helper
-
-A small CLI is provided in `identity-service/src/cli.ts` for manual management and testing.
+## CLI
 
 From `identity-service/`:
 
 ```bash
-export IDENTITY_ADMIN_TOKEN="changeme-admin-token"
-export IDENTITY_SERVICE_URL="http://localhost:8080"
+export IDENTITY_SERVICE_URL="http://localhost:8080"   # optional
 
-# Create an operator
-bun run src/cli.ts create-operator org.openclaw.pat "Pat"
+# Mint a new operator (creates key at ~/.openclaw/keys/operators/<operator_id>.key if missing)
+bun run src/cli.ts mint-operator org.openclaw.alice "Alice"
 
-# Create a bot
-bun run src/cli.ts create-bot openclaw.france.prod-1 org.openclaw.pat "france-bot"
+# Mint a bot (operator key required; bot key is generated and saved to ~/.openclaw/keys/<bot_id>.key)
+bun run src/cli.ts mint-bot openclaw.france.prod-1 org.openclaw.pat "france-bot"
 
-# Add a key (replace BASE64_PUBLIC_KEY with a real key)
-bun run src/cli.ts add-key openclaw.france.prod-1 ed25519 BASE64_PUBLIC_KEY
+# Add a key to a bot (operator signs; bot's operator_id is resolved via GET /v1/bots/:id)
+bun run src/cli.ts add-key openclaw.france.prod-1 <base64_public_key>
 
-# Fetch bot record
+# Lookup
+bun run src/cli.ts get-operator org.openclaw.pat
 bun run src/cli.ts get-bot openclaw.france.prod-1
 ```
+
+---
+
+## Ledger: operations log
+
+The ledger includes an **operations** array (append-only). Each successful mint or add-key appends an entry with `op_id`, `type`, relevant ids, signatures, `message`, and `timestamp`. This provides an audit trail and maps to a blockchain-style transaction log.
+
+---
+
+## Key security
+
+- Store operator keys in `~/.openclaw/keys/operators/` with mode `0o600`.
+- Prefer encrypting keys at rest (e.g. passphrase) where possible.
+- For production, consider hardware security modules (HSM).
 
 ---
 
@@ -144,15 +167,4 @@ From `identity-service/`:
 bun test
 ```
 
-Current tests cover basic ledger loading and cloning behavior. You can extend them to:
-
-- Exercise the HTTP endpoints.
-- Verify validation and error responses.
-- Simulate adding keys and revoking them (via the ledger APIs or future revoke endpoint).
-
----
-
-## Future evolution
-
-This service is a façade over the JSON ledger and is designed to be swapped out for a real chain/DID-backed implementation later. The **HTTP API contract** (endpoints and JSON shapes) should remain stable while the underlying storage and trust model evolve.
-
+Tests cover ledger loading, operations array, timestamp validation, mint-operator body validation, and Ed25519 signature verification.

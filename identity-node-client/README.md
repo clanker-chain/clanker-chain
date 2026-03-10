@@ -8,10 +8,8 @@ Node/TypeScript client for the Bun-based identity service in this repo.
 
 - Manage Ed25519 keys for a bot under `~/.openclaw/keys/{bot_id}.key`.
 - Talk to the identity service over HTTP:
-  - `POST /v1/operators`
-  - `POST /v1/bots`
-  - `POST /v1/bots/{bot_id}/keys`
-  - `GET /v1/bots/{bot_id}`
+  - `init()` — **verify only**: ensures the operator and bot exist and this bot's public key is registered (no POSTs; operator must mint the bot first).
+  - `GET /v1/operators/{id}`, `GET /v1/bots/{id}` for lookups.
 - Produce canonical Ed25519 signatures for identity-aware messages that match the `bot-comms.md` design.
 
 This is intended to be wrapped in an OpenClaw skill/tool so agents can call `identity_init` and `identity_sign` without handling HTTP or key management directly.
@@ -41,11 +39,10 @@ const client = new IdentityClient({
   botId: "openclaw.france.prod-1",
   operatorId: "org.openclaw.pat",
   identityServiceUrl: "http://localhost:8080",
-  // optional, defaults to process.env.IDENTITY_ADMIN_TOKEN
-  adminToken: process.env.IDENTITY_ADMIN_TOKEN,
 });
 
-// One-time (idempotent) init on startup
+// One-time (idempotent) init on startup: verifies operator and bot exist and this bot's key is registered.
+// The operator must have minted the bot (e.g. via identity-service CLI mint-bot) with this bot's public key first.
 await client.init();
 
 // Later, when sending a message:
@@ -75,7 +72,7 @@ const signedEnvelope = { ...envelope, signature, signature_scheme };
 ## Environment variables
 
 - `IDENTITY_SERVICE_URL` — default base URL for the identity service (fallback: `http://localhost:8080`).
-- `IDENTITY_ADMIN_TOKEN` — admin bearer token for write operations (optional if your service does not require auth in dev).
+- The identity service uses proof-based auth (signatures); no admin token is required for init or lookups.
 
 ---
 
