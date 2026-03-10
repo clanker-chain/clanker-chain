@@ -4,6 +4,7 @@
  * Usage:
  *   bun run src/cli.ts mint-operator <operator_id> [display_name]
  *   bun run src/cli.ts mint-bot <bot_id> <operator_id> [display_name]
+ *   bun run src/cli.ts mint-bot-token <bot_id> <operator_id> [display_name]
  *   bun run src/cli.ts add-key <bot_id> <public_key_base64>
  *   bun run src/cli.ts get-operator <operator_id>
  *   bun run src/cli.ts get-bot <bot_id>
@@ -32,6 +33,9 @@ async function main() {
         break;
       case "mint-bot":
         await mintBot(args);
+        break;
+      case "mint-bot-token":
+        await mintBotToken(args);
         break;
       case "add-key":
         await addKey(args);
@@ -141,6 +145,54 @@ async function mintBot(args: string[]) {
   await printResponse(res);
 }
 
+/**
+ * Create a pre-signed bot registration payload (\"mint token\") that can be
+ * handed to a bot. The token is simply the JSON body that the bot should POST
+ * to the identity service's /v1/bots endpoint.
+ *
+ * This command:
+ * - Ensures the operator key exists (and creates it if missing).
+ * - Generates a new bot keypair and writes the private key to
+ *   ~/.openclaw/keys/<bot_id>.key (so you can securely transfer it to the bot).
+ * - Prints the JSON payload the bot should POST to /v1/bots.
+ */
+async function mintBotToken(args: string[]) {
+  const [bot_id, operator_id, display_name] = args;
+  if (!bot_id || !operator_id) {
+    throw new Error("Usage: mint-bot-token <bot_id> <operator_id> [display_name]");
+  }
+  const operatorPriv = await readOrCreateOperatorPrivateKey(operator_id);
+  const botPriv = ed25519.utils.randomPrivateKey();
+  const botPub = await ed25519.getPublicKeyAsync(botPriv);
+  const bot_public_key = Buffer.from(botPub).toString("base64");
+
+  const keyPath = botKeyPath(bot_id);
+  await fs.mkdir(path.dirname(keyPath), { recursive: true });
+  await fs.writeFile(keyPath, `${Buffer.from(botPriv).toString("base64")}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  console.error("Bot key written to", keyPath);
+
+  const timestamp = new Date().toISOString();
+  const message = `mint-bot:${bot_id}:${operator_id}:${bot_public_key}:${timestamp}`;
+  const msgBytes = new TextEncoder().encode(message);
+  const sig = await ed25519.signAsync(msgBytes, operatorPriv);
+  const operator_signature = Buffer.from(sig).toString("base64");
+
+  const payload = {
+    bot_id,
+    operator_id,
+    display_name,
+    bot_public_key,
+    operator_signature,
+    message,
+  };
+
+  // This JSON can be POSTed directly to /v1/bots on the identity service.
+  console.log(JSON.stringify(payload, null, 2));
+}
+
 async function addKey(args: string[]) {
   const [bot_id, public_key] = args;
   if (!bot_id || !public_key) {
@@ -206,6 +258,7 @@ function printHelp() {
       "Identity service CLI (auth-free mint):",
       "  mint-operator <operator_id> [display_name]",
       "  mint-bot <bot_id> <operator_id> [display_name]",
+      "  mint-bot-token <bot_id> <operator_id> [display_name]",
       "  add-key <bot_id> <public_key_base64>",
       "  get-operator <operator_id>",
       "  get-bot <bot_id>",
