@@ -27,5 +27,17 @@ if [ -f "$TARGET_ROOT/$PLUGIN_NAME/package.json" ]; then
   (cd "$TARGET_ROOT/$PLUGIN_NAME" && npm install --production) || echo "npm install failed or Node not available; ensure dependencies are installed if required."
 fi
 
+# Expose the plugin's skill as skills/identity so OpenClaw has both the tooling (plugin) and the
+# reference instruction set (SKILL.md in skills/identity), same pattern as Slack.
+SKILLS_DIR="${OPENCLAW_SKILLS_DIR:-}"
+if [ -z "$SKILLS_DIR" ] && [ -d /app/skills ]; then
+  SKILLS_DIR="/app/skills"
+fi
+if [ -n "$SKILLS_DIR" ] && [ -d "$TARGET_ROOT/$PLUGIN_NAME/skill" ]; then
+  rm -rf "$SKILLS_DIR/identity"
+  ln -sf "$TARGET_ROOT/$PLUGIN_NAME/skill" "$SKILLS_DIR/identity"
+  echo "Skill symlink: $SKILLS_DIR/identity -> $TARGET_ROOT/$PLUGIN_NAME/skill"
+fi
+
 echo "Done. Restart OpenClaw so it picks up the new plugin."
 echo "Plugin path: $TARGET_ROOT/$PLUGIN_NAME"
