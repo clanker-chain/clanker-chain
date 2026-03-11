@@ -269,6 +269,163 @@ In your bot process (for example using `identity-node-client` or the OpenClaw id
 
 ---
 
+## Packaging the identity client as an OpenClaw extension
+
+Many OpenClaw deployments do **not** mount this whole repo into bot containers. Instead, bots get a small, versioned **plugin/extension** that bundles just the identity client and exposes the `identity` skill via `SKILL.md`. This section outlines how to do that at a high level.
+
+### Extension layout (in your OpenClaw plugin repo)
+
+In your OpenClaw plugin or bot image source (not necessarily this repo), follow the same pattern as other extensions (for example `openclaw/extensions/slack`):
+
+```text
+openclaw/
+  extensions/
+    identity-client/
+      package.json
+      openclaw.plugin.json
+      src/
+        index.ts
+      dist/
+        index.js
+        index.d.ts
+```
+
+At a high level:
+
+- `src/index.ts` should **re‑export** the thin client you want bots to use (for example, the `IdentityClient` from `identity-node-client` in this repo).
+- `package.json` declares the extension package (e.g. `@openclaw/identity-client`) and depends on `@noble/ed25519` plus any other minimal runtime deps.
+- `openclaw.plugin.json` is the OpenClaw plugin manifest.
+
+#### Example `package.json` (extension)
+
+```json
+{
+  "name": "@openclaw/identity-client",
+  "version": "0.1.0",
+  "description": "Thin client for the clanker-chain identity service",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@noble/ed25519": "^2.3.0"
+  }
+}
+```
+
+#### Example `openclaw.plugin.json`
+
+See the [OpenClaw plugin docs](https://docs.openclaw.ai/plugin) for the full schema. A minimal manifest that also ships the `identity` skill might look like:
+
+```json
+{
+  "id": "identity-client",
+  "name": "Identity client",
+  "description": "Identity client and identity skill for clanker-chain bots.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "skills": [
+    "skills/identity"
+  ]
+}
+```
+
+Notes:
+
+- `skills` lists one or more skill directories relative to the plugin root; when the plugin is enabled, those `SKILL.md` files become available to the agent. See [Skills (OpenClaw)](https://www.learnclawdbot.org/docs/tools/skills) for more details.
+- If your OpenClaw environment uses a different field name for skill directories, adjust accordingly based on the version of the plugin schema you target.
+
+### `src/index.ts` in the extension
+
+The extension’s `src/index.ts` is a thin wrapper around the actual client. For example, if you keep the implementation in this repo under `identity-node-client/src/index.ts`, your extension can re‑export it:
+
+```ts
+// openclaw/extensions/identity-client/src/index.ts
+export * from "../../../identity-node-client/src/index";
+```
+
+Later you can move the client implementation fully into the extension; the important part is that bots import a stable package name (e.g. `@openclaw/identity-client`) and don’t depend directly on this repo’s internal layout.
+
+### Installing the extension code on Ubuntu bot hosts
+
+There are two common patterns for getting the extension into your bot Docker image on Ubuntu. In both cases you copy only **source and build artifacts**, not `node_modules`.
+
+#### Option 1: Clone the repo on the Ubuntu host and build inside the image
+
+On the Ubuntu host:
+
+```bash
+cd /home/ubuntu
+git clone <your-clanker-chain-or-plugin-repo-url> clanker-chain
+```
+
+In your bot Dockerfile:
+
+```dockerfile
+FROM node:20-slim
+
+WORKDIR /app
+
+# Copy your bot app
+COPY . /app
+
+# Copy the identity-client extension from the cloned repo
+COPY /home/ubuntu/clanker-chain/openclaw/extensions/identity-client /app/openclaw/extensions/identity-client
+
+# Build the extension (installs deps for the extension only)
+WORKDIR /app/openclaw/extensions/identity-client
+RUN npm install && npm run build
+
+# Install the extension into the identity skill (or app) as a dependency
+WORKDIR /app/skills/identity
+RUN npm install /app/openclaw/extensions/identity-client
+```
+
+Then build the image on Ubuntu:
+
+```bash
+docker build -t your/france-bot-image .
+```
+
+At runtime, your identity skill can import from the extension package name, for example:
+
+```js
+import { IdentityClient } from "@openclaw/identity-client";
+```
+
+#### Option 2: Manually copy only the extension directory
+
+If you don’t want to clone the full repo on Ubuntu, you can copy just the extension folder from your Mac:
+
+On your Mac:
+
+```bash
+scp -r /Users/pat/clanker-chain/openclaw/extensions/identity-client \
+    ubuntu@<bot-host>:/home/ubuntu/openclaw/extensions/identity-client
+```
+
+Then use the same Dockerfile pattern, replacing the source path:
+
+```dockerfile
+COPY /home/ubuntu/openclaw/extensions/identity-client /app/openclaw/extensions/identity-client
+WORKDIR /app/openclaw/extensions/identity-client
+RUN npm install && npm run build
+
+WORKDIR /app/skills/identity
+RUN npm install /app/openclaw/extensions/identity-client
+```
+
+In both options:
+
+- You never include `node_modules` in what you copy; dependencies are installed inside the image during `docker build`.
+- The **skill on the bot** stays thin (`skills/identity/SKILL.md` + `run.mjs`); the identity client logic lives in a single extension that’s built into the image.
+
+---
+
 ## Mint-bot token output
 
 The `mint-bot-token` CLI command (`bun run src/cli.ts mint-bot-token ...`) prints a **ready-to-POST JSON body** for `POST /v1/bots`:
