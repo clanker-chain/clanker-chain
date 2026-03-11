@@ -1,0 +1,66 @@
+name: Identity client plugin release
+
+on:
+  push:
+    tags:
+      - "identity-client-plugin-v*"
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps and build plugin
+        working-directory: identity-client-plugin
+        run: |
+          npm install
+          npm run build
+
+      - name: Create bundle tarball
+        working-directory: identity-client-plugin
+        run: |
+          PLUGIN_NAME="identity-client-plugin"
+          BUNDLE_DIR="bundle"
+          rm -rf "$BUNDLE_DIR"
+          mkdir -p "$BUNDLE_DIR/$PLUGIN_NAME"
+
+          # Copy plugin files into the bundle/identity-client-plugin/ directory
+          cp package.json openclaw.plugin.json index.ts install.sh "$BUNDLE_DIR/$PLUGIN_NAME"/
+          cp -R dist "$BUNDLE_DIR/$PLUGIN_NAME"/
+          cp -R src/skill "$BUNDLE_DIR/$PLUGIN_NAME"/
+
+          TAR_NAME="$PLUGIN_NAME-${GITHUB_REF_NAME}.tgz"
+          tar -czf "$TAR_NAME" -C "$BUNDLE_DIR" "$PLUGIN_NAME"
+          echo "ASSET_PATH=$TAR_NAME" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Identity client plugin ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload plugin bundle asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: identity-client-plugin/${{ env.ASSET_PATH }}
+          asset_name: ${{ env.ASSET_PATH }}
+          asset_content_type: application/gzip
