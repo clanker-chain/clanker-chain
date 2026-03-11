@@ -2,7 +2,17 @@
 set -euo pipefail
 
 PLUGIN_NAME="identity-client-plugin"
-TARGET_ROOT="${OPENCLAW_EXTENSIONS_DIR:-$HOME/.openclaw/extensions}"
+if [ -n "${OPENCLAW_EXTENSIONS_DIR:-}" ]; then
+  TARGET_ROOT="$OPENCLAW_EXTENSIONS_DIR"
+  # OpenClaw Docker: app loads from /app/extensions; /extensions would be wrong
+  if [ "$TARGET_ROOT" = /extensions ] && [ -d /app/extensions ]; then
+    TARGET_ROOT="/app/extensions"
+  fi
+elif [ -d /app/extensions ]; then
+  TARGET_ROOT="/app/extensions"
+else
+  TARGET_ROOT="$HOME/.openclaw/extensions"
+fi
 
 echo "Installing $PLUGIN_NAME into: $TARGET_ROOT/$PLUGIN_NAME"
 
