@@ -118,10 +118,16 @@ export function validateMintOperator(body: unknown): MintOperatorBody {
   return { operator_id, display_name, public_key, signature, message };
 }
 
+export interface ValidateMintBotOptions {
+  /** If true, only require a timestamp in the message; do not enforce recency (one-time / bootstrap use). */
+  skipTimestampRecency?: boolean;
+}
+
 export function validateMintBot(
   body: unknown,
   operators: Record<string, OperatorRecord>,
   bots: Record<string, BotRecord>,
+  options?: ValidateMintBotOptions,
 ): MintBotBody {
   if (typeof body !== "object" || body === null) throw new Error("body must be an object");
   const { bot_id, operator_id, display_name, aliases, metadata, bot_public_key, operator_signature, message } =
@@ -144,7 +150,8 @@ export function validateMintBot(
   const expected = `mint-bot:${bot_id}:${operator_id}:${bot_public_key}:`;
   if (!message.startsWith(expected)) throw new Error("message does not match canonical format mint-bot:bot_id:operator_id:bot_public_key:timestamp");
   const timestamp = message.slice(expected.length);
-  if (!timestamp || !isTimestampRecent(timestamp)) throw new Error("timestamp missing or not recent");
+  if (!timestamp) throw new Error("timestamp missing or not recent");
+  if (!options?.skipTimestampRecency && !isTimestampRecent(timestamp)) throw new Error("timestamp missing or not recent");
   return { bot_id, operator_id, display_name, aliases, metadata, bot_public_key, operator_signature, message };
 }
 
