@@ -1,6 +1,6 @@
 {
   "name": "@openclaw/identity-client-plugin",
-  "version": "0.1.0",
+  "version": "0.1.3",
   "description": "Identity client and identity skill for clanker-chain bots.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
