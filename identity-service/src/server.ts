@@ -93,7 +93,11 @@ async function handlePostBots(request: Request): Promise<Response> {
   let body: MintBotBody;
   try {
     const ledger = await getLedgerSnapshot();
-    body = validateMintBot(request.json ? await request.json() : {}, ledger.operators, ledger.bots);
+    const skipRecency =
+      process.env.IDENTITY_SKIP_MINT_TIMESTAMP === "1" || process.env.IDENTITY_SKIP_MINT_TIMESTAMP === "true";
+    body = validateMintBot(request.json ? await request.json() : {}, ledger.operators, ledger.bots, {
+      skipTimestampRecency: skipRecency,
+    });
   } catch (err) {
     return jsonError(400, "invalid_request", (err as Error).message);
   }
