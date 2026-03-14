@@ -1,0 +1,29 @@
+services:
+  mqtt-auth:
+    build:
+      context: ../mqtt-auth-service
+      dockerfile: Dockerfile
+    ports:
+      - "9090:9090"
+    environment:
+      IDENTITY_SERVICE_URL: ${IDENTITY_SERVICE_URL:-http://host.docker.internal:8080}
+      MQTT_AUTH_PORT: "9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:9090/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  mosquitto:
+    image: iegomez/mosquitto-go-auth:3.0.0-mosquitto_2.0.18
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/etc/mosquitto/mosquitto.conf
+      - ./conf.d/go-auth.conf:/etc/mosquitto/conf.d/go-auth.conf
+    depends_on:
+      mqtt-auth:
+        condition: service_healthy
