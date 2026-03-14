@@ -2,7 +2,18 @@ import { promises as fs } from "fs";
 import path from "path";
 import os from "os";
 import * as ed25519 from "@noble/ed25519";
+import { SignJWT, importJWK } from "jose";
 import type { BotRecord, IdentityMessageEnvelope, OperatorRecord, PublicKeyRecord } from "./types";
+
+const MQTT_TOKEN_AUD = "clanker-mqtt";
+
+function base64url(buf: Uint8Array): string {
+  return Buffer.from(buf)
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
 
 export interface IdentityClientOptions {
   botId: string;
@@ -167,6 +178,33 @@ export class IdentityClient {
       signature: Buffer.from(sig).toString("base64"),
       signature_scheme: "ed25519",
     };
+  }
+
+  /**
+   * Issue a short-lived JWT for MQTT broker authentication (EdDSA / Ed25519).
+   * Use as the MQTT CONNECT password with username = bot_id.
+   */
+  async issueMqttToken(ttlSec: number = 300): Promise<string> {
+    const priv = await this.loadOrCreatePrivateKey();
+    const pub = await ed25519.getPublicKeyAsync(priv);
+    const jwk = {
+      kty: "OKP" as const,
+      crv: "Ed25519" as const,
+      d: base64url(priv),
+      x: base64url(pub),
+    };
+    const key = await importJWK(jwk, "EdDSA");
+    if (!key) {
+      throw new Error("Failed to import key for MQTT token");
+    }
+    const exp = Math.floor(Date.now() / 1000) + ttlSec;
+    const jwt = await new SignJWT({})
+      .setProtectedHeader({ alg: "EdDSA", typ: "JWT" })
+      .setSubject(this.botId)
+      .setAudience(MQTT_TOKEN_AUD)
+      .setExpirationTime(exp)
+      .sign(key);
+    return jwt;
   }
 }
 

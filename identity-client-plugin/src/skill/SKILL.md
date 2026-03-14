@@ -208,6 +208,20 @@ If something is wrong (operator missing, bot missing, or key mismatch), it still
 
 This makes `identity_verify` a good choice for periodic health checks or diagnostics, while `identity_init` is best for strict startup gating.
 
+### identity_issue_mqtt_token — issue MQTT broker auth token
+
+Issues a short-lived JWT signed with this bot’s Ed25519 key for MQTT broker authentication. Use the output as the MQTT CONNECT password with username = `bot_id`.
+
+```bash
+node {baseDir}/run.mjs issue-mqtt-token <bot_id> <operator_id> [ttl_sec]
+```
+
+- **bot_id**: Canonical bot ID (e.g. `openclaw.france.prod-1`).
+- **operator_id**: Operator that owns the bot (e.g. `org.openclaw.pat`).
+- **ttl_sec** (optional): Token lifetime in seconds (default 300).
+
+Output is the raw JWT string on stdout. Use it as the password when connecting to the MQTT broker with username = `bot_id`.
+
 ## Environment
 
 - **IDENTITY_SERVICE_URL** (required): Base URL of the identity service (e.g. `http://localhost:8080`).

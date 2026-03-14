@@ -7,6 +7,7 @@
  *   node run.mjs verify <bot_id> <operator_id>
  *   node run.mjs get-bot <bot_id>
  *   node run.mjs sign '<envelope_json>'
+ *   node run.mjs issue-mqtt-token <bot_id> <operator_id> [ttl_sec]
  *
  * Env: IDENTITY_SERVICE_URL.
  */
@@ -21,6 +22,7 @@ function usage() {
   node run.mjs verify <bot_id> <operator_id>
   node run.mjs get-bot <bot_id>
   node run.mjs sign '<envelope_json>'
+  node run.mjs issue-mqtt-token <bot_id> <operator_id> [ttl_sec]
 `);
 }
 
@@ -182,6 +184,24 @@ async function main() {
           envelope: { ...envelope, signature, signature_scheme },
         }),
       );
+      return;
+    }
+
+    if (cmd === "issue-mqtt-token") {
+      const [botId, operatorId, ttlSecStr] = args;
+      if (!botId || !operatorId) {
+        console.error("identity issue-mqtt-token requires bot_id and operator_id");
+        usage();
+        process.exit(1);
+      }
+      const ttlSec = ttlSecStr ? parseInt(ttlSecStr, 10) : 300;
+      if (Number.isNaN(ttlSec) || ttlSec < 1) {
+        console.error("ttl_sec must be a positive number");
+        process.exit(1);
+      }
+      const client = new IdentityClient({ botId, operatorId });
+      const token = await client.issueMqttToken(ttlSec);
+      console.log(token);
       return;
     }
 
