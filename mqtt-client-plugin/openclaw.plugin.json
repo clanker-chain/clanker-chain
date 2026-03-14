@@ -1,0 +1,13 @@
+{
+  "id": "mqtt-client",
+  "name": "MQTT client",
+  "description": "MQTT client and skill for clanker-chain bots (crypto auth).",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "skills": [
+    "src/skill"
+  ]
+}
