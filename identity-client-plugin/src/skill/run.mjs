@@ -84,15 +84,6 @@ async function main() {
         bot: { exists: false },
         key: { matches: false, public_key: undefined },
         error: undefined,
-      } as {
-        ok: boolean;
-        bot_id: string;
-        operator_id: string;
-        identity_service_url: string;
-        operator: { exists: boolean };
-        bot: { exists: boolean };
-        key: { matches: boolean; public_key: string | undefined };
-        error: string | undefined;
       };
 
       try {
@@ -126,7 +117,7 @@ async function main() {
         const hasKey =
           Array.isArray(bot.public_keys) &&
           bot.public_keys.some(
-            (k: { public_key: string; status: string }) =>
+            (k) =>
               k.public_key === publicKey && k.status === "active",
           );
         result.key.matches = hasKey;
@@ -141,7 +132,7 @@ async function main() {
         result.ok = true;
         console.log(JSON.stringify(result));
         return;
-      } catch (err: any) {
+      } catch (err) {
         result.error = (err && err.message) || String(err);
         console.log(JSON.stringify(result));
         return;
@@ -208,7 +199,7 @@ async function main() {
     console.error("Unknown command:", cmd);
     usage();
     process.exit(1);
-  } catch (err: any) {
+  } catch (err) {
     console.error(JSON.stringify({ error: (err && err.message) || String(err) }));
     process.exit(1);
   }
