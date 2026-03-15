@@ -44,8 +44,8 @@ jobs:
           rm -rf "$BUNDLE_DIR"
           mkdir -p "$BUNDLE_DIR/$PLUGIN_NAME"
 
-          # Copy plugin files
-          cp mqtt-client-plugin/package.json mqtt-client-plugin/openclaw.plugin.json mqtt-client-plugin/index.mjs "$BUNDLE_DIR/$PLUGIN_NAME"/
+          # Copy plugin files (include install.sh for one-step install + pnpm lockfile update)
+          cp mqtt-client-plugin/package.json mqtt-client-plugin/openclaw.plugin.json mqtt-client-plugin/index.mjs mqtt-client-plugin/install.sh "$BUNDLE_DIR/$PLUGIN_NAME"/
           cp -R mqtt-client-plugin/src "$BUNDLE_DIR/$PLUGIN_NAME"/
 
           # Copy node_modules (dereference file: deps so tarball is self-contained)
