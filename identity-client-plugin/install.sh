@@ -43,7 +43,7 @@ fi
 OPENCLAW_ROOT="${OPENCLAW_ROOT:-$(dirname "$TARGET_ROOT")}"
 if [ -f "$OPENCLAW_ROOT/pnpm-workspace.yaml" ]; then
   echo "Running pnpm install in OpenClaw repo ($OPENCLAW_ROOT) to update lockfile..."
-  (cd "$OPENCLAW_ROOT" && npx --yes pnpm install) || echo "pnpm install skipped (npx/pnpm not available)."
+  (cd "$OPENCLAW_ROOT" && npx --yes pnpm install --ignore-scripts) || echo "pnpm install skipped (npx/pnpm not available)."
 fi
 
 echo "Done. Restart OpenClaw so it picks up the new plugin."
