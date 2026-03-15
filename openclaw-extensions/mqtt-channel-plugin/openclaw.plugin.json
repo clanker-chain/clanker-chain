@@ -1,0 +1,16 @@
+{
+  "id": "mqtt-channel",
+  "name": "MQTT Channel",
+  "version": "0.1.0",
+  "description": "MQTT channel provider for bot-to-bot messaging",
+  "openclaw": ">=2026.3.0",
+  "contributes": {
+    "channels": {
+      "mqtt": {
+        "provider": "./dist/index.js",
+        "displayName": "MQTT",
+        "capabilities": ["dm", "group"]
+      }
+    }
+  }
+}
