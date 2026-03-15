@@ -1,6 +1,6 @@
 {
   "name": "@openclaw/mqtt-client-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MQTT client and skill for clanker-chain bots (crypto auth).",
   "type": "module",
   "main": "index.mjs",
