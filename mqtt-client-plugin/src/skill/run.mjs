@@ -8,10 +8,20 @@
  *   node run.mjs subscribe <bot_id> <operator_id> <topic1> [topic2 ...]
  *   node run.mjs poll <bot_id> <operator_id> [timeout_ms] [topic1] [topic2 ...]
  *
- * Env: MQTT_BROKER_URL, MQTT_CLIENT_ID, IDENTITY_SERVICE_URL (optional).
+ * Env:
+ *   - MQTT_BROKER_URL (required)
+ *   - MQTT_CLIENT_ID (required)
+ *   - IDENTITY_SERVICE_URL (optional, enables identity-backed JWT auth)
+ *   - MQTT_PASSWORD (optional, static JWT or opaque password)
+ *   - MQTT_STATIC_PASSWORD (optional, simple static password)
+ *
+ * Auth precedence:
+ *   1) IDENTITY_SERVICE_URL set  -> identity-node-client issues JWT per connection
+ *   2) MQTT_PASSWORD set         -> used as-is as MQTT password
+ *   3) MQTT_STATIC_PASSWORD set  -> used as-is as MQTT password
+ *   otherwise                    -> error
  */
 
-import { IdentityClient } from "identity-node-client";
 import { MqttClient, topicForInbox, topicForAnnounce } from "mqtt-node-client";
 
 const [,, cmd, ...args] = process.argv;
@@ -19,6 +29,9 @@ const [,, cmd, ...args] = process.argv;
 const brokerUrl = process.env.MQTT_BROKER_URL;
 const clientId = process.env.MQTT_CLIENT_ID;
 const displayName = process.env.MQTT_BOT_DISPLAY_NAME || clientId;
+const mqttPassword = process.env.MQTT_PASSWORD;
+const mqttStaticPassword = process.env.MQTT_STATIC_PASSWORD;
+const identityServiceUrl = process.env.IDENTITY_SERVICE_URL;
 
 function usage() {
   console.error(`Usage:
@@ -26,26 +39,72 @@ function usage() {
   node run.mjs publish <bot_id> <operator_id> <topic> '<json>'
   node run.mjs subscribe <bot_id> <operator_id> <topic1> [topic2 ...]
   node run.mjs poll <bot_id> <operator_id> [timeout_ms] [topic1] [topic2 ...]
-Env: MQTT_BROKER_URL, MQTT_CLIENT_ID
+Env:
+  - MQTT_BROKER_URL (required)
+  - MQTT_CLIENT_ID (required)
+  - IDENTITY_SERVICE_URL (optional, enables identity-backed JWT auth)
+  - MQTT_PASSWORD (optional, static JWT or opaque password)
+  - MQTT_STATIC_PASSWORD (optional, simple static password)
+Auth precedence:
+  1) IDENTITY_SERVICE_URL
+  2) MQTT_PASSWORD
+  3) MQTT_STATIC_PASSWORD
 `);
 }
 
-async function getToken(botId, operatorId) {
-  const identity = new IdentityClient({ botId, operatorId });
-  return identity.issueMqttToken(300);
+async function createAuth(botId, operatorId) {
+  // Identity-backed JWT (recommended)
+  if (identityServiceUrl) {
+    const { IdentityClient } = await import("identity-node-client");
+    const identity = new IdentityClient({
+      botId,
+      operatorId,
+      identityServiceUrl,
+    });
+    // Ensure operator/bot/key are registered; throws with clear error otherwise.
+    await identity.init();
+    return {
+      authMode: "identity",
+      username: botId,
+      getPassword: async () => identity.issueMqttToken(300),
+    };
+  }
+
+  // Static JWT or opaque password
+  if (mqttPassword) {
+    return {
+      authMode: "jwt",
+      username: botId,
+      getPassword: async () => mqttPassword,
+    };
+  }
+
+  // Simple static password
+  if (mqttStaticPassword) {
+    return {
+      authMode: "static",
+      username: botId,
+      getPassword: async () => mqttStaticPassword,
+    };
+  }
+
+  throw new Error(
+    "No MQTT auth configured. Set IDENTITY_SERVICE_URL, MQTT_PASSWORD, or MQTT_STATIC_PASSWORD."
+  );
 }
 
 async function withConnection(botId, operatorId, fn) {
   if (!brokerUrl || !clientId) {
     throw new Error("MQTT_BROKER_URL and MQTT_CLIENT_ID are required");
   }
-  const token = await getToken(botId, operatorId);
+  const { authMode, username, getPassword } = await createAuth(botId, operatorId);
+  console.error(JSON.stringify({ authMode }));
   const mqtt = new MqttClient();
   await mqtt.connect({
     brokerUrl,
     clientId,
-    username: botId,
-    getPassword: async () => token,
+    username,
+    getPassword,
   });
   try {
     return await fn(mqtt);
