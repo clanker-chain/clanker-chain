@@ -39,15 +39,19 @@ export OPENCLAW_ROOT=~/services/openclaw
 
 ## Scripts
 
-| Script             | What it does |
-|--------------------|--------------|
-| `build.sh`         | `docker compose build`; loads `.env` and passes `GITHUB_TOKEN` / `IDENTITY_ASSET_ID` as build args. |
-| `ls-extensions.sh` | `docker compose exec openclaw-gateway ls -la /app/extensions` |
-| `ls-skills.sh`     | `docker compose exec openclaw-gateway ls -la /app/skills` |
-| `shell.sh`         | Open a shell in the gateway container (working dir `/app`). |
-| `up.sh`            | `docker compose up -d` |
-| `down.sh`          | `docker compose down` |
-| `logs.sh`          | `docker compose logs -f openclaw-gateway` (pass args to override, e.g. `./logs.sh --tail 100`). |
+| Script                      | What it does |
+|-----------------------------|--------------|
+| `install-identity-extension.sh` | Download identity-client-plugin from a GitHub release asset and run its install (extensions + pnpm lockfile). Usage: `GITHUB_TOKEN=ghp_xxx ./install-identity-extension.sh <ASSET_ID>`. |
+| `install-mqtt-extension.sh`    | Download mqtt-client-plugin from a GitHub release asset and run its install. Usage: `GITHUB_TOKEN=ghp_xxx ./install-mqtt-extension.sh <ASSET_ID>`. |
+| `build.sh`                  | `docker compose build`; loads `.env` and passes `GITHUB_TOKEN` / `IDENTITY_ASSET_ID` as build args. |
+| `ls-extensions.sh`          | `docker compose exec openclaw-gateway ls -la /app/extensions` |
+| `ls-skills.sh`              | `docker compose exec openclaw-gateway ls -la /app/skills` |
+| `shell.sh`                  | Open a shell in the gateway container (working dir `/app`). |
+| `up.sh`                     | `docker compose up -d` |
+| `down.sh`                   | `docker compose down` |
+| `logs.sh`                   | `docker compose logs -f openclaw-gateway` (pass args to override, e.g. `./logs.sh --tail 100`). |
+
+For a full quickstart (scripts → install plugins → openclaw.json → build → up), see [OpenClaw extensions quickstart](../../docs/openclaw-extensions-quickstart.md).
 
 ## Overrides
 
