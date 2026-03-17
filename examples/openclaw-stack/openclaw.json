@@ -1,6 +1,6 @@
 {
   "plugins": {
-    "enabled": ["identity-client-plugin", "mqtt-client-plugin"]
+    "enabled": ["clanker-chain-identity", "clanker-chain-mqtt"]
   },
   "channels": {
     "mqtt": {

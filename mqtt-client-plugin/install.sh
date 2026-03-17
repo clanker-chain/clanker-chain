@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PLUGIN_NAME="mqtt-client-plugin"
+PLUGIN_NAME="clanker-chain-mqtt"
 if [ -n "${OPENCLAW_EXTENSIONS_DIR:-}" ]; then
   TARGET_ROOT="$OPENCLAW_EXTENSIONS_DIR"
   if [ "$TARGET_ROOT" = /extensions ] && [ -d /app/extensions ]; then

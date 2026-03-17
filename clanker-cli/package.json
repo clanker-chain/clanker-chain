@@ -1,5 +1,5 @@
 {
-  "name": "@openclaw/clanker-cli",
+  "name": "@clanker-chain/clanker-cli",
   "version": "0.1.0",
   "description": "CLI for wiring clanker-chain identity and MQTT into OpenClaw and other agentic stacks.",
   "type": "module",

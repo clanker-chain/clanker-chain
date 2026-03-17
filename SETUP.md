@@ -35,11 +35,12 @@ Use this for quick local testing or simple brokers that use a static password.
 In your OpenClaw workspace or bot image:
 
 ```bash
-cd /path/to/openclaw
-npm install /path/to/clanker-chain/mqtt-client-plugin
+openclaw plugins install @clanker-chain/mqtt-plugin
 ```
 
-Enable the plugin in your OpenClaw config (for example via `plugins.enabled`) as documented by OpenClaw.
+Or from a local path: `openclaw plugins install /path/to/clanker-chain/mqtt-client-plugin`
+
+Enable the plugin in your OpenClaw config (for example via `plugins.enabled` with id `clanker-chain-mqtt`) as documented by OpenClaw.
 
 ### 1.2 Configure environment
 

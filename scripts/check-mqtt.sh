@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Health check for MQTT connectivity via the mqtt-client-plugin skill.
+# Health check for MQTT connectivity via the clanker-chain-mqtt skill.
 # Usage:
 #   ./scripts/check-mqtt.sh <bot_id> <operator_id>
 #
@@ -27,7 +27,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SKILL_RUN="${ROOT_DIR}/mqtt-client-plugin/src/skill/run.mjs"
 
 if [ ! -f "$SKILL_RUN" ]; then
-  echo "{\"ok\": false, \"error\": \"mqtt-client-plugin skill runner not found at ${SKILL_RUN}\"}"
+  echo "{\"ok\": false, \"error\": \"clanker-chain-mqtt skill runner not found at ${SKILL_RUN}\"}"
   exit 1
 fi
 

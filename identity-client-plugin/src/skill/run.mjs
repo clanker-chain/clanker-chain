@@ -12,7 +12,7 @@
  * Env: IDENTITY_SERVICE_URL.
  */
 
-import { IdentityClient } from "@openclaw/identity-client-plugin";
+import { IdentityClient } from "@clanker-chain/identity-plugin";
 
 const [,, cmd, ...args] = process.argv;
 

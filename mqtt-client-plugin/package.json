@@ -1,9 +1,12 @@
 {
-  "name": "@openclaw/mqtt-client-plugin",
+  "name": "@clanker-chain/mqtt-plugin",
   "version": "0.1.3",
   "description": "MQTT client and skill for clanker-chain bots (crypto auth).",
   "type": "module",
   "main": "index.mjs",
+  "openclaw": {
+    "extensions": ["./index.mjs"]
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },

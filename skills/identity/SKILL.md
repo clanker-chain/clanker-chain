@@ -242,7 +242,7 @@ This skill is designed to be **small and thin** on the bot. The heavy lifting (l
 
 - A private key file under `~/.openclaw/keys/<bot_id>.key`.
 - Network access to the identity service (`IDENTITY_SERVICE_URL`).
-- A thin identity client library (for example, an `@openclaw/identity-client` extension) that this skill can import.
+- A thin identity client library (for example, the `@clanker-chain/identity-plugin` package) that this skill can import.
 
 ### Skills vs plugins
 
@@ -262,19 +262,14 @@ This repo provides the **skill manifest and CLI wrapper** (`run.mjs`); you typic
 
 ### Typical packaging flow
 
-1. In your OpenClaw plugin or bot image source repo (separate from this identity service repo), create an extension under `openclaw/extensions/identity-client` that:
-   - Wraps the `IdentityClient` implementation (for example by re‑exporting `identity-node-client` from this repo).
-   - Has its own `package.json` and `openclaw.plugin.json` (see `identity/SERVICE.md` for example manifests).
-2. In your Dockerfile for bot images (on the Ubuntu host):
-   - `COPY` the extension directory into the image (e.g. `/app/openclaw/extensions/identity-client`).
-   - Run `npm install && npm run build` in that directory.
-   - From the skill directory (`/app/skills/identity`), run `npm install /app/openclaw/extensions/identity-client` so that:
+1. Install the Clanker Chain identity plugin: `openclaw plugins install @clanker-chain/identity-plugin`, or in your OpenClaw plugin or bot image source repo, add the plugin (see `identity/SERVICE.md` for example manifests).
+2. In your Dockerfile for bot images (on the Ubuntu host), ensure the identity plugin is available so that:
 
    ```js
-   import { IdentityClient } from "@openclaw/identity-client";
+   import { IdentityClient } from "@clanker-chain/identity-plugin";
    ```
 
-   resolves inside `run.mjs`.
+   resolves inside `run.mjs` (e.g. by installing `@clanker-chain/identity-plugin` in the skill or app).
 3. Copy only `SKILL.md` (and optionally `run.mjs`) into `skills/identity/` in the image, or point the plugin’s `skills` array at your workspace skill directory.
 
 With this setup, bots do not need any of the identity service or ledger code; they only need:

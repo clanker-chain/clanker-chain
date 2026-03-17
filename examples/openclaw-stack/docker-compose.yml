@@ -4,7 +4,7 @@ services:
   openclaw-gateway:
     image: openclaw/gateway:latest
     environment:
-      - OPENCLAW_EXTENSIONS=identity-client-plugin mqtt-client-plugin
+      - OPENCLAW_EXTENSIONS=clanker-chain-identity clanker-chain-mqtt
     volumes:
       - ./openclaw.json:/root/.openclaw/openclaw.json:ro
     depends_on:

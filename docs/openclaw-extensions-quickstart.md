@@ -6,42 +6,59 @@ End-to-end steps to install the clanker-chain identity and MQTT plugins into Ope
 
 - Ubuntu (or similar) with Docker and Docker Compose
 - OpenClaw repo (e.g. `~/services/openclaw`) with the official Dockerfile and `docker-compose.yml`
-- `curl` installed
+- `curl` installed (only if using the GitHub release path below)
 
-## 1. Download the extension bundles
+## 1. Install the plugins (recommended: OpenClaw CLI)
 
-From your OpenClaw repo:
+From any directory where OpenClaw is available:
 
 ```bash
-cd ~/services/openclaw
-
-# Identity client plugin (replace version with the tag you want)
-curl -L "https://github.com/pjsandwich/clanker-chain/releases/download/identity-client-plugin-v0.1.5/identity-client-plugin-identity-client-plugin-v0.1.5.tgz" \
-  -o identity-client-plugin.tgz
-
-# MQTT client plugin (replace version with the tag you want)
-curl -L "https://github.com/pjsandwich/clanker-chain/releases/download/mqtt-client-plugin-v0.1.2/mqtt-client-plugin-mqtt-client-plugin-v0.1.2.tgz" \
-  -o mqtt-client-plugin.tgz
+openclaw plugins install @clanker-chain/identity-plugin
+openclaw plugins install @clanker-chain/mqtt-plugin
 ```
 
-## 2. Unpack into the OpenClaw extensions directory
+Restart the Gateway after installing. Then ensure your config enables the plugins (see step 2).
 
-```bash
-cd ~/services/openclaw
-mkdir -p extensions
+## 2. Configure OpenClaw
 
-tar -xzf identity-client-plugin.tgz -C extensions
-tar -xzf mqtt-client-plugin.tgz -C extensions
+**2a. Enable the plugins**
+
+Ensure `plugins.enabled` in your OpenClaw config (e.g. `~/.openclaw/openclaw.json`) includes the plugin ids:
+
+```json
+{
+  "plugins": {
+    "enabled": ["clanker-chain-identity", "clanker-chain-mqtt"]
+  }
+}
 ```
 
-## 4. Configure OpenClaw
+If you use `openclaw plugins install`, the plugins may already be enabled; confirm in `openclaw plugins list`.
 
-**4a. Build args and .env**
+**2b. MQTT channel config**
 
-In the OpenClaw repo, ensure `.env` contains:
+Add the `mqtt` channel with your broker and identity service URLs. Example snippet:
+
+```json
+{
+  "channels": {
+    "mqtt": {
+      "enabled": true,
+      "botId": "openclaw.test.local",
+      "operatorId": "org.openclaw.operator",
+      "brokerUrl": "mqtt://localhost:1883",
+      "identityServiceUrl": "http://localhost:8080"
+    }
+  }
+}
+```
+
+**2c. Docker build (when baking extensions into the image)**
+
+If your OpenClaw image is built with extensions baked in, set in `.env`:
 
 ```bash
-OPENCLAW_EXTENSIONS=identity-client-plugin mqtt-client-plugin
+OPENCLAW_EXTENSIONS=clanker-chain-identity clanker-chain-mqtt
 ```
 
 Ensure `docker-compose.yml` passes this into the build, e.g.:
@@ -56,17 +73,7 @@ services:
         OPENCLAW_EXTENSIONS: ${OPENCLAW_EXTENSIONS}
 ```
 
-**4b. Enable the plugins in OpenClaw config**
-
-Edit the gateway config and add the plugins to the enabled plugins list:
-
-```bash
-nano ~/.openclaw/openclaw.json
-```
-
-Add `identity-client-plugin` and `mqtt-client-plugin` to the enabled plugins configuration (exact key may be `plugins.enabled` or similar depending on your OpenClaw version).
-
-## 5. Build and run
+## 3. Build and run (Docker)
 
 ```bash
 cd ~/services/openclaw
@@ -74,28 +81,19 @@ docker compose build
 docker compose down && docker compose up -d
 ```
 
-## Summary (copy-paste checklist)
+## Alternative: Install from GitHub release tarballs
 
-```bash
-# 1. Download plugin bundles (update versions as needed)
-cd ~/services/openclaw
-curl -L "https://github.com/pjsandwich/clanker-chain/releases/download/identity-client-plugin-v0.1.5/identity-client-plugin-identity-client-plugin-v0.1.5.tgz" \
-  -o identity-client-plugin.tgz
-curl -L "https://github.com/pjsandwich/clanker-chain/releases/download/mqtt-client-plugin-v0.1.2/mqtt-client-plugin-mqtt-client-plugin-v0.1.2.tgz" \
-  -o mqtt-client-plugin.tgz
+If you prefer not to use npm or need a specific release:
 
-# 2. Unpack into extensions/
-mkdir -p extensions
-tar -xzf identity-client-plugin.tgz -C extensions
-tar -xzf mqtt-client-plugin.tgz -C extensions
+1. Download the plugin tarballs from the [clanker-chain releases](https://github.com/pjsandwich/clanker-chain/releases). Asset names follow the pattern `identity-client-plugin-identity-client-plugin-vX.Y.Z.tgz` and `mqtt-client-plugin-mqtt-client-plugin-vX.Y.Z.tgz` (replace version as needed).
+2. Install from the local tarball:
 
-# 3. Add OPENCLAW_EXTENSIONS=identity-client-plugin mqtt-client-plugin to ~/services/openclaw/.env
-# 4. Add identity-client-plugin and mqtt-client-plugin to enabled plugins in ~/.openclaw/openclaw.json
+   ```bash
+   openclaw plugins install ./path/to/identity-client-plugin.tgz
+   openclaw plugins install ./path/to/mqtt-client-plugin.tgz
+   ```
 
-# 5. Build and start
-docker compose build
-docker compose down && docker compose up -d
-```
+3. Configure as in step 2 (plugin ids are `clanker-chain-identity` and `clanker-chain-mqtt`; use these in `OPENCLAW_EXTENSIONS` and `plugins.enabled` if applicable).
 
 ## Next steps and auth options
 
