@@ -1,5 +1,5 @@
 import { IdentityClient } from 'identity-node-client';
-import { MqttClient } from 'mqtt-node-client';
+import { MqttClient, type ReceivedMessage } from 'mqtt-node-client';
 import type {
   MqttChannelConfig,
   InboundMessage,
@@ -7,6 +7,59 @@ import type {
   MqttMessage,
   MessageHandler,
 } from './types.js';
+
+type MessagePayload = Record<string, unknown>;
+
+function isRecord(value: unknown): value is MessagePayload {
+  return typeof value === 'object' && value !== null;
+}
+
+function readString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function valueToText(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function toInboundMessage(msg: ReceivedMessage): InboundMessage {
+  const payload = isRecord(msg.payload) ? msg.payload : undefined;
+  const from = readString(payload?.from) ?? readString(payload?.from_id) ?? msg.topic;
+  const body = payload?.body ?? payload?.text ?? msg.payload;
+  const messageId =
+    readString(payload?.message_id) ??
+    readString(payload?.correlation_id) ??
+    readString(payload?.id) ??
+    `${from}-${msg.timestamp}`;
+  const timestamp = readString(payload?.timestamp) ?? msg.timestamp;
+
+  return {
+    id: messageId,
+    from,
+    text: valueToText(body),
+    channel: 'mqtt',
+    chatType: msg.topic.includes('/inbox') ? 'direct' : 'group',
+    timestamp: new Date(timestamp),
+    topic: msg.topic,
+    raw: msg,
+  };
+}
 
 /**
  * MQTT Channel Provider for OpenClaw
@@ -69,16 +122,15 @@ export class MqttChannelProvider {
     // Initialize identity client and get JWT token
     console.log('[mqtt-channel] Initializing identity client...');
     await this.identityClient.init();
-    const token = await this.identityClient.issueMqttToken();
-    console.log('[mqtt-channel] JWT token issued');
 
     // Connect to MQTT broker
     console.log('[mqtt-channel] Connecting to broker:', this.config.brokerUrl);
     await this.mqttClient.connect({
       brokerUrl: this.config.brokerUrl,
       clientId: this.config.botId,
-      getPassword: async () => token,
+      getPassword: async () => this.identityClient.issueMqttToken(),
     });
+    console.log('[mqtt-channel] JWT token issued');
     console.log('[mqtt-channel] Connected to MQTT broker');
 
     // Subscribe to topics
@@ -167,18 +219,9 @@ export class MqttChannelProvider {
         for (const msg of messages) {
           if (this.messageHandler) {
             try {
-              const inboundMessage: InboundMessage = {
-                id: msg.id || `${msg.from}-${Date.now()}`,
-                from: msg.from,
-                text: msg.body,
-                channel: 'mqtt',
-                chatType: msg.topic.includes('/inbox') ? 'direct' : 'group',
-                timestamp: new Date(msg.timestamp),
-                topic: msg.topic,
-                raw: msg,
-              };
+              const inboundMessage = toInboundMessage(msg);
 
-              console.log('[mqtt-channel] Received message from:', msg.from);
+              console.log('[mqtt-channel] Received message from:', inboundMessage.from);
               await this.messageHandler(inboundMessage);
             } catch (error) {
               console.error('[mqtt-channel] Error handling message:', error);
