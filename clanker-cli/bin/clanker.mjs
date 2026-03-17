@@ -103,16 +103,26 @@ async function main() {
     const envPath = join(cwd, ".env");
     let envContent = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
 
-    if (!envContent.includes("OPENCLAW_EXTENSIONS")) {
+    const extensionsMatch = envContent.match(/^OPENCLAW_EXTENSIONS=(.*)$/m);
+
+    if (!extensionsMatch) {
       const line = 'OPENCLAW_EXTENSIONS=clanker-chain-identity clanker-chain-mqtt';
       envContent = envContent.trimEnd() + (envContent ? "\n" : "") + line + "\n";
       writeFileSync(envPath, envContent, "utf8");
       console.log(`Wrote OPENCLAW_EXTENSIONS to ${envPath}`);
-    } else if (!envContent.includes("clanker-chain-identity") || !envContent.includes("clanker-chain-mqtt")) {
-      // Naive append for now.
+    } else if (!extensionsMatch[1].includes("clanker-chain-identity") || !extensionsMatch[1].includes("clanker-chain-mqtt")) {
+      const existingValues = extensionsMatch[1].split(/\s+/).filter(Boolean);
+      const mergedValues = [...existingValues];
+
+      for (const extension of ["clanker-chain-identity", "clanker-chain-mqtt"]) {
+        if (!mergedValues.includes(extension)) {
+          mergedValues.push(extension);
+        }
+      }
+
       envContent = envContent.replace(
         /^OPENCLAW_EXTENSIONS=.*$/m,
-        "OPENCLAW_EXTENSIONS=clanker-chain-identity clanker-chain-mqtt",
+        `OPENCLAW_EXTENSIONS=${mergedValues.join(" ")}`,
       );
       writeFileSync(envPath, envContent, "utf8");
       console.log(`Updated OPENCLAW_EXTENSIONS in ${envPath}`);

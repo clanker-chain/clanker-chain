@@ -32,19 +32,42 @@ if [ ! -f "$SKILL_RUN" ]; then
 fi
 
 set +e
-OUTPUT="$(node "$SKILL_RUN" connect "${BOT_ID}" "${OPERATOR_ID}" 2>&1)"
+STDOUT_FILE="$(mktemp)"
+STDERR_FILE="$(mktemp)"
+cleanup() {
+  rm -f "$STDOUT_FILE" "$STDERR_FILE"
+}
+trap cleanup EXIT
+
+node "$SKILL_RUN" connect "${BOT_ID}" "${OPERATOR_ID}" >"$STDOUT_FILE" 2>"$STDERR_FILE"
 STATUS="$?"
 set -e
 
+STDOUT_OUTPUT="$(cat "$STDOUT_FILE")"
+STDERR_OUTPUT="$(cat "$STDERR_FILE")"
+
 if [ "$STATUS" -eq 0 ]; then
-  echo "{\"ok\": true, \"details\": ${OUTPUT:-\"\"}}"
+  auth_line="$(printf '%s\n' "$STDERR_OUTPUT" | tail -n1)"
+  result_line="$(printf '%s\n' "$STDOUT_OUTPUT" | tail -n1)"
+
+  if printf '%s' "$auth_line" | jq empty >/dev/null 2>&1 && printf '%s' "$result_line" | jq empty >/dev/null 2>&1; then
+    jq -cn \
+      --argjson auth "$auth_line" \
+      --argjson result "$result_line" \
+      '{ok: true, details: {authMode: $auth.authMode, result: $result}}'
+  else
+    jq -cn \
+      --arg stdout "$STDOUT_OUTPUT" \
+      --arg stderr "$STDERR_OUTPUT" \
+      '{ok: true, details: {stdout: $stdout, stderr: $stderr}}'
+  fi
 else
   # Try to parse JSON error line if present
-  err_line="$(printf '%s\n' "$OUTPUT" | tail -n1)"
+  err_line="$(printf '%s\n' "$STDERR_OUTPUT" | tail -n1)"
   if printf '%s' "$err_line" | jq empty >/dev/null 2>&1; then
     echo "{\"ok\": false, \"error\": ${err_line}}"
   else
-    echo "{\"ok\": false, \"error\": $(printf '%s' "$OUTPUT" | jq -Rs .)}"
+    echo "{\"ok\": false, \"error\": $(printf '%s' "$STDERR_OUTPUT" | jq -Rs .)}"
   fi
   exit 1
 fi
