@@ -1,6 +1,6 @@
 {
-  "id": "mqtt-client",
-  "name": "MQTT client",
+  "id": "clanker-chain-mqtt",
+  "name": "Clanker Chain MQTT",
   "description": "MQTT client and skill for clanker-chain bots (crypto auth).",
   "configSchema": {
     "type": "object",

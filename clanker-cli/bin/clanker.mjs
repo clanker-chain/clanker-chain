@@ -35,7 +35,7 @@ Usage:
   clanker check identity [operator_id]
 
 Commands:
-  init-openclaw           Wire identity-client-plugin and mqtt-client-plugin into the current OpenClaw repo (.env + basic config).
+  init-openclaw           Wire clanker-chain-identity and clanker-chain-mqtt into the current OpenClaw repo (.env + basic config).
   mint                    Wraps identity-service/scripts/quick-mint.sh to mint an operator and bot.
   check mqtt              Run scripts/check-mqtt.sh with the given bot and operator ids.
   check identity          Run scripts/check-identity.sh for the given operator id (default: org.openclaw.operator).
@@ -104,15 +104,15 @@ async function main() {
     let envContent = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
 
     if (!envContent.includes("OPENCLAW_EXTENSIONS")) {
-      const line = 'OPENCLAW_EXTENSIONS=identity-client-plugin mqtt-client-plugin';
+      const line = 'OPENCLAW_EXTENSIONS=clanker-chain-identity clanker-chain-mqtt';
       envContent = envContent.trimEnd() + (envContent ? "\n" : "") + line + "\n";
       writeFileSync(envPath, envContent, "utf8");
       console.log(`Wrote OPENCLAW_EXTENSIONS to ${envPath}`);
-    } else if (!envContent.includes("identity-client-plugin") || !envContent.includes("mqtt-client-plugin")) {
+    } else if (!envContent.includes("clanker-chain-identity") || !envContent.includes("clanker-chain-mqtt")) {
       // Naive append for now.
       envContent = envContent.replace(
         /^OPENCLAW_EXTENSIONS=.*$/m,
-        "OPENCLAW_EXTENSIONS=identity-client-plugin mqtt-client-plugin",
+        "OPENCLAW_EXTENSIONS=clanker-chain-identity clanker-chain-mqtt",
       );
       writeFileSync(envPath, envContent, "utf8");
       console.log(`Updated OPENCLAW_EXTENSIONS in ${envPath}`);
@@ -131,13 +131,13 @@ async function main() {
     if (!existsSync(cfgPath)) {
       const cfg = {
         plugins: {
-          enabled: ["identity-client-plugin", "mqtt-client-plugin"],
+          enabled: ["clanker-chain-identity", "clanker-chain-mqtt"],
         },
       };
       writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
-      console.log(`Created ${cfgPath} with identity-client-plugin and mqtt-client-plugin enabled.`);
+      console.log(`Created ${cfgPath} with clanker-chain-identity and clanker-chain-mqtt enabled.`);
     } else {
-      console.log(`${cfgPath} already exists. Please ensure identity-client-plugin and mqtt-client-plugin are enabled there.`);
+      console.log(`${cfgPath} already exists. Please ensure clanker-chain-identity and clanker-chain-mqtt are enabled there.`);
     }
 
     console.log("init-openclaw complete. Rebuild your OpenClaw images and restart the stack.");

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PLUGIN_NAME="identity-client-plugin"
+PLUGIN_NAME="clanker-chain-identity"
 if [ -n "${OPENCLAW_EXTENSIONS_DIR:-}" ]; then
   TARGET_ROOT="$OPENCLAW_EXTENSIONS_DIR"
   # OpenClaw Docker: app loads from /app/extensions; /extensions would be wrong

@@ -41,8 +41,8 @@ export OPENCLAW_ROOT=~/services/openclaw
 
 | Script                      | What it does |
 |-----------------------------|--------------|
-| `install-identity-extension.sh` | Download identity-client-plugin from a GitHub release asset and run its install (extensions + pnpm lockfile). Usage: `GITHUB_TOKEN=ghp_xxx ./install-identity-extension.sh <ASSET_ID>`. |
-| `install-mqtt-extension.sh`    | Download mqtt-client-plugin from a GitHub release asset and run its install. Usage: `GITHUB_TOKEN=ghp_xxx ./install-mqtt-extension.sh <ASSET_ID>`. |
+| `install-identity-extension.sh` | Download clanker-chain-identity from a GitHub release asset and run its install (extensions + pnpm lockfile). Usage: `GITHUB_TOKEN=ghp_xxx ./install-identity-extension.sh <ASSET_ID>`. |
+| `install-mqtt-extension.sh`    | Download clanker-chain-mqtt from a GitHub release asset and run its install. Usage: `GITHUB_TOKEN=ghp_xxx ./install-mqtt-extension.sh <ASSET_ID>`. |
 | `build.sh`                  | `docker compose build`; loads `.env` and passes `GITHUB_TOKEN` / `IDENTITY_ASSET_ID` as build args. |
 | `ls-extensions.sh`          | `docker compose exec openclaw-gateway ls -la /app/extensions` |
 | `ls-skills.sh`              | `docker compose exec openclaw-gateway ls -la /app/skills` |

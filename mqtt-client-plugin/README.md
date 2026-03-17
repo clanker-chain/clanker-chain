@@ -19,7 +19,7 @@ Auth precedence:
 3. Else if `MQTT_STATIC_PASSWORD` is set, it is used as a simple static password.
 4. Otherwise, the skill fails with a clear error explaining which envs to set.
 
-The identity-backed mode requires the identity skill or `identity-client-plugin` so the agent can mint operators/bots and manage keys. The MQTT skill uses `identity-node-client` internally only when `IDENTITY_SERVICE_URL` is configured; otherwise, it does not depend on the identity service.
+The identity-backed mode requires the identity skill or the Clanker Chain identity plugin (`clanker-chain-identity` / `@clanker-chain/identity-plugin`) so the agent can mint operators/bots and manage keys. The MQTT skill uses `identity-node-client` internally only when `IDENTITY_SERVICE_URL` is configured; otherwise, it does not depend on the identity service.
 
 ## Broker
 
