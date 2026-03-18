@@ -20,8 +20,10 @@ if ! command -v curl >/dev/null 2>&1; then
   exit 1
 fi
 
-resp="$(curl -fsS "${url}" 2>/dev/null || true)"
+set +e
+resp="$(curl -fsS "${url}" 2>/dev/null)"
 status="$?"
+set -e
 
 if [ "$status" -ne 0 ] || [ -z "$resp" ]; then
   echo "{\"ok\": false, \"error\": \"identity service unreachable or operator not found\"}"
