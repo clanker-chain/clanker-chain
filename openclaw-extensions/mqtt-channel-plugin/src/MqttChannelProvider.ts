@@ -93,7 +93,8 @@ export class MqttChannelProvider {
         announce: config.topics?.announce || `bots/all/announce`,
         status: config.topics?.status || `bots/{botId}/status`,
       },
-      pollIntervalMs: config.pollIntervalMs || 1000,
+      // Preserve explicit 0 (non-blocking/fast polling); default only when nullish.
+      pollIntervalMs: config.pollIntervalMs ?? 1000,
     };
 
     // Replace {botId} placeholders
@@ -120,7 +121,7 @@ export class MqttChannelProvider {
   }
 
   private async connectAndSubscribe(): Promise<void> {
-    if (!this.mqttClient.connected) {
+    if (this.mqttClient.connected) {
       try {
         await this.mqttClient.disconnect();
       } catch {
