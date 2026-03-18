@@ -38,7 +38,11 @@ function valueToText(value: unknown): string {
   }
 }
 
-function toInboundMessage(msg: ReceivedMessage): InboundMessage {
+function applyBotIdPlaceholders(topic: string, botId: string): string {
+  return topic.replace(/\{botId\}/g, botId);
+}
+
+function toInboundMessage(msg: ReceivedMessage, inboxTopic: string): InboundMessage {
   const payload = isRecord(msg.payload) ? msg.payload : undefined;
   const from = readString(payload?.from) ?? readString(payload?.from_id) ?? msg.topic;
   const body = payload?.body ?? payload?.text ?? msg.payload;
@@ -54,7 +58,7 @@ function toInboundMessage(msg: ReceivedMessage): InboundMessage {
     from,
     text: valueToText(body),
     channel: 'mqtt',
-    chatType: msg.topic.includes('/inbox') ? 'direct' : 'group',
+    chatType: msg.topic === inboxTopic ? 'direct' : 'group',
     timestamp: new Date(timestamp),
     topic: msg.topic,
     raw: msg,
@@ -77,6 +81,10 @@ export class MqttChannelProvider {
   private pollingPromise?: Promise<void>;
 
   constructor(config: MqttChannelConfig) {
+    if (!config.identityServiceUrl) {
+      throw new Error('MqttChannelProvider requires identityServiceUrl for JWT auth');
+    }
+
     // Set defaults
     this.config = {
       ...config,
@@ -89,12 +97,16 @@ export class MqttChannelProvider {
     };
 
     // Replace {botId} placeholders
-    this.config.topics.inbox = this.config.topics.inbox.replace(
-      '{botId}',
+    this.config.topics.inbox = applyBotIdPlaceholders(
+      this.config.topics.inbox!,
       this.config.botId
     );
-    this.config.topics.status = this.config.topics.status.replace(
-      '{botId}',
+    this.config.topics.announce = applyBotIdPlaceholders(
+      this.config.topics.announce!,
+      this.config.botId
+    );
+    this.config.topics.status = applyBotIdPlaceholders(
+      this.config.topics.status!,
       this.config.botId
     );
 
@@ -105,6 +117,29 @@ export class MqttChannelProvider {
     });
 
     this.mqttClient = new MqttClient();
+  }
+
+  private async connectAndSubscribe(): Promise<void> {
+    if (!this.mqttClient.connected) {
+      try {
+        await this.mqttClient.disconnect();
+      } catch {
+        // Ignore disconnect cleanup errors before reconnecting.
+      }
+    }
+
+    console.log('[mqtt-channel] Connecting to broker:', this.config.brokerUrl);
+    await this.mqttClient.connect({
+      brokerUrl: this.config.brokerUrl,
+      clientId: this.config.botId,
+      getPassword: async () => this.identityClient.issueMqttToken(),
+    });
+    console.log('[mqtt-channel] JWT token issued');
+    console.log('[mqtt-channel] Connected to MQTT broker');
+
+    const topics = [this.config.topics.inbox!, this.config.topics.announce!];
+    console.log('[mqtt-channel] Subscribing to topics:', topics);
+    await this.mqttClient.subscribe(topics);
   }
 
   /**
@@ -122,21 +157,7 @@ export class MqttChannelProvider {
     // Initialize identity client and get JWT token
     console.log('[mqtt-channel] Initializing identity client...');
     await this.identityClient.init();
-
-    // Connect to MQTT broker
-    console.log('[mqtt-channel] Connecting to broker:', this.config.brokerUrl);
-    await this.mqttClient.connect({
-      brokerUrl: this.config.brokerUrl,
-      clientId: this.config.botId,
-      getPassword: async () => this.identityClient.issueMqttToken(),
-    });
-    console.log('[mqtt-channel] JWT token issued');
-    console.log('[mqtt-channel] Connected to MQTT broker');
-
-    // Subscribe to topics
-    const topics = [this.config.topics.inbox, this.config.topics.announce];
-    console.log('[mqtt-channel] Subscribing to topics:', topics);
-    await this.mqttClient.subscribe(topics);
+    await this.connectAndSubscribe();
 
     // Start polling loop
     this.pollingActive = true;
@@ -214,12 +235,17 @@ export class MqttChannelProvider {
     
     while (this.pollingActive) {
       try {
+        if (!this.mqttClient.connected) {
+          console.warn('[mqtt-channel] MQTT connection lost; reconnecting');
+          await this.connectAndSubscribe();
+        }
+
         const messages = await this.mqttClient.poll(this.config.pollIntervalMs);
 
         for (const msg of messages) {
           if (this.messageHandler) {
             try {
-              const inboundMessage = toInboundMessage(msg);
+              const inboundMessage = toInboundMessage(msg, this.config.topics.inbox!);
 
               console.log('[mqtt-channel] Received message from:', inboundMessage.from);
               await this.messageHandler(inboundMessage);
@@ -231,6 +257,11 @@ export class MqttChannelProvider {
       } catch (error) {
         if (this.pollingActive) {
           console.error('[mqtt-channel] Error polling messages:', error);
+          try {
+            await this.mqttClient.disconnect();
+          } catch (disconnectError) {
+            console.error('[mqtt-channel] Error disconnecting after poll failure:', disconnectError);
+          }
           // Wait a bit before retrying
           await new Promise((resolve) => setTimeout(resolve, 5000));
         }
