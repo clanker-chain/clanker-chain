@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Download and install mqtt-client-plugin from a GitHub release asset.
+# Download and install clanker-chain-mqtt (MQTT plugin) from a GitHub release asset.
 # Usage: GITHUB_TOKEN=ghp_xxx ./install-mqtt-extension.sh <ASSET_ID>
 # Asset ID: from the release page, click the .tgz and use the ID from the URL.
 set -euo pipefail
@@ -29,7 +29,7 @@ fi
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
 
-echo "Downloading mqtt-client-plugin asset $MQTT_ASSET_ID..."
+echo "Downloading clanker-chain-mqtt asset $MQTT_ASSET_ID..."
 curl -fsSL \
   -H "Authorization: Bearer ${GITHUB_TOKEN}" \
   -H "Accept: application/octet-stream" \
@@ -46,4 +46,4 @@ fi
 export OPENCLAW_EXTENSIONS_DIR OPENCLAW_ROOT
 bash "$PLUGIN_DIR/install.sh"
 
-echo "MQTT extension installed. Add to OPENCLAW_EXTENSIONS in .env and to enabled plugins in openclaw.json, then rebuild."
+echo "Clanker Chain MQTT plugin installed. Add clanker-chain-mqtt to OPENCLAW_EXTENSIONS in .env and to enabled plugins in openclaw.json, then rebuild."

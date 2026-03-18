@@ -1,14 +1,19 @@
 {
-  "name": "@openclaw/mqtt-client-plugin",
-  "version": "0.1.2",
+  "name": "@clanker-chain/mqtt-plugin",
+  "version": "0.1.3",
   "description": "MQTT client and skill for clanker-chain bots (crypto auth).",
   "type": "module",
   "main": "index.mjs",
+  "openclaw": {
+    "extensions": ["./index.mjs"]
+  },
   "scripts": {
-    "postinstall": "cd ../mqtt-node-client && npm run build 2>/dev/null || true"
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "identity-node-client": "file:../identity-node-client",
-    "mqtt-node-client": "file:../mqtt-node-client"
+    "mqtt-node-client": "^0.1.0"
+  },
+  "optionalDependencies": {
+    "identity-node-client": "^0.1.0"
   }
 }

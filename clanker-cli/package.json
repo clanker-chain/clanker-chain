@@ -1,0 +1,14 @@
+{
+  "name": "@clanker-chain/clanker-cli",
+  "version": "0.1.0",
+  "description": "CLI for wiring clanker-chain identity and MQTT into OpenClaw and other agentic stacks.",
+  "type": "module",
+  "bin": {
+    "clanker": "./bin/clanker.mjs"
+  },
+  "scripts": {
+    "lint": "node ./bin/clanker.mjs --help"
+  },
+  "dependencies": {}
+}
+

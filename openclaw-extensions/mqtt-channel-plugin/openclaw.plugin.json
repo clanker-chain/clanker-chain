@@ -1,0 +1,63 @@
+{
+  "id": "mqtt-channel",
+  "name": "MQTT Channel",
+  "version": "0.1.0",
+  "description": "MQTT channel provider for bot-to-bot messaging",
+  "openclaw": ">=2026.3.0",
+  "channels": ["mqtt"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "botId": {
+        "type": "string",
+        "description": "Bot ID (e.g. openclaw.tooter.prod-1)"
+      },
+      "operatorId": {
+        "type": "string",
+        "description": "Operator ID (e.g. org.openclaw.pat)"
+      },
+      "brokerUrl": {
+        "type": "string",
+        "description": "MQTT broker URL (e.g. mqtt://localhost:1883)"
+      },
+      "identityServiceUrl": {
+        "type": "string",
+        "description": "Identity service URL for JWT issuance (required)"
+      },
+      "topics": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "inbox": {
+            "type": "string",
+            "description": "Inbox topic pattern (default: bots/{botId}/inbox)"
+          },
+          "announce": {
+            "type": "string",
+            "description": "Announce topic pattern (default: bots/all/announce)"
+          },
+          "status": {
+            "type": "string",
+            "description": "Status topic pattern (default: bots/{botId}/status)"
+          }
+        }
+      },
+      "pollIntervalMs": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Polling interval in milliseconds (default: 1000)"
+      }
+    },
+    "required": ["botId", "operatorId", "brokerUrl", "identityServiceUrl"]
+  },
+  "contributes": {
+    "channels": {
+      "mqtt": {
+        "provider": "./dist/index.js",
+        "displayName": "MQTT",
+        "capabilities": ["dm", "group"]
+      }
+    }
+  }
+}

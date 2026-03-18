@@ -15,7 +15,7 @@ chmod 600 .env
 Edit `.env` and add your values (no quotes unless the value contains spaces):
 
 ```bash
-# Build: fetch identity-client-plugin from private GitHub release
+# Build: fetch clanker-chain-identity from private GitHub release
 GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 IDENTITY_ASSET_ID=371654497
 

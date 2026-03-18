@@ -1,0 +1,15 @@
+{
+  "plugins": {
+    "enabled": ["clanker-chain-identity", "clanker-chain-mqtt"]
+  },
+  "channels": {
+    "mqtt": {
+      "enabled": true,
+      "botId": "openclaw.test.local",
+      "operatorId": "org.openclaw.operator",
+      "brokerUrl": "mqtt://mqtt-broker:1883",
+      "identityServiceUrl": "http://identity-service:8080"
+    }
+  }
+}
+
