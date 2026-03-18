@@ -12,6 +12,8 @@ Provides automatic message routing for OpenClaw bot-to-bot messaging via MQTT pu
 
 ## Configuration
 
+This channel provider is identity-backed only, so `identityServiceUrl` is required.
+
 Add to your `openclaw.json`:
 
 ```json
