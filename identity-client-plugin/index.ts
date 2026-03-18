@@ -2,8 +2,8 @@ import type { OpenClawCorePluginApi } from "openclaw/plugin-sdk/core";
 import { emptyPluginConfigSchema } from "openclaw/plugin-sdk/core";
 
 const plugin = {
-  id: "identity-client",
-  name: "Identity client",
+  id: "clanker-chain-identity",
+  name: "Clanker Chain Identity",
   description: "Identity client and identity skill for clanker-chain bots.",
   configSchema: emptyPluginConfigSchema(),
   register(_api: OpenClawCorePluginApi) {

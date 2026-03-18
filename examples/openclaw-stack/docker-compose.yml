@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  openclaw-gateway:
+    image: openclaw/gateway:latest
+    environment:
+      - OPENCLAW_EXTENSIONS=clanker-chain-identity clanker-chain-mqtt
+    volumes:
+      - ./openclaw.json:/root/.openclaw/openclaw.json:ro
+    depends_on:
+      - identity-service
+      - mqtt-broker
+
+  identity-service:
+    build:
+      context: ../../identity-service
+    environment:
+      - IDENTITY_SERVICE_PORT=8080
+    ports:
+      - "8080:8080"
+
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+
+  mqtt-auth-service:
+    build:
+      context: ../../mqtt-auth-service
+    environment:
+      - IDENTITY_SERVICE_URL=http://identity-service:8080
+      - MQTT_BROKER_URL=mqtt://mqtt-broker:1883
+    depends_on:
+      - identity-service
+      - mqtt-broker
+

@@ -293,14 +293,14 @@ openclaw/
 At a high level:
 
 - `src/index.ts` should **re‑export** the thin client you want bots to use (for example, the `IdentityClient` from `identity-node-client` in this repo).
-- `package.json` declares the extension package (e.g. `@openclaw/identity-client`) and depends on `@noble/ed25519` plus any other minimal runtime deps.
+- `package.json` declares the extension package (e.g. `@clanker-chain/identity-plugin`) and depends on `@noble/ed25519` plus any other minimal runtime deps.
 - `openclaw.plugin.json` is the OpenClaw plugin manifest.
 
 #### Example `package.json` (extension)
 
 ```json
 {
-  "name": "@openclaw/identity-client",
+  "name": "@clanker-chain/identity-plugin",
   "version": "0.1.0",
   "description": "Thin client for the clanker-chain identity service",
   "main": "dist/index.js",
@@ -320,8 +320,8 @@ See the [OpenClaw plugin docs](https://docs.openclaw.ai/plugin) for the full sch
 
 ```json
 {
-  "id": "identity-client",
-  "name": "Identity client",
+  "id": "clanker-chain-identity",
+  "name": "Clanker Chain Identity",
   "description": "Identity client and identity skill for clanker-chain bots.",
   "configSchema": {
     "type": "object",
@@ -348,7 +348,7 @@ The extension’s `src/index.ts` is a thin wrapper around the actual client. For
 export * from "../../../identity-node-client/src/index";
 ```
 
-Later you can move the client implementation fully into the extension; the important part is that bots import a stable package name (e.g. `@openclaw/identity-client`) and don’t depend directly on this repo’s internal layout.
+Later you can move the client implementation fully into the extension; the important part is that bots import a stable package name (e.g. `@clanker-chain/identity-plugin`) and don’t depend directly on this repo’s internal layout.
 
 ### Installing the extension code on Ubuntu bot hosts
 
@@ -394,7 +394,7 @@ docker build -t your/france-bot-image .
 At runtime, your identity skill can import from the extension package name, for example:
 
 ```js
-import { IdentityClient } from "@openclaw/identity-client";
+import { IdentityClient } from "@clanker-chain/identity-plugin";
 ```
 
 #### Option 2: Manually copy only the extension directory

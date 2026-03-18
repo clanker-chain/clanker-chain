@@ -6,60 +6,59 @@ End-to-end steps to install the clanker-chain identity and MQTT plugins into Ope
 
 - Ubuntu (or similar) with Docker and Docker Compose
 - OpenClaw repo (e.g. `~/services/openclaw`) with the official Dockerfile and `docker-compose.yml`
-- `GITHUB_TOKEN` with access to the clanker-chain releases (if private)
-- **Asset IDs** for the release tarballs: open the [releases](https://github.com/pjsandwich/clanker-chain/releases) page, open a release (e.g. identity-client-plugin-v0.1.5), click the `.tgz` asset, and use the numeric ID from the URL (`.../releases/assets/<ASSET_ID>`)
+- `curl` installed (only if using the GitHub release path below)
 
-## 1. Get the install scripts
+## 1. Install the plugins (recommended: OpenClaw CLI)
 
-From the clanker-chain repo, copy the two scripts to your home (or anywhere on your path):
+From any directory where OpenClaw is available:
 
 ```bash
-# If you have the repo cloned:
-cp /path/to/clanker-chain/scripts/openclaw-docker/install-identity-extension.sh ~/
-cp /path/to/clanker-chain/scripts/openclaw-docker/install-mqtt-extension.sh ~/
-chmod +x ~/install-identity-extension.sh ~/install-mqtt-extension.sh
+openclaw plugins install @clanker-chain/identity-plugin
+openclaw plugins install @clanker-chain/mqtt-plugin
 ```
 
-Or create them by hand:
+Restart the Gateway after installing. Then ensure your config enables the plugins (see step 2).
 
-```bash
-touch ~/install-identity-extension.sh ~/install-mqtt-extension.sh
-chmod +x ~/install-identity-extension.sh ~/install-mqtt-extension.sh
+## 2. Configure OpenClaw
+
+**2a. Enable the plugins**
+
+Ensure `plugins.enabled` in your OpenClaw config (e.g. `~/.openclaw/openclaw.json`) includes the plugin ids:
+
+```json
+{
+  "plugins": {
+    "enabled": ["clanker-chain-identity", "clanker-chain-mqtt"]
+  }
+}
 ```
 
-Then paste the script contents from the repo into each file (e.g. with `nano ~/install-identity-extension.sh`). The scripts live in `scripts/openclaw-docker/install-identity-extension.sh` and `scripts/openclaw-docker/install-mqtt-extension.sh`.
+If you use `openclaw plugins install`, the plugins may already be enabled; confirm in `openclaw plugins list`.
 
-## 2. Install the identity plugin
+**2b. MQTT channel config**
 
-```bash
-cd ~/services/openclaw
-export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-~/install-identity-extension.sh <IDENTITY_ASSET_ID>
+Add the `mqtt` channel with your broker and identity service URLs. Example snippet:
+
+```json
+{
+  "channels": {
+    "mqtt": {
+      "enabled": true,
+      "botId": "openclaw.test.local",
+      "operatorId": "org.openclaw.operator",
+      "brokerUrl": "mqtt://localhost:1883",
+      "identityServiceUrl": "http://localhost:8080"
+    }
+  }
+}
 ```
 
-Example: `~/install-identity-extension.sh 374416153`
+**2c. Docker build (when baking extensions into the image)**
 
-The script downloads the release tarball, runs the plugin’s `install.sh` (which copies the plugin into `extensions/identity-client-plugin` and runs `pnpm install --ignore-scripts` in the OpenClaw repo to update the lockfile).
-
-## 3. Install the MQTT plugin
+If your OpenClaw image is built with extensions baked in, set in `.env`:
 
 ```bash
-export GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-~/install-mqtt-extension.sh <MQTT_ASSET_ID>
-```
-
-Example: `~/install-mqtt-extension.sh 374416302`
-
-The script downloads the tarball and runs the plugin’s `install.sh` (which installs the plugin, unpacks the node clients for pnpm, and runs `pnpm install --ignore-scripts`).
-
-## 4. Configure OpenClaw
-
-**4a. Build args and .env**
-
-In the OpenClaw repo, ensure `.env` contains:
-
-```bash
-OPENCLAW_EXTENSIONS=identity-client-plugin mqtt-client-plugin
+OPENCLAW_EXTENSIONS=clanker-chain-identity clanker-chain-mqtt
 ```
 
 Ensure `docker-compose.yml` passes this into the build, e.g.:
@@ -74,17 +73,7 @@ services:
         OPENCLAW_EXTENSIONS: ${OPENCLAW_EXTENSIONS}
 ```
 
-**4b. Enable the plugins in OpenClaw config**
-
-Edit the gateway config and add the plugins to the enabled plugins list:
-
-```bash
-nano ~/.openclaw/openclaw.json
-```
-
-Add `identity-client-plugin` and `mqtt-client-plugin` to the enabled plugins configuration (exact key may be `plugins.enabled` or similar depending on your OpenClaw version).
-
-## 5. Build and run
+## 3. Build and run (Docker)
 
 ```bash
 cd ~/services/openclaw
@@ -92,27 +81,27 @@ docker compose build
 docker compose down && docker compose up -d
 ```
 
-## Summary (copy-paste checklist)
+## Alternative: Install from GitHub release tarballs
 
-```bash
-# 1. Scripts (if copying from repo)
-cp /path/to/clanker-chain/scripts/openclaw-docker/install-identity-extension.sh ~/
-cp /path/to/clanker-chain/scripts/openclaw-docker/install-mqtt-extension.sh ~/
-chmod +x ~/install-identity-extension.sh ~/install-mqtt-extension.sh
+If you prefer not to use npm or need a specific release:
 
-# 2. Install plugins (replace ASSET_IDs with real IDs from the release page)
-cd ~/services/openclaw
-export GITHUB_TOKEN=ghp_xxxx
-~/install-identity-extension.sh <IDENTITY_ASSET_ID>
-~/install-mqtt-extension.sh <MQTT_ASSET_ID>
+1. Download the plugin tarballs from the [clanker-chain releases](https://github.com/pjsandwich/clanker-chain/releases). Asset names follow the pattern `identity-client-plugin-identity-client-plugin-vX.Y.Z.tgz` and `mqtt-client-plugin-mqtt-client-plugin-vX.Y.Z.tgz` (replace version as needed).
+2. Install from the local tarball:
 
-# 3. Add OPENCLAW_EXTENSIONS=identity-client-plugin mqtt-client-plugin to ~/services/openclaw/.env
-# 4. Add identity-client-plugin and mqtt-client-plugin to enabled plugins in ~/.openclaw/openclaw.json
+   ```bash
+   openclaw plugins install ./path/to/identity-client-plugin.tgz
+   openclaw plugins install ./path/to/mqtt-client-plugin.tgz
+   ```
 
-# 5. Build and start
-docker compose build
-docker compose down && docker compose up -d
-```
+3. Configure as in step 2 (plugin ids are `clanker-chain-identity` and `clanker-chain-mqtt`; use these in `OPENCLAW_EXTENSIONS` and `plugins.enabled` if applicable).
+
+## Next steps and auth options
+
+See `SETUP.md` in this repo for:
+
+- MQTT-only setup with static password/JWT.
+- Identity-only flows (identity service and minting bots).
+- Full-stack identity + MQTT wiring, including health checks (`scripts/check-mqtt.sh`, `scripts/check-identity.sh`).
 
 ---
 

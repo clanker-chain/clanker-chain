@@ -146,7 +146,7 @@ export class MqttClient {
    */
   poll(timeoutMs: number = 100): Promise<ReceivedMessage[]> {
     if (!this.client?.connected) {
-      return Promise.resolve([]);
+      return Promise.reject(new Error("Not connected"));
     }
     if (this.received.length > 0) {
       const out = this.received;

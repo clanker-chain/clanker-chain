@@ -4,11 +4,8 @@
   "private": true,
   "type": "module",
   "description": "OpenClaw skill for MQTT (connect, publish, subscribe, poll). Depends on mqtt-node-client and identity-node-client.",
-  "scripts": {
-    "postinstall": "cd ../../mqtt-node-client && npm run build 2>/dev/null || true"
-  },
   "dependencies": {
-    "identity-node-client": "file:../../identity-node-client",
-    "mqtt-node-client": "file:../../mqtt-node-client"
+    "identity-node-client": "^0.1.0",
+    "mqtt-node-client": "^0.1.0"
   }
 }
