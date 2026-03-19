@@ -46,8 +46,19 @@ run_bun_package() {
   local dir="$1"
   log "Bun package checks: $dir"
 
-  if [ -f "${dir}/bun.lockb" ]; then
-    (cd "$dir" && bun install --frozen-lockfile)
+  # Bun lockfiles: bun.lock (text) is the newer format; bun.lockb is legacy.
+  local has_bun_lock=0
+  if [ -f "${dir}/bun.lock" ] || [ -f "${dir}/bun.lockb" ]; then
+    has_bun_lock=1
+  fi
+
+  if [ "$CI_MODE" = "1" ]; then
+    if [ "$has_bun_lock" -eq 1 ]; then
+      (cd "$dir" && bun install --frozen-lockfile)
+    else
+      echo "ERROR: --ci requires a bun lockfile (bun.lock or bun.lockb) in ${dir} for reproducible installs." >&2
+      exit 1
+    fi
   else
     (cd "$dir" && bun install)
   fi
@@ -113,10 +124,18 @@ run_npm_package() {
   local dir="$1"
   log "NPM package checks: $dir"
 
-  if [ -f "${dir}/package-lock.json" ]; then
+  if [ "$CI_MODE" = "1" ]; then
+    if [ ! -f "${dir}/package-lock.json" ]; then
+      echo "ERROR: --ci requires ${dir}/package-lock.json for npm ci." >&2
+      exit 1
+    fi
     (cd "$dir" && npm ci)
   else
-    (cd "$dir" && npm install)
+    if [ -f "${dir}/package-lock.json" ]; then
+      (cd "$dir" && npm ci)
+    else
+      (cd "$dir" && npm install)
+    fi
   fi
 
   if [ -f "${dir}/package.json" ]; then
