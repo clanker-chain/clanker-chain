@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { loadLedger, getLedgerSnapshot } from "../src/ledger";
+import { getLedgerSnapshot, loadLedger, upsertOperator } from "../src/ledger";
 import { isTimestampRecent, validateMintOperator } from "../src/validation";
 import { verifyEd25519 } from "../src/crypto";
 import * as ed25519 from "@noble/ed25519";
@@ -87,9 +87,9 @@ test("POST /v1/bots accepts mint-bot-token payload and GET /v1/bots returns bot 
   const operatorPub = await ed25519.getPublicKeyAsync(operatorPriv);
   const operatorPublicKeyB64 = Buffer.from(operatorPub).toString("base64");
   const operatorId = "org.openclaw.test-operator";
+  const now = new Date().toISOString();
 
-  const ledger = await getLedgerSnapshot();
-  ledger.operators[operatorId] = {
+  await upsertOperator({
     operator_id: operatorId,
     display_name: "Test Operator",
     public_keys: [
@@ -97,19 +97,18 @@ test("POST /v1/bots accepts mint-bot-token payload and GET /v1/bots returns bot 
         key_id: `${operatorId}-test-key`,
         algorithm: "ed25519",
         public_key: operatorPublicKeyB64,
-        created: new Date().toISOString(),
+        created: now,
         status: "active",
       },
     ],
     status: "active",
-    created: new Date().toISOString(),
-    updated: new Date().toISOString(),
-  };
+    created: now,
+    updated: now,
+  });
 
-  // Persist the operator into the real ledger used by the server.
-  await loadLedger();
-
-  const botId = "openclaw.test-bot";
+  // BOT_ID_REGEX requires 3 segments separated by dots.
+  // Use a unique botId so the test is idempotent across repeated local runs.
+  const botId = `openclaw.test-bot.local-${Math.floor(Date.now() / 1000)}`;
   const botPriv = ed25519.utils.randomPrivateKey();
   const botPub = await ed25519.getPublicKeyAsync(botPriv);
   const botPublicKeyB64 = Buffer.from(botPub).toString("base64");
@@ -128,7 +127,7 @@ test("POST /v1/bots accepts mint-bot-token payload and GET /v1/bots returns bot 
     message,
   };
 
-  const baseUrl = "http://localhost:8080";
+  const baseUrl = process.env.IDENTITY_SERVICE_URL ?? "http://localhost:8080";
 
   // Act: POST the mint-bot payload to /v1/bots.
   const postRes = await fetch(`${baseUrl}/v1/bots`, {
