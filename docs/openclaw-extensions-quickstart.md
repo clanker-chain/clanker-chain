@@ -105,11 +105,81 @@ See `SETUP.md` in this repo for:
 
 ---
 
-## Creating new releases (maintainers)
+## Publishing via release actions (maintainers)
 
-1. Bump version in `identity-client-plugin/package.json` or `mqtt-client-plugin/package.json`.
-2. Commit and push to `main`.
-3. Tag and push to trigger the release workflow:
-   - Identity: `git tag identity-client-plugin-v0.1.5 && git push origin identity-client-plugin-v0.1.5`
-   - MQTT: `git tag mqtt-client-plugin-v0.1.2 && git push origin mqtt-client-plugin-v0.1.2`
-4. Note the **asset ID** for each new release (from the release page) and update this doc or release notes if needed.
+This repo publishes both npm packages and GitHub release tarballs from tag-triggered workflows.
+
+### 1. Pre-publish gate (local)
+
+Run the same checks used by CI:
+
+```bash
+bash ./scripts/ci-local.sh --ci
+```
+
+This validates build/test/typecheck and ensures plugin tarballs contain files declared by `openclaw.extensions`.
+
+### 2. Bump versions
+
+Update package versions:
+
+- `identity-client-plugin/package.json`
+- `mqtt-client-plugin/package.json`
+
+### 3. Tag and push
+
+Tags must match package versions exactly:
+
+```bash
+# Identity example
+git tag identity-client-plugin-v0.1.7
+git push origin identity-client-plugin-v0.1.7
+
+# MQTT example
+git tag mqtt-client-plugin-v0.1.6
+git push origin mqtt-client-plugin-v0.1.6
+```
+
+These tags trigger:
+
+- `.github/workflows/identity-client-plugin-release.yml`
+- `.github/workflows/mqtt-client-plugin-release.yml`
+
+Each workflow now:
+
+1. Verifies tag version matches `package.json`.
+2. Runs `npm pack --dry-run` and checks `openclaw.extensions` entry files are present.
+3. Publishes to npm (`@clanker-chain/identity-plugin`, `@clanker-chain/mqtt-plugin`).
+4. Uploads GitHub `.tgz` release assets.
+
+### 4. Post-publish verification checklist
+
+From any machine with npm/openclaw access:
+
+```bash
+# npm registry visibility
+npm view @clanker-chain/identity-plugin@<version>
+npm view @clanker-chain/mqtt-plugin@<version>
+
+# OpenClaw install path (host or openclaw-cli container)
+openclaw plugins install @clanker-chain/identity-plugin@<version>
+openclaw plugins install @clanker-chain/mqtt-plugin@<version>
+
+# Plugin IDs should match manifests
+openclaw plugins inspect clanker-chain-identity
+openclaw plugins inspect clanker-chain-mqtt
+```
+
+For Docker-hosted OpenClaw where npm cache permissions are restricted, install with a writable cache:
+
+```bash
+docker compose run --rm \
+  -e NPM_CONFIG_CACHE=/tmp/.npm \
+  -e npm_config_cache=/tmp/.npm \
+  openclaw-cli plugins install @clanker-chain/identity-plugin@<version>
+
+docker compose run --rm \
+  -e NPM_CONFIG_CACHE=/tmp/.npm \
+  -e npm_config_cache=/tmp/.npm \
+  openclaw-cli plugins install @clanker-chain/mqtt-plugin@<version>
+```
