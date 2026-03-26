@@ -1,6 +1,6 @@
 {
   "name": "@clanker-chain/mqtt-plugin",
-  "version": "0.1.6",
+  "version": "0.0.1",
   "description": "MQTT client and skill for clanker-chain bots (crypto auth).",
   "type": "module",
   "main": "index.mjs",
