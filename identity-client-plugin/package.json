@@ -1,6 +1,6 @@
 {
   "name": "@clanker-chain/identity-plugin",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Identity client and identity skill for clanker-chain bots.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
