@@ -215,7 +215,8 @@ export class MqttChannelProvider {
    * Used for heartbeats and presence
    */
   async publishStatus(status: Record<string, any>): Promise<void> {
-    const topic = this.config.topics.status;
+    // Constructor sets a default topic, so this should never be undefined at runtime.
+    const topic = this.config.topics.status!;
     
     const statusMessage = {
       botId: this.config.botId,

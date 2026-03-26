@@ -68,7 +68,6 @@ let ledger: IdentityLedger | null = null;
 let writeLock: Promise<void> = Promise.resolve();
 
 export async function loadLedger(): Promise<IdentityLedger> {
-  if (ledger) return ledger;
   const data = await fs.readFile(ledgerPath, "utf8");
   const parsed = JSON.parse(data) as IdentityLedger;
   // Basic shape checks; detailed validation happens elsewhere.
