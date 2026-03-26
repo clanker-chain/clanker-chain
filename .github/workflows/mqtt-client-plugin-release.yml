@@ -42,14 +42,16 @@ jobs:
           PLUGIN_NAME="mqtt-client-plugin"
           BUNDLE_DIR="bundle"
           rm -rf "$BUNDLE_DIR"
-          mkdir -p "$BUNDLE_DIR/$PLUGIN_NAME"
+          mkdir -p "$BUNDLE_DIR/$PLUGIN_NAME/node_modules"
 
           # Copy plugin files (include install.sh for one-step install + pnpm lockfile update)
           cp mqtt-client-plugin/package.json mqtt-client-plugin/openclaw.plugin.json mqtt-client-plugin/index.mjs mqtt-client-plugin/install.sh "$BUNDLE_DIR/$PLUGIN_NAME"/
           cp -R mqtt-client-plugin/src "$BUNDLE_DIR/$PLUGIN_NAME"/
 
-          # Copy node_modules (dereference file: deps so tarball is self-contained)
-          cp -RL mqtt-client-plugin/node_modules "$BUNDLE_DIR/$PLUGIN_NAME"/
+          # Bundle local node-client deps directly from repo sources to avoid
+          # layout-specific node_modules paths in CI runners.
+          cp -R mqtt-node-client "$BUNDLE_DIR/$PLUGIN_NAME/node_modules/mqtt-node-client"
+          cp -R identity-node-client "$BUNDLE_DIR/$PLUGIN_NAME/node_modules/identity-node-client"
 
           TAR_NAME="$PLUGIN_NAME-${GITHUB_REF_NAME}.tgz"
           tar -czf "$TAR_NAME" -C "$BUNDLE_DIR" "$PLUGIN_NAME"
