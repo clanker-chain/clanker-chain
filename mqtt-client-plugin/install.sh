@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PLUGIN_NAME="clanker-chain-mqtt"
+PLUGIN_NAME="${PLUGIN_NAME:-clanker-chain-mqtt}"
 if [ -n "${OPENCLAW_EXTENSIONS_DIR:-}" ]; then
   TARGET_ROOT="$OPENCLAW_EXTENSIONS_DIR"
   if [ "$TARGET_ROOT" = /extensions ] && [ -d /app/extensions ]; then
@@ -21,17 +21,30 @@ mkdir -p "$TARGET_ROOT"
 rm -rf "$TARGET_ROOT/$PLUGIN_NAME"
 cp -R "$SRC_DIR" "$TARGET_ROOT/$PLUGIN_NAME"
 
-# Unpack file: deps from tarball's node_modules so pnpm install in OpenClaw repo can resolve them
-if [ -d "$TARGET_ROOT/$PLUGIN_NAME/node_modules/identity-node-client" ]; then
-  rm -rf "$TARGET_ROOT/identity-node-client"
-  cp -R "$TARGET_ROOT/$PLUGIN_NAME/node_modules/identity-node-client" "$TARGET_ROOT/"
-  echo "Unpacked identity-node-client for workspace resolution"
-fi
-if [ -d "$TARGET_ROOT/$PLUGIN_NAME/node_modules/mqtt-node-client" ]; then
-  rm -rf "$TARGET_ROOT/mqtt-node-client"
-  cp -R "$TARGET_ROOT/$PLUGIN_NAME/node_modules/mqtt-node-client" "$TARGET_ROOT/"
-  echo "Unpacked mqtt-node-client for workspace resolution"
-fi
+# Unpack local node-client deps from tarball so pnpm workspace resolution works in OpenClaw repos.
+unpack_local_dep() {
+  # Args: $1 package dir name
+  local dep_name="$1"
+  local dep_root="$TARGET_ROOT/$PLUGIN_NAME/node_modules/$dep_name"
+  local src=""
+
+  if [ -d "$dep_root/$dep_name" ]; then
+    # Handle nested layouts like node_modules/<name>/<name>.
+    src="$dep_root/$dep_name"
+  elif [ -d "$dep_root" ]; then
+    # Handle standard layout: node_modules/<name>.
+    src="$dep_root"
+  fi
+
+  if [ -n "$src" ]; then
+    rm -rf "$TARGET_ROOT/$dep_name"
+    cp -R "$src" "$TARGET_ROOT/$dep_name"
+    echo "Unpacked $dep_name for workspace resolution"
+  fi
+}
+
+unpack_local_dep "identity-node-client"
+unpack_local_dep "mqtt-node-client"
 
 # Expose the plugin's skill (same pattern as identity)
 SKILLS_DIR="${OPENCLAW_SKILLS_DIR:-}"
