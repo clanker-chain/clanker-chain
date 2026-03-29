@@ -1,6 +1,6 @@
 {
   "name": "@clanker-chain/mqtt-plugin",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "MQTT client and skill for clanker-chain bots (crypto auth).",
   "type": "module",
   "main": "index.mjs",
@@ -10,6 +10,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
+  "bundleDependencies": [
+    "mqtt-node-client",
+    "identity-node-client"
+  ],
   "dependencies": {
     "mqtt-node-client": "^0.1.0"
   },
