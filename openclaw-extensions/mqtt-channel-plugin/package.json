@@ -10,8 +10,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "identity-node-client": "workspace:*",
-    "mqtt-node-client": "workspace:*"
+    "@clanker-chain/identity-node-client": "^0.0.1",
+    "@clanker-chain/mqtt-node-client": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

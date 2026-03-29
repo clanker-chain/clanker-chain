@@ -22,7 +22,7 @@
  *   otherwise                    -> error
  */
 
-import { MqttClient, topicForInbox, topicForAnnounce } from "mqtt-node-client";
+import { MqttClient, topicForInbox, topicForAnnounce } from "@clanker-chain/mqtt-node-client";
 
 const [,, cmd, ...args] = process.argv;
 
@@ -55,7 +55,7 @@ Auth precedence:
 async function createAuth(botId, operatorId) {
   // Identity-backed JWT (recommended)
   if (identityServiceUrl) {
-    const { IdentityClient } = await import("identity-node-client");
+    const { IdentityClient } = await import("@clanker-chain/identity-node-client");
     const identity = new IdentityClient({
       botId,
       operatorId,

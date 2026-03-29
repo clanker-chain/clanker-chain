@@ -1,6 +1,6 @@
 {
-  "name": "identity-node-client",
-  "version": "0.1.0",
+  "name": "@clanker-chain/identity-node-client",
+  "version": "0.0.1",
   "private": false,
   "type": "module",
   "main": "dist/index.js",

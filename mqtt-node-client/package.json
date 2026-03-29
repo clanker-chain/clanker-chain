@@ -1,6 +1,6 @@
 {
-  "name": "mqtt-node-client",
-  "version": "0.1.0",
+  "name": "@clanker-chain/mqtt-node-client",
+  "version": "0.0.1",
   "private": false,
   "type": "module",
   "main": "dist/index.js",

@@ -11,8 +11,8 @@
  * Env: MQTT_BROKER_URL, MQTT_CLIENT_ID, IDENTITY_SERVICE_URL (optional).
  */
 
-import { IdentityClient } from "identity-node-client";
-import { MqttClient, topicForInbox, topicForAnnounce } from "mqtt-node-client";
+import { IdentityClient } from "@clanker-chain/identity-node-client";
+import { MqttClient, topicForInbox, topicForAnnounce } from "@clanker-chain/mqtt-node-client";
 
 const [,, cmd, ...args] = process.argv;
 
