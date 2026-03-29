@@ -165,13 +165,18 @@ main() {
   # so we avoid npm install here. Instead, we symlink the local node clients and
   # run TypeScript against that compile graph.
   log "TS check/build for mqtt-channel-plugin"
-  mkdir -p "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules"
-  ln -sf "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/identity-node-client"
-  ln -sf "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/mqtt-node-client"
+  mkdir -p "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain"
+  ln -sf "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/identity-node-client"
+  ln -sf "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/mqtt-node-client"
   (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun x tsc -p tsconfig.json)
 
-  # Bundle/runtime packages (install only; bundle validation checks correctness)
-  run_npm_package "${ROOT_DIR}/mqtt-client-plugin"
+  # mqtt-client-plugin depends on @clanker-chain/mqtt-node-client and
+  # @clanker-chain/identity-node-client which are local packages (not yet on npm
+  # at dev time). Symlink them instead of running npm ci.
+  log "Linking mqtt-client-plugin deps from local sources"
+  mkdir -p "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain"
+  ln -sf "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/identity-node-client"
+  ln -sf "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/mqtt-node-client"
 
   if [ "$SKIP_TARBALL_VALIDATION" = "1" ]; then
     log "Skipping tarball validation as requested."

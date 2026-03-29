@@ -12,7 +12,7 @@
  * Env: IDENTITY_SERVICE_URL, IDENTITY_ADMIN_TOKEN (optional).
  */
 
-import { IdentityClient } from "identity-node-client";
+import { IdentityClient } from "@clanker-chain/identity-node-client";
 
 const [,, cmd, ...args] = process.argv;
 

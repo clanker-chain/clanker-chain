@@ -1,5 +1,5 @@
-import { IdentityClient } from 'identity-node-client';
-import { MqttClient, type ReceivedMessage } from 'mqtt-node-client';
+import { IdentityClient } from '@clanker-chain/identity-node-client';
+import { MqttClient, type ReceivedMessage } from '@clanker-chain/mqtt-node-client';
 import type {
   MqttChannelConfig,
   InboundMessage,

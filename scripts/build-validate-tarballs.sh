@@ -97,12 +97,15 @@ build_mqtt_client_plugin() {
   log "Building mqtt-client-plugin tarball (bundle)"
   local tarball_path="${WORK_DIR}/mqtt-client-plugin.tgz"
 
-  # Build node-client deps first (mirrors the release workflow).
+  # Build node-client deps from local sources.
   (cd "${ROOT_DIR}/identity-node-client" && npm ci 1>&2 && npm run build 1>&2)
   (cd "${ROOT_DIR}/mqtt-node-client" && npm ci 1>&2 && npm run build 1>&2)
 
   local plugin_dir="${ROOT_DIR}/mqtt-client-plugin"
-  (cd "$plugin_dir" && npm ci 1>&2)
+  # Symlink scoped node-client packages so npm install resolves them locally.
+  mkdir -p "${plugin_dir}/node_modules/@clanker-chain"
+  ln -sf "${ROOT_DIR}/identity-node-client" "${plugin_dir}/node_modules/@clanker-chain/identity-node-client"
+  ln -sf "${ROOT_DIR}/mqtt-node-client" "${plugin_dir}/node_modules/@clanker-chain/mqtt-node-client"
 
   local bundle_dir="${WORK_DIR}/bundle/mqtt-client-plugin"
   rm -rf "$bundle_dir"
@@ -114,7 +117,9 @@ build_mqtt_client_plugin() {
     "${plugin_dir}/install.sh" \
     "$bundle_dir/"
   cp -R "${plugin_dir}/src" "$bundle_dir/"
-  cp -RL "${plugin_dir}/node_modules" "$bundle_dir/"
+  mkdir -p "$bundle_dir/node_modules/@clanker-chain"
+  cp -RL "${ROOT_DIR}/identity-node-client" "$bundle_dir/node_modules/@clanker-chain/identity-node-client"
+  cp -RL "${ROOT_DIR}/mqtt-node-client" "$bundle_dir/node_modules/@clanker-chain/mqtt-node-client"
 
   tar -czf "$tarball_path" -C "${WORK_DIR}/bundle" "mqtt-client-plugin"
 

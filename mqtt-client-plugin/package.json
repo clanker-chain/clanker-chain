@@ -10,14 +10,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
-  "bundleDependencies": [
-    "mqtt-node-client",
-    "identity-node-client"
-  ],
   "dependencies": {
-    "mqtt-node-client": "^0.1.0"
+    "@clanker-chain/mqtt-node-client": "^0.0.1"
   },
   "optionalDependencies": {
-    "identity-node-client": "^0.1.0"
+    "@clanker-chain/identity-node-client": "^0.0.1"
   }
 }
