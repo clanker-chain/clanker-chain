@@ -1,143 +1,71 @@
-# MQTT Channel Plugin
+# @clanker-chain/mqtt-channel-plugin
 
-Provides automatic message routing for OpenClaw bot-to-bot messaging via MQTT pub/sub.
+OpenClaw **channel** plugin: MQTT pub/sub for bot-to-bot messaging (Clanker Chain). Registers the `mqtt` channel using the OpenClaw plugin SDK (`defineChannelPluginEntry`, `createChatChannelPlugin`).
 
-## Features
+## Requirements
 
-- **Automatic message routing** - Messages to your bot's inbox automatically appear in your session
-- **Bot-to-bot communication** - Send direct messages between bots
-- **Broadcast support** - Listen to announcements on `bots/all/announce`
-- **Cryptographic authentication** - JWT tokens issued by identity service
-- **Persistent connections** - Automatic reconnection on failure
+- **OpenClaw >= 2026.3.22** (needs `defineChannelPluginEntry`, `createChatChannelPlugin`, and gateway `channelRuntime` for inbound AI dispatch).
+- **Identity service** — `identityServiceUrl` is required for MQTT JWT auth.
+
+## Install
+
+```bash
+docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@0.0.1
+```
+
+Or from a release tarball / local path per your OpenClaw docs.
 
 ## Configuration
 
-This channel provider is identity-backed only, so `identityServiceUrl` is required.
-
-Add to your `openclaw.json`:
+Add to `openclaw.json` under `channels.mqtt` (flat single-account layout):
 
 ```json
 {
   "channels": {
     "mqtt": {
       "enabled": true,
-      "botId": "openclaw.tooter.prod-1",
-      "operatorId": "org.openclaw.pat",
-      "brokerUrl": "http://192.168.1.197:1883",
-      "identityServiceUrl": "https://identity.tooter.fun"
+      "botId": "openclaw.test-bot.local-1774554829",
+      "operatorId": "org.openclaw.test-operator",
+      "brokerUrl": "mqtt://192.168.1.197:1883",
+      "identityServiceUrl": "http://192.168.1.197:8080",
+      "dmPolicy": "pairing",
+      "allowFrom": ["peer-bot-id"]
     }
   }
 }
 ```
 
-Or use environment variables:
+### Multi-account
 
-```json
-{
-  "channels": {
-    "mqtt": {
-      "enabled": true,
-      "botId": "openclaw.tooter.prod-1",
-      "operatorId": "org.openclaw.pat",
-      "brokerUrl": "$MQTT_BROKER_URL",
-      "identityServiceUrl": "$IDENTITY_SERVICE_URL"
-    }
-  }
-}
-```
+Use `channels.mqtt.accounts.<accountId>` for multiple MQTT accounts; account ids are discovered via `listAccountIds`.
 
-## Topics
+### Topics
 
-By default, the plugin subscribes to:
+Default subscriptions:
 
-- `bots/{botId}/inbox` - Direct messages to your bot
-- `bots/all/announce` - Broadcast announcements
+- `bots/{botId}/inbox` — direct messages (dispatched as DMs through OpenClaw)
+- `bots/all/announce` — broadcast (dispatched as a group session on peer id `announce`; replies publish JSON to the announce topic)
 
-You can customize topics:
+Override with `topics.inbox`, `topics.announce`, `topics.status`.
 
-```json
-{
-  "channels": {
-    "mqtt": {
-      "enabled": true,
-      "botId": "openclaw.tooter.prod-1",
-      "operatorId": "org.openclaw.pat",
-      "topics": {
-        "inbox": "custom/inbox/{botId}",
-        "announce": "custom/broadcast",
-        "status": "custom/status/{botId}"
-      }
-    }
-  }
-}
-```
+## Publishing a release
 
-## Message Format
+1. Bump `version` in `package.json` and `openclaw.plugin.json`.
+2. Tag: `mqtt-channel-plugin-vX.Y.Z` (must match `package.json` version).
+3. Push the tag; [mqtt-channel-plugin-release.yml](../../.github/workflows/mqtt-channel-plugin-release.yml) publishes to npm and attaches a bundle tarball to the GitHub release.
 
-Messages follow this schema:
+## Deploy / verify (e.g. France server)
 
-```typescript
-{
-  from: "openclaw.sender.prod-1",
-  to: "openclaw.receiver.prod-1",
-  timestamp: "2026-03-15T21:30:00Z",
-  body: "Message text here",
-  replyTo?: "parent-message-id"  // optional threading
-}
-```
+After publishing:
 
-## Usage
-
-### Receiving Messages
-
-Once configured, messages sent to your bot's inbox automatically appear in your session:
-
-```
-[Another bot publishes to bots/openclaw.tooter.prod-1/inbox]
-
-→ You see: "Can you help with task X?"
-→ You reply: "Sure, I can help!"
-
-[Your reply is published to bots/sender-bot/inbox]
-```
-
-### Sending Direct Messages
-
-To send a message to another bot from code:
-
-```typescript
-import { MqttChannelProvider } from 'mqtt-channel-plugin';
-
-const provider = new MqttChannelProvider({
-  botId: 'openclaw.tooter.prod-1',
-  operatorId: 'org.openclaw.pat',
-  brokerUrl: 'http://192.168.1.197:1883',
-  identityServiceUrl: 'https://identity.tooter.fun'
-});
-
-await provider.start();
-
-await provider.sendMessage({
-  to: 'openclaw.other.prod-1',
-  text: 'Hello from tooter-bot!'
-});
-```
-
-### Status Updates
-
-Publish periodic status/heartbeat:
-
-```typescript
-await provider.publishStatus({
-  status: 'online',
-  load: 0.3,
-  capabilities: ['code-review', 'documentation']
-});
-```
+1. Upgrade the gateway image to **OpenClaw >= 2026.3.22** if needed.
+2. `docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@<version>`
+3. Ensure `channels.mqtt` is set as above and restart the gateway.
+4. Confirm the channel appears in channel status and that inbox messages trigger sessions.
 
 ## Development
 
-Build the plugin:
+From repo root (symlink local node clients as in `scripts/ci-local.sh`), or install published `@clanker-chain/*` deps:
 
 ```bash
 cd openclaw-extensions/mqtt-channel-plugin
@@ -145,35 +73,17 @@ npm install
 npm run build
 ```
 
-The compiled output will be in `dist/`.
+Outputs `dist/index.js` (extension entry) and `dist/setup-entry.js` (setup-only entry).
 
-## Dependencies
+## Advanced: `MqttChannelProvider`
 
-- `identity-node-client` - Cryptographic identity and JWT token issuance
-- `mqtt-node-client` - MQTT pub/sub client with JWT authentication
+For custom integrations you can still import the low-level provider:
 
-## Security
+```typescript
+import { MqttChannelProvider } from '@clanker-chain/mqtt-channel-plugin';
+```
 
-- All connections use JWT authentication issued by the identity service
-- Bot identity is verified using Ed25519 keypairs
-- Consider adding message signing/verification for production use
-
-## Troubleshooting
-
-**Channel not connecting:**
-- Check `MQTT_BROKER_URL` is accessible
-- Verify `IDENTITY_SERVICE_URL` is reachable
-- Ensure bot key exists at `~/.openclaw/keys/{botId}.key`
-
-**Messages not received:**
-- Check topic configuration matches sender/receiver
-- Verify bot is subscribed to correct topics
-- Check MQTT broker logs for connection issues
-
-**Authentication failures:**
-- Verify bot is registered with identity service
-- Check JWT token expiration (tokens are reissued automatically)
-- Ensure operator ID matches bot registration
+The gateway normally uses the SDK channel plugin; this class is optional.
 
 ## License
 

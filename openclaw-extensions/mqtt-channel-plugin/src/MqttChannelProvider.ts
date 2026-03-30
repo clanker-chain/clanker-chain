@@ -72,8 +72,13 @@ function toInboundMessage(msg: ReceivedMessage, inboxTopic: string): InboundMess
  * Messages published to the bot's inbox topic are automatically routed
  * to the OpenClaw session, and replies are published back to the sender.
  */
+type NormalizedMqttConfig = MqttChannelConfig & {
+  topics: { inbox: string; announce: string; status: string };
+  pollIntervalMs: number;
+};
+
 export class MqttChannelProvider {
-  private config: Required<MqttChannelConfig>;
+  private config: NormalizedMqttConfig;
   private identityClient: IdentityClient;
   private mqttClient: MqttClient;
   private messageHandler?: MessageHandler;
@@ -189,6 +194,22 @@ export class MqttChannelProvider {
    */
   onMessage(handler: MessageHandler): void {
     this.messageHandler = handler;
+  }
+
+  getInboxTopic(): string {
+    return this.config.topics.inbox!;
+  }
+
+  getAnnounceTopic(): string {
+    return this.config.topics.announce!;
+  }
+
+  /**
+   * Publish a JSON payload to an arbitrary topic (e.g. announce / group replies).
+   */
+  async publishJson(topic: string, payload: Record<string, unknown>): Promise<void> {
+    console.log('[mqtt-channel] Publishing JSON to:', topic);
+    await this.mqttClient.publish(topic, payload);
   }
 
   /**

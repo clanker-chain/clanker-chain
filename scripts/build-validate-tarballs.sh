@@ -47,7 +47,8 @@ pkg_path = os.path.join(plugin_root, "package.json")
 with open(pkg_path, "r", encoding="utf-8") as f:
   pkg = json.load(f)
 
-extensions = (pkg.get("openclaw") or {}).get("extensions") or []
+openclaw = pkg.get("openclaw") or {}
+extensions = openclaw.get("extensions") or []
 if not extensions:
   print(f"ERROR: No openclaw.extensions found in {os.path.basename(plugin_root)}/package.json", file=sys.stderr)
   sys.exit(1)
@@ -58,8 +59,14 @@ for ext in extensions:
   if not os.path.exists(resolved):
     missing.append((ext, resolved))
 
+setup_entry = openclaw.get("setupEntry")
+if setup_entry:
+  resolved = os.path.join(plugin_root, setup_entry)
+  if not os.path.exists(resolved):
+    missing.append((setup_entry, resolved))
+
 if missing:
-  print("ERROR: Tarball validation failed. Missing openclaw.extensions entry files:", file=sys.stderr)
+  print("ERROR: Tarball validation failed. Missing openclaw extension/setupEntry files:", file=sys.stderr)
   for ext, resolved in missing:
     print(f"- {ext} (expected at {resolved})", file=sys.stderr)
   sys.exit(1)
@@ -126,15 +133,48 @@ build_mqtt_client_plugin() {
   echo "$tarball_path"
 }
 
+build_mqtt_channel_plugin() {
+  log "Building mqtt-channel-plugin tarball (bundle)"
+  local tarball_path="${WORK_DIR}/mqtt-channel-plugin.tgz"
+
+  (cd "${ROOT_DIR}/identity-node-client" && npm ci 1>&2 && npm run build 1>&2)
+  (cd "${ROOT_DIR}/mqtt-node-client" && npm ci 1>&2 && npm run build 1>&2)
+
+  local plugin_dir="${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin"
+  mkdir -p "${plugin_dir}/node_modules/@clanker-chain"
+  ln -sf "${ROOT_DIR}/identity-node-client" "${plugin_dir}/node_modules/@clanker-chain/identity-node-client"
+  ln -sf "${ROOT_DIR}/mqtt-node-client" "${plugin_dir}/node_modules/@clanker-chain/mqtt-node-client"
+  (cd "$plugin_dir" && npm install 1>&2 && npm run build 1>&2)
+
+  local bundle_dir="${WORK_DIR}/bundle/mqtt-channel-plugin"
+  rm -rf "$bundle_dir"
+  mkdir -p "$bundle_dir"
+
+  cp "${plugin_dir}/package.json" \
+    "${plugin_dir}/openclaw.plugin.json" \
+    "${plugin_dir}/README.md" \
+    "$bundle_dir/"
+  cp -R "${plugin_dir}/dist" "$bundle_dir/"
+  mkdir -p "$bundle_dir/node_modules/@clanker-chain"
+  cp -RL "${ROOT_DIR}/identity-node-client" "$bundle_dir/node_modules/@clanker-chain/identity-node-client"
+  cp -RL "${ROOT_DIR}/mqtt-node-client" "$bundle_dir/node_modules/@clanker-chain/mqtt-node-client"
+
+  tar -czf "$tarball_path" -C "${WORK_DIR}/bundle" "mqtt-channel-plugin"
+
+  echo "$tarball_path"
+}
+
 main() {
   log "Building + validating clanker-chain OpenClaw plugin tarballs"
 
-  local identity_tgz mqtt_tgz
+  local identity_tgz mqtt_tgz mqtt_channel_tgz
   identity_tgz="$(build_identity_client_plugin)"
   mqtt_tgz="$(build_mqtt_client_plugin)"
+  mqtt_channel_tgz="$(build_mqtt_channel_plugin)"
 
   validate_tarball "$identity_tgz" "identity-client-plugin"
   validate_tarball "$mqtt_tgz" "mqtt-client-plugin"
+  validate_tarball "$mqtt_channel_tgz" "mqtt-channel-plugin"
 
   log "All tarball validations passed"
 }
