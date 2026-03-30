@@ -164,7 +164,7 @@ main() {
   # mqtt-channel-plugin uses workspace:* dependencies and doesn't ship a lockfile,
   # so we avoid npm install here. Instead, we symlink the local node clients and
   # run TypeScript against that compile graph.
-  log "TS check/build for mqtt-channel-plugin"
+  log "TS check/build for mqtt-channel-plugin (OpenClaw channel SDK plugin)"
   mkdir -p "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain"
   ln -sf "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/identity-node-client"
   ln -sf "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/mqtt-node-client"

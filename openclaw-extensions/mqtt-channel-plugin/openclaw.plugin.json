@@ -1,60 +1,89 @@
 {
   "id": "mqtt-channel",
   "name": "MQTT Channel",
-  "version": "0.1.0",
-  "description": "MQTT channel provider for bot-to-bot messaging",
-  "openclaw": ">=2026.3.0",
+  "version": "0.0.1",
+  "description": "OpenClaw MQTT channel for bot-to-bot messaging (Clanker Chain)",
+  "kind": "channel",
+  "openclaw": ">=2026.3.22",
   "channels": ["mqtt"],
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "botId": {
-        "type": "string",
-        "description": "Bot ID (e.g. openclaw.tooter.prod-1)"
-      },
-      "operatorId": {
-        "type": "string",
-        "description": "Operator ID (e.g. org.openclaw.pat)"
-      },
-      "brokerUrl": {
-        "type": "string",
-        "description": "MQTT broker URL (e.g. mqtt://localhost:1883)"
-      },
-      "identityServiceUrl": {
-        "type": "string",
-        "description": "Identity service URL for JWT issuance (required)"
-      },
-      "topics": {
+      "mqtt": {
         "type": "object",
         "additionalProperties": false,
+        "description": "channels.mqtt — single account (flat) or use accounts.* for multi-account",
         "properties": {
-          "inbox": {
-            "type": "string",
-            "description": "Inbox topic pattern (default: bots/{botId}/inbox)"
+          "enabled": {
+            "type": "boolean",
+            "description": "When false, the gateway will not start the MQTT channel"
           },
-          "announce": {
+          "dmPolicy": {
             "type": "string",
-            "description": "Announce topic pattern (default: bots/all/announce)"
+            "description": "DM policy key for OpenClaw security (optional)"
           },
-          "status": {
+          "allowFrom": {
+            "type": "array",
+            "items": {
+              "type": ["string", "number"]
+            },
+            "description": "Allowlist of sender bot IDs for DMs (optional)"
+          },
+          "botId": {
             "type": "string",
-            "description": "Status topic pattern (default: bots/{botId}/status)"
+            "description": "Bot ID (e.g. openclaw.test-bot.local-1)"
+          },
+          "operatorId": {
+            "type": "string",
+            "description": "Operator ID (e.g. org.openclaw.pat)"
+          },
+          "brokerUrl": {
+            "type": "string",
+            "description": "MQTT broker URL (e.g. mqtt://127.0.0.1:1883)"
+          },
+          "identityServiceUrl": {
+            "type": "string",
+            "description": "Identity service URL for JWT issuance (required)"
+          },
+          "accounts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "description": "Optional per-account overrides (multi-account)"
+          },
+          "topics": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "inbox": {
+                "type": "string",
+                "description": "Inbox topic pattern (default: bots/{botId}/inbox)"
+              },
+              "announce": {
+                "type": "string",
+                "description": "Announce topic pattern (default: bots/all/announce)"
+              },
+              "status": {
+                "type": "string",
+                "description": "Status topic pattern (default: bots/{botId}/status)"
+              }
+            }
+          },
+          "pollIntervalMs": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Polling interval in milliseconds (default: 1000)"
           }
         }
-      },
-      "pollIntervalMs": {
-        "type": "integer",
-        "minimum": 0,
-        "description": "Polling interval in milliseconds (default: 1000)"
       }
-    },
-    "required": ["botId", "operatorId", "brokerUrl", "identityServiceUrl"]
+    }
   },
   "contributes": {
     "channels": {
       "mqtt": {
-        "provider": "./dist/index.js",
         "displayName": "MQTT",
         "capabilities": ["dm", "group"]
       }

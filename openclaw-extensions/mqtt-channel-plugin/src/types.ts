@@ -3,6 +3,15 @@
  */
 
 export interface MqttChannelConfig {
+  /** When false, gateway will not start this account */
+  enabled?: boolean;
+
+  /** DM policy key (OpenClaw channel security); optional */
+  dmPolicy?: string;
+
+  /** Allow-from list for DMs; optional */
+  allowFrom?: Array<string | number>;
+
   /** Bot ID (e.g., openclaw.tooter.prod-1) */
   botId: string;
   
