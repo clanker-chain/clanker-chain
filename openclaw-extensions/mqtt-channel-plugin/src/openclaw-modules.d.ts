@@ -1,6 +1,6 @@
 /**
  * Minimal typings so this package typechecks without installing OpenClaw locally.
- * At runtime, OpenClaw provides these modules (>= 2026.3.22).
+ * At runtime, OpenClaw provides these modules (>= 2026.4.15).
  */
 declare module 'openclaw/plugin-sdk/core' {
   export type OpenClawConfig = Record<string, unknown>;
