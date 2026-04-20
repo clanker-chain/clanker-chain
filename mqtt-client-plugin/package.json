@@ -11,9 +11,9 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@clanker-chain/mqtt-node-client": "^0.0.1"
+    "@clanker-chain/mqtt-node-client": "0.0.1"
   },
   "optionalDependencies": {
-    "@clanker-chain/identity-node-client": "^0.0.1"
+    "@clanker-chain/identity-node-client": "0.0.1"
   }
 }

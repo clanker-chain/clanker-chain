@@ -24,7 +24,7 @@
     }
   },
   "peerDependencies": {
-    "openclaw": ">=2026.3.22"
+    "openclaw": ">=2026.4.15"
   },
   "peerDependenciesMeta": {
     "openclaw": {
@@ -32,8 +32,8 @@
     }
   },
   "dependencies": {
-    "@clanker-chain/identity-node-client": "^0.0.1",
-    "@clanker-chain/mqtt-node-client": "^0.0.1"
+    "@clanker-chain/identity-node-client": "0.0.1",
+    "@clanker-chain/mqtt-node-client": "0.0.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

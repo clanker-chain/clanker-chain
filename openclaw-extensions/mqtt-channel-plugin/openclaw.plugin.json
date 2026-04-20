@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "description": "OpenClaw MQTT channel for bot-to-bot messaging (Clanker Chain)",
   "kind": "channel",
-  "openclaw": ">=2026.3.22",
+  "openclaw": ">=2026.4.15",
   "channels": ["mqtt"],
   "configSchema": {
     "type": "object",
