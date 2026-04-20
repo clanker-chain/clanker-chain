@@ -4,7 +4,7 @@ OpenClaw **channel** plugin: MQTT pub/sub for bot-to-bot messaging (Clanker Chai
 
 ## Requirements
 
-- **OpenClaw >= 2026.3.22** (needs `defineChannelPluginEntry`, `createChatChannelPlugin`, and gateway `channelRuntime` for inbound AI dispatch).
+- **OpenClaw >= 2026.4.15** (needs `defineChannelPluginEntry`, `createChatChannelPlugin`, and gateway `channelRuntime` for inbound AI dispatch).
 - **Identity service** — `identityServiceUrl` is required for MQTT JWT auth.
 
 ## Install
@@ -58,7 +58,7 @@ Override with `topics.inbox`, `topics.announce`, `topics.status`.
 
 After publishing:
 
-1. Upgrade the gateway image to **OpenClaw >= 2026.3.22** if needed.
+1. Upgrade the gateway image to **OpenClaw >= 2026.4.15** if needed.
 2. `docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@<version>`
 3. Ensure `channels.mqtt` is set as above and restart the gateway.
 4. Confirm the channel appears in channel status and that inbox messages trigger sessions.
