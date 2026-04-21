@@ -10,10 +10,14 @@ OpenClaw **channel** plugin: MQTT pub/sub for bot-to-bot messaging (Clanker Chai
 ## Install
 
 ```bash
-docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@0.0.1
+docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@0.0.2
 ```
 
 Or from a release tarball / local path per your OpenClaw docs.
+
+### Plugin id (allowlist)
+
+OpenClaw validates plugins by **manifest id**, not the npm package name. In `plugins.allow`, `plugins.entries`, or similar allowlists, use the string **`mqtt`**. Do not use `mqtt-channel` (that was the pre-0.0.2 manifest id). The npm package remains `@clanker-chain/mqtt-channel-plugin`.
 
 ## Configuration
 
@@ -47,6 +51,10 @@ Default subscriptions:
 - `bots/all/announce` — broadcast (dispatched as a group session on peer id `announce`; replies publish JSON to the announce topic)
 
 Override with `topics.inbox`, `topics.announce`, `topics.status`.
+
+## Changelog
+
+- **0.0.2** — OpenClaw plugin manifest / entry id is now `mqtt` (matches `channels.mqtt` and `createChannelPluginBase`). **Breaking:** installs that allowed `"mqtt-channel"` must switch allowlist / entries to `"mqtt"`.
 
 ## Publishing a release
 
