@@ -10,7 +10,7 @@ OpenClaw **channel** plugin: MQTT pub/sub for bot-to-bot messaging (Clanker Chai
 ## Install
 
 ```bash
-docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@0.0.2
+docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@0.0.3
 ```
 
 Or from a release tarball / local path per your OpenClaw docs.
@@ -20,6 +20,8 @@ Or from a release tarball / local path per your OpenClaw docs.
 OpenClaw validates plugins by **manifest id**, not the npm package name. In `plugins.allow`, `plugins.entries`, or similar allowlists, use the string **`mqtt`**. Do not use `mqtt-channel` (that was the pre-0.0.2 manifest id). The npm package remains `@clanker-chain/mqtt-channel-plugin`.
 
 ## Configuration
+
+Control UI and `openclaw config schema` aggregate MQTT settings from the plugin manifest (`channelConfigs.mqtt.schema`). Requires OpenClaw **>= 2026.4.15**.
 
 Add to `openclaw.json` under `channels.mqtt` (flat single-account layout):
 
@@ -54,6 +56,7 @@ Override with `topics.inbox`, `topics.announce`, `topics.status`.
 
 ## Changelog
 
+- **0.0.3** — Manifest now contributes the MQTT JSON Schema via `channelConfigs.mqtt.schema` so the OpenClaw aggregated config schema includes `channels.properties.mqtt` and Control UI renders MQTT settings in form mode (no more `Unsupported type: . Use Raw mode.`). Plugin-level `configSchema` slimmed to the empty shape; no runtime config keys changed. Requires OpenClaw >= 2026.4.15.
 - **0.0.2** — OpenClaw plugin manifest / entry id is now `mqtt` (matches `channels.mqtt` and `createChannelPluginBase`). **Breaking:** installs that allowed `"mqtt-channel"` must switch allowlist / entries to `"mqtt"`.
 
 ## Publishing a release
