@@ -172,6 +172,21 @@ export class MqttChannelProvider {
   }
 
   /**
+   * Start the channel and keep this promise pending until `signal` aborts.
+   * Does not call {@link stop} on abort; teardown is the caller's responsibility
+   * (the gateway plugin uses `stopAccount` as the single teardown point).
+   */
+  async runUntilAborted(signal: AbortSignal): Promise<void> {
+    await this.start();
+    if (signal.aborted) {
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      signal.addEventListener('abort', () => resolve(), { once: true });
+    });
+  }
+
+  /**
    * Stop the channel provider
    * - Stops message polling
    * - Disconnects from MQTT broker
