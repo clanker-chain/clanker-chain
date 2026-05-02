@@ -10,7 +10,7 @@ OpenClaw **channel** plugin: MQTT pub/sub for bot-to-bot messaging (Clanker Chai
 ## Install
 
 ```bash
-docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@0.0.3
+docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@0.0.4
 ```
 
 Or from a release tarball / local path per your OpenClaw docs.
@@ -56,6 +56,7 @@ Override with `topics.inbox`, `topics.announce`, `topics.status`.
 
 ## Changelog
 
+- **0.0.4** — Fix restart loop in the gateway. `startAccount` now blocks on a new `MqttChannelProvider.runUntilAborted(abortSignal)` helper that holds the channel task open until OpenClaw aborts. Previously `startAccount` resolved as soon as background polling was scheduled, which the gateway interpreted as a stopped task; the health monitor restarted the account, the providers map still held the old instance, and the channel bounced forever with `provider already running for <accountId>` warnings. Also clears the providers map on a failed `start()` so a next attempt isn't suppressed by the "already running" guard. `stopAccount` is unchanged and remains the single teardown point.
 - **0.0.3** — Manifest now contributes the MQTT JSON Schema via `channelConfigs.mqtt.schema` so the OpenClaw aggregated config schema includes `channels.properties.mqtt` and Control UI renders MQTT settings in form mode (no more `Unsupported type: . Use Raw mode.`). Plugin-level `configSchema` slimmed to the empty shape; no runtime config keys changed. Requires OpenClaw >= 2026.4.15.
 - **0.0.2** — OpenClaw plugin manifest / entry id is now `mqtt` (matches `channels.mqtt` and `createChannelPluginBase`). **Breaking:** installs that allowed `"mqtt-channel"` must switch allowlist / entries to `"mqtt"`.
 
