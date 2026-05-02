@@ -225,6 +225,11 @@ export const mqttChannelPlugin = createChatChannelPlugin({
         try {
           await provider.runUntilAborted(ctx.abortSignal);
         } catch (e) {
+          try {
+            await provider.stop();
+          } catch {
+            // Ignore cleanup errors after a failed start (e.g. stop on never-connected client).
+          }
           providers.delete(ctx.accountId);
           throw e;
         }
