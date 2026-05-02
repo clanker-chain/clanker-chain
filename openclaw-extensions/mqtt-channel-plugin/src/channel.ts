@@ -221,8 +221,14 @@ export const mqttChannelPlugin = createChatChannelPlugin({
           }
         });
 
-        await provider.start();
-        ctx.log?.info?.(`[mqtt-channel] started account ${ctx.accountId}`);
+        ctx.log?.info?.(`[mqtt-channel] starting account ${ctx.accountId}`);
+        try {
+          await provider.runUntilAborted(ctx.abortSignal);
+        } catch (e) {
+          providers.delete(ctx.accountId);
+          throw e;
+        }
+        ctx.log?.info?.(`[mqtt-channel] runUntilAborted returned for ${ctx.accountId}`);
       },
       stopAccount: async (ctx: ChannelGatewayContext<ResolvedMqttAccount>) => {
         const p = providers.get(ctx.accountId);
