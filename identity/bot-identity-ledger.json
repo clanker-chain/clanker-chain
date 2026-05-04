@@ -1,8 +1,8 @@
 {
   "$schema": "https://example.com/schemas/bot-identity-ledger.schema.json",
   "version": 1,
-  "created": "2026-03-10T02:16:51.502Z",
-  "updated": "2026-04-20T01:18:15.412Z",
+  "created": "2026-05-03T15:19:55.114Z",
+  "updated": "2026-05-03T20:11:55.562Z",
   "operators": {
     "org.openclaw.pat": {
       "operator_id": "org.openclaw.pat",
@@ -11,14 +11,30 @@
         {
           "key_id": "org.openclaw.pat-genesis-1",
           "algorithm": "ed25519",
-          "public_key": "qNmxqVCOpuV7aZkPRE1GA3Hc1ysXSiY5Bekyg/gf+3Q=",
-          "created": "2026-03-10T02:16:51.502Z",
+          "public_key": "8YFPGvtSoLhQo3De0uBQBkPJP7Dd097k6hbooUiUK5A=",
+          "created": "2026-05-03T15:19:55.114Z",
           "status": "active"
         }
       ],
       "status": "active",
-      "created": "2026-03-10T02:16:51.502Z",
-      "updated": "2026-03-10T02:16:51.502Z"
+      "created": "2026-05-03T15:19:55.114Z",
+      "updated": "2026-05-03T15:19:55.114Z"
+    },
+    "org.openclaw.alice": {
+      "operator_id": "org.openclaw.alice",
+      "display_name": "Alice",
+      "public_keys": [
+        {
+          "key_id": "org.openclaw.alice-2026-05-03T15:20:37.984Z",
+          "algorithm": "ed25519",
+          "public_key": "7CCmPixDi/MLGG9Zy6C/DGIiv26sGkkAGRfHwcxpDJs=",
+          "created": "2026-05-03T15:20:37.984Z",
+          "status": "active"
+        }
+      ],
+      "status": "active",
+      "created": "2026-05-03T15:20:37.984Z",
+      "updated": "2026-05-03T15:20:37.984Z"
     },
     "org.openclaw.test-operator": {
       "operator_id": "org.openclaw.test-operator",
@@ -27,342 +43,189 @@
         {
           "key_id": "org.openclaw.test-operator-test-key",
           "algorithm": "ed25519",
-          "public_key": "1Y+ak6DQSxgL8kUEsuhMA+5dSXUuUkqkcv8nq3rR4Gc=",
-          "created": "2026-04-20T01:18:15.412Z",
+          "public_key": "H+Q/WyFqHZdUqRTCsmT3rvy0CJ68PBykVx2fBgB3GWM=",
+          "created": "2026-05-03T20:11:55.542Z",
           "status": "active"
         }
       ],
       "status": "active",
-      "created": "2026-04-20T01:18:15.412Z",
-      "updated": "2026-04-20T01:18:15.412Z"
+      "created": "2026-05-03T20:11:55.542Z",
+      "updated": "2026-05-03T20:11:55.542Z"
     }
   },
   "bots": {
-    "openclaw.test-bot.local-1773936411": {
-      "bot_id": "openclaw.test-bot.local-1773936411",
-      "display_name": "Test Bot",
-      "operator_id": "org.openclaw.test-operator",
+    "openclaw.france.prod-1": {
+      "bot_id": "openclaw.france.prod-1",
+      "display_name": "france-bot",
+      "operator_id": "org.openclaw.pat",
       "public_keys": [
         {
-          "key_id": "openclaw.test-bot.local-1773936411-2026-03-19T16:06:51.383Z",
+          "key_id": "openclaw.france.prod-1-2026-05-03T15:21:28.789Z",
           "algorithm": "ed25519",
-          "public_key": "7PA4XJFUobKNkiI3UXeSmRrAHbFzDmuWIp+B1Vf3WNk=",
-          "created": "2026-03-19T16:06:51.383Z",
+          "public_key": "fewEZIs6ZG2kgfXh7Bbgp+xwMw1Xc+S+a+PLV6snGMs=",
+          "created": "2026-05-03T15:21:28.789Z",
           "status": "active"
         }
       ],
       "status": "active",
-      "created": "2026-03-19T16:06:51.383Z",
-      "updated": "2026-03-19T16:06:51.383Z"
+      "created": "2026-05-03T15:21:28.789Z",
+      "updated": "2026-05-03T15:21:28.789Z"
     },
-    "openclaw.test-bot.local-1773936441": {
-      "bot_id": "openclaw.test-bot.local-1773936441",
-      "display_name": "Test Bot",
-      "operator_id": "org.openclaw.test-operator",
+    "openclaw.tooter.prod-1": {
+      "bot_id": "openclaw.tooter.prod-1",
+      "display_name": "tooter-bot",
+      "operator_id": "org.openclaw.alice",
       "public_keys": [
         {
-          "key_id": "openclaw.test-bot.local-1773936441-2026-03-19T16:07:21.432Z",
+          "key_id": "openclaw.tooter.prod-1-2026-05-03T15:21:39.856Z",
           "algorithm": "ed25519",
-          "public_key": "biy7UcqsTyrvtbSIGWj1/Ol2lvV5c8qgNnQdqoVVrng=",
-          "created": "2026-03-19T16:07:21.432Z",
+          "public_key": "+Lj5OvupcNmI8M0HVeFlj66oMYjYIjgtC0pBu0XQX24=",
+          "created": "2026-05-03T15:21:39.856Z",
           "status": "active"
         }
       ],
       "status": "active",
-      "created": "2026-03-19T16:07:21.432Z",
-      "updated": "2026-03-19T16:07:21.432Z"
+      "created": "2026-05-03T15:21:39.856Z",
+      "updated": "2026-05-03T15:21:39.856Z"
     },
-    "openclaw.test-bot.local-1773937374": {
-      "bot_id": "openclaw.test-bot.local-1773937374",
+    "openclaw.test-bot.local-1777838870": {
+      "bot_id": "openclaw.test-bot.local-1777838870",
       "display_name": "Test Bot",
       "operator_id": "org.openclaw.test-operator",
       "public_keys": [
         {
-          "key_id": "openclaw.test-bot.local-1773937374-2026-03-19T16:22:54.590Z",
+          "key_id": "openclaw.test-bot.local-1777838870-2026-05-03T20:07:50.426Z",
           "algorithm": "ed25519",
-          "public_key": "Ay/2ISycT1qCgVsXlEuMm2JYl+276TUyPp+OTbrZp/s=",
-          "created": "2026-03-19T16:22:54.590Z",
+          "public_key": "UYSkxKVZzcY3RZjo6Wuq6U3xcKpqYUaLOlDFp6Gfx6g=",
+          "created": "2026-05-03T20:07:50.426Z",
           "status": "active"
         }
       ],
       "status": "active",
-      "created": "2026-03-19T16:22:54.590Z",
-      "updated": "2026-03-19T16:22:54.590Z"
+      "created": "2026-05-03T20:07:50.426Z",
+      "updated": "2026-05-03T20:07:50.426Z"
     },
-    "openclaw.test-bot.local-1774554829": {
-      "bot_id": "openclaw.test-bot.local-1774554829",
+    "openclaw.test-bot.local-1777838901": {
+      "bot_id": "openclaw.test-bot.local-1777838901",
       "display_name": "Test Bot",
       "operator_id": "org.openclaw.test-operator",
       "public_keys": [
         {
-          "key_id": "openclaw.test-bot.local-1774554829-2026-03-26T19:53:49.117Z",
+          "key_id": "openclaw.test-bot.local-1777838901-2026-05-03T20:08:22.014Z",
           "algorithm": "ed25519",
-          "public_key": "Fh/eMGcnrIwJdYL25MM6w8S0AHrJbRdZBjEXlga6d2g=",
-          "created": "2026-03-26T19:53:49.117Z",
+          "public_key": "zzpw2TwmQ2fu4FG9I4gIIUtSe4d+pcIYRhlrcyDSjS8=",
+          "created": "2026-05-03T20:08:22.014Z",
           "status": "active"
         }
       ],
       "status": "active",
-      "created": "2026-03-26T19:53:49.117Z",
-      "updated": "2026-03-26T19:53:49.117Z"
+      "created": "2026-05-03T20:08:22.014Z",
+      "updated": "2026-05-03T20:08:22.014Z"
     },
-    "openclaw.test-bot.local-1774562440": {
-      "bot_id": "openclaw.test-bot.local-1774562440",
+    "openclaw.test-bot.local-1777838924": {
+      "bot_id": "openclaw.test-bot.local-1777838924",
       "display_name": "Test Bot",
       "operator_id": "org.openclaw.test-operator",
       "public_keys": [
         {
-          "key_id": "openclaw.test-bot.local-1774562440-2026-03-26T22:00:40.330Z",
+          "key_id": "openclaw.test-bot.local-1777838924-2026-05-03T20:08:44.509Z",
           "algorithm": "ed25519",
-          "public_key": "kErzmPqtb01VTEdF88VLODUPuVwS/jeedm9l00EX9G8=",
-          "created": "2026-03-26T22:00:40.330Z",
+          "public_key": "IxLgEdXmaOL2yQUq//Og31T5qxktcr6jzwleYkYbJI8=",
+          "created": "2026-05-03T20:08:44.509Z",
           "status": "active"
         }
       ],
       "status": "active",
-      "created": "2026-03-26T22:00:40.330Z",
-      "updated": "2026-03-26T22:00:40.330Z"
+      "created": "2026-05-03T20:08:44.509Z",
+      "updated": "2026-05-03T20:08:44.509Z"
     },
-    "openclaw.test-bot.local-1774562528": {
-      "bot_id": "openclaw.test-bot.local-1774562528",
+    "openclaw.test-bot.local-1777839115": {
+      "bot_id": "openclaw.test-bot.local-1777839115",
       "display_name": "Test Bot",
       "operator_id": "org.openclaw.test-operator",
       "public_keys": [
         {
-          "key_id": "openclaw.test-bot.local-1774562528-2026-03-26T22:02:08.554Z",
+          "key_id": "openclaw.test-bot.local-1777839115-2026-05-03T20:11:55.560Z",
           "algorithm": "ed25519",
-          "public_key": "BrrZHLgrL2dJh9iYqgv/DJkmJcirqOQYrI1mAmCiAdY=",
-          "created": "2026-03-26T22:02:08.554Z",
+          "public_key": "uXY/m8MvPCiknwrvipxJQwuTAjT4Nt4bYz9HFbXyBKY=",
+          "created": "2026-05-03T20:11:55.560Z",
           "status": "active"
         }
       ],
       "status": "active",
-      "created": "2026-03-26T22:02:08.554Z",
-      "updated": "2026-03-26T22:02:08.554Z"
-    },
-    "openclaw.test-bot.local-1774562576": {
-      "bot_id": "openclaw.test-bot.local-1774562576",
-      "display_name": "Test Bot",
-      "operator_id": "org.openclaw.test-operator",
-      "public_keys": [
-        {
-          "key_id": "openclaw.test-bot.local-1774562576-2026-03-26T22:02:56.225Z",
-          "algorithm": "ed25519",
-          "public_key": "zeK78OJ+HVMr4OVaqR2Hsy5RK9X/DbPO4fRGYWFjMvw=",
-          "created": "2026-03-26T22:02:56.225Z",
-          "status": "active"
-        }
-      ],
-      "status": "active",
-      "created": "2026-03-26T22:02:56.225Z",
-      "updated": "2026-03-26T22:02:56.225Z"
-    },
-    "openclaw.test-bot.local-1774562601": {
-      "bot_id": "openclaw.test-bot.local-1774562601",
-      "display_name": "Test Bot",
-      "operator_id": "org.openclaw.test-operator",
-      "public_keys": [
-        {
-          "key_id": "openclaw.test-bot.local-1774562601-2026-03-26T22:03:21.859Z",
-          "algorithm": "ed25519",
-          "public_key": "EXm5IILN+bi3w3aXZIIgclJj7J0p0PSh3wMroJ3Xog0=",
-          "created": "2026-03-26T22:03:21.859Z",
-          "status": "active"
-        }
-      ],
-      "status": "active",
-      "created": "2026-03-26T22:03:21.859Z",
-      "updated": "2026-03-26T22:03:21.859Z"
-    },
-    "openclaw.test-bot.local-1774562663": {
-      "bot_id": "openclaw.test-bot.local-1774562663",
-      "display_name": "Test Bot",
-      "operator_id": "org.openclaw.test-operator",
-      "public_keys": [
-        {
-          "key_id": "openclaw.test-bot.local-1774562663-2026-03-26T22:04:23.893Z",
-          "algorithm": "ed25519",
-          "public_key": "LO0USLPtb9pRJN8BeQsAT1Nq0Xq7tVMPE2XJEvxF23k=",
-          "created": "2026-03-26T22:04:23.893Z",
-          "status": "active"
-        }
-      ],
-      "status": "active",
-      "created": "2026-03-26T22:04:23.893Z",
-      "updated": "2026-03-26T22:04:23.893Z"
-    },
-    "openclaw.test-bot.local-1774805814": {
-      "bot_id": "openclaw.test-bot.local-1774805814",
-      "display_name": "Test Bot",
-      "operator_id": "org.openclaw.test-operator",
-      "public_keys": [
-        {
-          "key_id": "openclaw.test-bot.local-1774805814-2026-03-29T17:36:54.242Z",
-          "algorithm": "ed25519",
-          "public_key": "fiJB36tlcJXyDD6sYBZT6hhzk4d90KavQy5Z/j6Udug=",
-          "created": "2026-03-29T17:36:54.242Z",
-          "status": "active"
-        }
-      ],
-      "status": "active",
-      "created": "2026-03-29T17:36:54.242Z",
-      "updated": "2026-03-29T17:36:54.242Z"
-    },
-    "openclaw.test-bot.local-1774806269": {
-      "bot_id": "openclaw.test-bot.local-1774806269",
-      "display_name": "Test Bot",
-      "operator_id": "org.openclaw.test-operator",
-      "public_keys": [
-        {
-          "key_id": "openclaw.test-bot.local-1774806269-2026-03-29T17:44:29.899Z",
-          "algorithm": "ed25519",
-          "public_key": "sOoQJkKhV3Y/JeOKaPivOdk+8hYXs2a9ND/MuMIxcMM=",
-          "created": "2026-03-29T17:44:29.899Z",
-          "status": "active"
-        }
-      ],
-      "status": "active",
-      "created": "2026-03-29T17:44:29.899Z",
-      "updated": "2026-03-29T17:44:29.899Z"
-    },
-    "openclaw.test-bot.local-1774806556": {
-      "bot_id": "openclaw.test-bot.local-1774806556",
-      "display_name": "Test Bot",
-      "operator_id": "org.openclaw.test-operator",
-      "public_keys": [
-        {
-          "key_id": "openclaw.test-bot.local-1774806556-2026-03-29T17:49:16.352Z",
-          "algorithm": "ed25519",
-          "public_key": "ZlcyBiJjsl0YGeQK4pzGaqsNBEcZuO5yXT4JQRnbMps=",
-          "created": "2026-03-29T17:49:16.352Z",
-          "status": "active"
-        }
-      ],
-      "status": "active",
-      "created": "2026-03-29T17:49:16.352Z",
-      "updated": "2026-03-29T17:49:16.352Z"
+      "created": "2026-05-03T20:11:55.560Z",
+      "updated": "2026-05-03T20:11:55.560Z"
     }
   },
   "operations": [
     {
-      "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1773936411",
-      "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "7PA4XJFUobKNkiI3UXeSmRrAHbFzDmuWIp+B1Vf3WNk=",
-      "operator_signature": "EK7jfZKP1aKnclwUCjlpXiDgkQOJ0yhz9WHaQGt6kIdDuaxON5tzBe8R73PDxG74mJ7xsZ23b7bj/YvTsWc5Cw==",
-      "message": "mint-bot:openclaw.test-bot.local-1773936411:org.openclaw.test-operator:7PA4XJFUobKNkiI3UXeSmRrAHbFzDmuWIp+B1Vf3WNk=:2026-03-19T16:06:51.366Z",
-      "timestamp": "2026-03-19T16:06:51.366Z",
+      "type": "mint-operator",
+      "operator_id": "org.openclaw.alice",
+      "public_key": "7CCmPixDi/MLGG9Zy6C/DGIiv26sGkkAGRfHwcxpDJs=",
+      "signature": "jmT9WusX2i0V2N9sUkyAy+KPnbDRa2FRr9W2nnu6FsskYVymkRQnTKSGtI0tWKVZwqY1QAHok+2H1BP320PdAQ==",
+      "message": "mint-operator:org.openclaw.alice:7CCmPixDi/MLGG9Zy6C/DGIiv26sGkkAGRfHwcxpDJs=:2026-05-03T15:20:37.934Z",
+      "timestamp": "2026-05-03T15:20:37.934Z",
       "op_id": "op-001"
     },
     {
       "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1773936441",
-      "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "biy7UcqsTyrvtbSIGWj1/Ol2lvV5c8qgNnQdqoVVrng=",
-      "operator_signature": "UdASmSYzlDsK63FOc5SKiWuajN0VNUtL/5SNHk78ecgkv6WGKU7CJLOgJ9SJ7goBkn9L4M7uxDZtpeJmUwBhAg==",
-      "message": "mint-bot:openclaw.test-bot.local-1773936441:org.openclaw.test-operator:biy7UcqsTyrvtbSIGWj1/Ol2lvV5c8qgNnQdqoVVrng=:2026-03-19T16:07:21.416Z",
-      "timestamp": "2026-03-19T16:07:21.416Z",
+      "bot_id": "openclaw.france.prod-1",
+      "operator_id": "org.openclaw.pat",
+      "bot_public_key": "fewEZIs6ZG2kgfXh7Bbgp+xwMw1Xc+S+a+PLV6snGMs=",
+      "operator_signature": "cDjaFze6OrVKPslj1oHaV2SE1pCAZucDgCYF2XrbqlhzpzDy6lIjEiuwesq1yWaZe2uX3GwTSfb6wBO+kAvsDA==",
+      "message": "mint-bot:openclaw.france.prod-1:org.openclaw.pat:fewEZIs6ZG2kgfXh7Bbgp+xwMw1Xc+S+a+PLV6snGMs=:2026-05-03T15:21:28.772Z",
+      "timestamp": "2026-05-03T15:21:28.772Z",
       "op_id": "op-002"
     },
     {
       "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1773937374",
-      "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "Ay/2ISycT1qCgVsXlEuMm2JYl+276TUyPp+OTbrZp/s=",
-      "operator_signature": "1lI+wIT0FqKvlH8KC5b6BnzPDIoNaFU7aiOs8ZpqMzA9eiALYDoL6YwwO+VSE5f9iRIAZmuVCa8/i76tJuXLBA==",
-      "message": "mint-bot:openclaw.test-bot.local-1773937374:org.openclaw.test-operator:Ay/2ISycT1qCgVsXlEuMm2JYl+276TUyPp+OTbrZp/s=:2026-03-19T16:22:54.573Z",
-      "timestamp": "2026-03-19T16:22:54.573Z",
+      "bot_id": "openclaw.tooter.prod-1",
+      "operator_id": "org.openclaw.alice",
+      "bot_public_key": "+Lj5OvupcNmI8M0HVeFlj66oMYjYIjgtC0pBu0XQX24=",
+      "operator_signature": "UAC9V4QUGS3djKIWi62IZBNxywodQKr1WFA3Cf5i/he24m9Asl6j+XGP6gejos1qBdMRuENAsizjv1YKIFWeBQ==",
+      "message": "mint-bot:openclaw.tooter.prod-1:org.openclaw.alice:+Lj5OvupcNmI8M0HVeFlj66oMYjYIjgtC0pBu0XQX24=:2026-05-03T15:21:39.841Z",
+      "timestamp": "2026-05-03T15:21:39.841Z",
       "op_id": "op-003"
     },
     {
       "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1774554829",
+      "bot_id": "openclaw.test-bot.local-1777838870",
       "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "Fh/eMGcnrIwJdYL25MM6w8S0AHrJbRdZBjEXlga6d2g=",
-      "operator_signature": "hVxWjYG/q6XY1hrcHoB55sypYeo72e13dYkO3dzbPeSRyrA6nX3y8mDq/D9S7BahuuWgWOAIlZCFjrL9r181BA==",
-      "message": "mint-bot:openclaw.test-bot.local-1774554829:org.openclaw.test-operator:Fh/eMGcnrIwJdYL25MM6w8S0AHrJbRdZBjEXlga6d2g=:2026-03-26T19:53:49.044Z",
-      "timestamp": "2026-03-26T19:53:49.044Z",
+      "bot_public_key": "UYSkxKVZzcY3RZjo6Wuq6U3xcKpqYUaLOlDFp6Gfx6g=",
+      "operator_signature": "J6M3sb7lJ29PK88loS79LHjQdstVvEEx8CnjFkn8iwRXdVbgb9/F3XTvCsC501yOgjEk83p3eStbjtEpaDJCCQ==",
+      "message": "mint-bot:openclaw.test-bot.local-1777838870:org.openclaw.test-operator:UYSkxKVZzcY3RZjo6Wuq6U3xcKpqYUaLOlDFp6Gfx6g=:2026-05-03T20:07:50.409Z",
+      "timestamp": "2026-05-03T20:07:50.409Z",
       "op_id": "op-004"
     },
     {
       "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1774562440",
+      "bot_id": "openclaw.test-bot.local-1777838901",
       "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "kErzmPqtb01VTEdF88VLODUPuVwS/jeedm9l00EX9G8=",
-      "operator_signature": "UTCFeYApOJML9shBoSwfsnEx1KgXzV3zqxxw5CtcANAa9ZxeeL8qLxkkanS/C6X9i3z0GNJr5t5gcQmLuZYsBw==",
-      "message": "mint-bot:openclaw.test-bot.local-1774562440:org.openclaw.test-operator:kErzmPqtb01VTEdF88VLODUPuVwS/jeedm9l00EX9G8=:2026-03-26T22:00:40.272Z",
-      "timestamp": "2026-03-26T22:00:40.272Z",
+      "bot_public_key": "zzpw2TwmQ2fu4FG9I4gIIUtSe4d+pcIYRhlrcyDSjS8=",
+      "operator_signature": "xpwb8X8ccj9bXVvSaqt+YU37zCRDKh4y46vOd/k0rZqA2dm+2UHl53gX9xZ294lebcEkDW8HqcmYytxeTXA/AQ==",
+      "message": "mint-bot:openclaw.test-bot.local-1777838901:org.openclaw.test-operator:zzpw2TwmQ2fu4FG9I4gIIUtSe4d+pcIYRhlrcyDSjS8=:2026-05-03T20:08:21.997Z",
+      "timestamp": "2026-05-03T20:08:21.997Z",
       "op_id": "op-005"
     },
     {
       "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1774562528",
+      "bot_id": "openclaw.test-bot.local-1777838924",
       "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "BrrZHLgrL2dJh9iYqgv/DJkmJcirqOQYrI1mAmCiAdY=",
-      "operator_signature": "oX3KGlpp+N4eZA8j2QBy+0z7RzV8okz1NJX95DVloBkCUaO4TXej9uzgzPWEuNELteJh2JgrerRJ9TVPVrNiCA==",
-      "message": "mint-bot:openclaw.test-bot.local-1774562528:org.openclaw.test-operator:BrrZHLgrL2dJh9iYqgv/DJkmJcirqOQYrI1mAmCiAdY=:2026-03-26T22:02:08.517Z",
-      "timestamp": "2026-03-26T22:02:08.517Z",
+      "bot_public_key": "IxLgEdXmaOL2yQUq//Og31T5qxktcr6jzwleYkYbJI8=",
+      "operator_signature": "KSCpuTeV4Ct5Ed7G0Vr/IU2slsTNn2tg3xTbDHcxYELEckvtwfmZFMFwjDTIFLqI19U5cq0IaZXiga7P2q/cBw==",
+      "message": "mint-bot:openclaw.test-bot.local-1777838924:org.openclaw.test-operator:IxLgEdXmaOL2yQUq//Og31T5qxktcr6jzwleYkYbJI8=:2026-05-03T20:08:44.490Z",
+      "timestamp": "2026-05-03T20:08:44.490Z",
       "op_id": "op-006"
     },
     {
       "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1774562576",
+      "bot_id": "openclaw.test-bot.local-1777839115",
       "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "zeK78OJ+HVMr4OVaqR2Hsy5RK9X/DbPO4fRGYWFjMvw=",
-      "operator_signature": "FwyPXLMXjJYn3jNAwC4d8Ssj4bdP6MIkUaorr2UYyO0Jkx8ZO0k6vwiFzb3LtNFXICk9h9+6kD2PGTQEjTEwAQ==",
-      "message": "mint-bot:openclaw.test-bot.local-1774562576:org.openclaw.test-operator:zeK78OJ+HVMr4OVaqR2Hsy5RK9X/DbPO4fRGYWFjMvw=:2026-03-26T22:02:56.203Z",
-      "timestamp": "2026-03-26T22:02:56.203Z",
+      "bot_public_key": "uXY/m8MvPCiknwrvipxJQwuTAjT4Nt4bYz9HFbXyBKY=",
+      "operator_signature": "TK/PBzb5ZFLKoinQ3U8kA1K+db60oMsllZ5MUc9b/d0OjAud6Cjmhz3t+7gYlmWvoMNEfMWRBsWpZ/KhsJpPCA==",
+      "message": "mint-bot:openclaw.test-bot.local-1777839115:org.openclaw.test-operator:uXY/m8MvPCiknwrvipxJQwuTAjT4Nt4bYz9HFbXyBKY=:2026-05-03T20:11:55.544Z",
+      "timestamp": "2026-05-03T20:11:55.544Z",
       "op_id": "op-007"
-    },
-    {
-      "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1774562601",
-      "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "EXm5IILN+bi3w3aXZIIgclJj7J0p0PSh3wMroJ3Xog0=",
-      "operator_signature": "Q7nu9yX7P+sXtc6srmCbw6oMXxm5Ee7ZSDHJ9QGp+hMU97VgLsHjMV9P6Eh25TETSPPhSjE5ocnTCfrvY2qODA==",
-      "message": "mint-bot:openclaw.test-bot.local-1774562601:org.openclaw.test-operator:EXm5IILN+bi3w3aXZIIgclJj7J0p0PSh3wMroJ3Xog0=:2026-03-26T22:03:21.842Z",
-      "timestamp": "2026-03-26T22:03:21.842Z",
-      "op_id": "op-008"
-    },
-    {
-      "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1774562663",
-      "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "LO0USLPtb9pRJN8BeQsAT1Nq0Xq7tVMPE2XJEvxF23k=",
-      "operator_signature": "m7qLTl4htS125DQw/APetPN6GK/Uw7aYIP0WeW5D3Lh2R0VJcQi74kRl4BGPK7b3jYvHt1YD9ipFRm/S+GCgDw==",
-      "message": "mint-bot:openclaw.test-bot.local-1774562663:org.openclaw.test-operator:LO0USLPtb9pRJN8BeQsAT1Nq0Xq7tVMPE2XJEvxF23k=:2026-03-26T22:04:23.876Z",
-      "timestamp": "2026-03-26T22:04:23.876Z",
-      "op_id": "op-009"
-    },
-    {
-      "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1774805814",
-      "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "fiJB36tlcJXyDD6sYBZT6hhzk4d90KavQy5Z/j6Udug=",
-      "operator_signature": "gYRLVovLMlTvZVgag0x5GMkZ9SQ5FJ9QbFmD0EpDQYOmJ3TNKExBySty8XlzQGxTPM6hqF6IXF43aK+CzGdLCw==",
-      "message": "mint-bot:openclaw.test-bot.local-1774805814:org.openclaw.test-operator:fiJB36tlcJXyDD6sYBZT6hhzk4d90KavQy5Z/j6Udug=:2026-03-29T17:36:54.225Z",
-      "timestamp": "2026-03-29T17:36:54.225Z",
-      "op_id": "op-010"
-    },
-    {
-      "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1774806269",
-      "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "sOoQJkKhV3Y/JeOKaPivOdk+8hYXs2a9ND/MuMIxcMM=",
-      "operator_signature": "7jhok/sA+z7MggimJeadXtu2Q2oLDx1liTYD+z32R+IN3kahP0Z2i0YobZ2BuwtLS124oRRYm299vi32tJe1Bg==",
-      "message": "mint-bot:openclaw.test-bot.local-1774806269:org.openclaw.test-operator:sOoQJkKhV3Y/JeOKaPivOdk+8hYXs2a9ND/MuMIxcMM=:2026-03-29T17:44:29.881Z",
-      "timestamp": "2026-03-29T17:44:29.881Z",
-      "op_id": "op-011"
-    },
-    {
-      "type": "mint-bot",
-      "bot_id": "openclaw.test-bot.local-1774806556",
-      "operator_id": "org.openclaw.test-operator",
-      "bot_public_key": "ZlcyBiJjsl0YGeQK4pzGaqsNBEcZuO5yXT4JQRnbMps=",
-      "operator_signature": "Mo0hNrjYN2zentDuPUJii0fEWhgf0ie0hBNfp2vVNRo6iKV1Kw1PtacOn981SsuQZwosD1bew2lBrdW4PcOvCQ==",
-      "message": "mint-bot:openclaw.test-bot.local-1774806556:org.openclaw.test-operator:ZlcyBiJjsl0YGeQK4pzGaqsNBEcZuO5yXT4JQRnbMps=:2026-03-29T17:49:16.287Z",
-      "timestamp": "2026-03-29T17:49:16.287Z",
-      "op_id": "op-012"
     }
   ]
 }

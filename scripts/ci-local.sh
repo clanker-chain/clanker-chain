@@ -119,6 +119,30 @@ run_bun_package() {
   fi
 }
 
+run_foundry_chain() {
+  if [ -d "${HOME}/.foundry/bin" ]; then
+    PATH="${HOME}/.foundry/bin:${PATH}"
+    export PATH
+  fi
+
+  if ! have_cmd forge; then
+    if [ "$CI_MODE" = "1" ]; then
+      echo "ERROR: forge is required in --ci mode (Foundry toolchain)." >&2
+      exit 1
+    fi
+    log "forge not on PATH — skipping chain/ Solidity tests. Install Foundry: https://book.getfoundry.sh/getting-started/installation"
+    return 0
+  fi
+
+  if [ ! -d "${ROOT_DIR}/chain" ]; then
+    log "No chain/ directory (skipping Foundry tests)."
+    return 0
+  fi
+
+  log "Foundry tests: chain/"
+  (cd "${ROOT_DIR}/chain" && forge test -vvv)
+}
+
 run_npm_package() {
   # Args: $1 dir
   local dir="$1"
@@ -177,6 +201,14 @@ main() {
   mkdir -p "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain"
   ln -sf "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/identity-node-client"
   ln -sf "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/mqtt-node-client"
+
+  if [ -f "${ROOT_DIR}/mqtt-client-plugin/tsconfig.json" ]; then
+    (cd "${ROOT_DIR}/mqtt-client-plugin" && bun x tsc -p tsconfig.json)
+  else
+    log "No mqtt-client-plugin/tsconfig.json (skipping TS check for mqtt-client-plugin)."
+  fi
+
+  run_foundry_chain
 
   if [ "$SKIP_TARBALL_VALIDATION" = "1" ]; then
     log "Skipping tarball validation as requested."
