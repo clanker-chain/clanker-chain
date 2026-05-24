@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import {
+  canonicalJson,
   signEnvelope,
   verifyEnvelope,
   CLANKER_MESSAGE_SIGNATURE_SCHEME,
@@ -70,5 +71,25 @@ describe("EIP-712 message signing", () => {
     };
     const sigA = (await signEnvelope(account, envA, domain)).signature;
     assert.equal(await verifyEnvelope(envB, sigA, account.address, domain), true);
+  });
+
+  it("omits undefined object properties like JSON.stringify", () => {
+    assert.equal(
+      canonicalJson({ action: "ping", optional: undefined, task_id: "t1" }),
+      canonicalJson({ action: "ping", task_id: "t1" }),
+    );
+    assert.doesNotMatch(canonicalJson({ foo: undefined, bar: 1 }), /undefined/);
+  });
+
+  it("verifies after wire JSON drops undefined body properties", async () => {
+    const account = privateKeyToAccount(generatePrivateKey());
+    const signedEnvelope: IdentityMessageEnvelope = {
+      ...sampleEnvelope,
+      body: { action: "claim_task", task_id: "task-123", optional: undefined },
+    };
+    const { signature } = await signEnvelope(account, signedEnvelope, domain);
+    const wireBody = JSON.parse(JSON.stringify(signedEnvelope.body)) as Record<string, unknown>;
+    const afterWire: IdentityMessageEnvelope = { ...signedEnvelope, body: wireBody };
+    assert.equal(await verifyEnvelope(afterWire, signature, account.address, domain), true);
   });
 });

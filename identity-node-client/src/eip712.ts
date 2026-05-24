@@ -38,6 +38,10 @@ export function canonicalJson(value: unknown): string {
 }
 
 function stringifyCanonical(value: unknown): string {
+  // JSON.stringify(undefined) is undefined (not a string); array holes become null.
+  if (value === undefined) {
+    return "null";
+  }
   if (value === null || typeof value !== "object") {
     return JSON.stringify(value);
   }
@@ -45,7 +49,9 @@ function stringifyCanonical(value: unknown): string {
     return `[${value.map((item) => stringifyCanonical(item)).join(",")}]`;
   }
   const obj = value as Record<string, unknown>;
-  const keys = Object.keys(obj).sort();
+  const keys = Object.keys(obj)
+    .filter((k) => obj[k] !== undefined)
+    .sort();
   return `{${keys.map((k) => `${JSON.stringify(k)}:${stringifyCanonical(obj[k])}`).join(",")}}`;
 }
 
