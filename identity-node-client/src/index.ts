@@ -1,115 +1,86 @@
 import { promises as fs } from "fs";
 import path from "path";
 import os from "os";
-import * as ed25519 from "@noble/ed25519";
-import { SignJWT, importJWK } from "jose";
-import type { BotRecord, IdentityMessageEnvelope, OperatorRecord, PublicKeyRecord } from "./types.js";
+import { type Address, type Hex, type PrivateKeyAccount } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import {
+  type ClankerEip712Domain,
+  signEnvelope,
+  verifyEnvelope,
+  CLANKER_MESSAGE_SIGNATURE_SCHEME,
+} from "./eip712.js";
+import type { BotRecord, IdentityMessageEnvelope, OperatorRecord } from "./types.js";
 
-const MQTT_TOKEN_AUD = "clanker-mqtt";
+function isHexEthPrivateKey(raw: string): boolean {
+  const s = raw.trim();
+  return /^0x[0-9a-fA-F]{64}$/.test(s);
+}
 
-function base64url(buf: Uint8Array): string {
-  return Buffer.from(buf)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
+export interface IdentityBackendHealth {
+  ok: boolean;
+  mode: "evm";
+  chainId?: number;
+  registryAddress?: string;
+  lastBlock?: string;
+  chainOk?: boolean;
+  error?: string;
 }
 
 export interface IdentityClientOptions {
   botId: string;
   operatorId: string;
-  /**
-   * Base URL of the identity service, e.g. "http://localhost:8080".
-   * Defaults to process.env.IDENTITY_SERVICE_URL or http://localhost:8080.
-   */
   identityServiceUrl?: string;
-  /**
-   * Path to the private key file. Defaults to ~/.openclaw/keys/{botId}.key
-   */
+  mqttAuthServiceUrl?: string;
   keyPath?: string;
-  /**
-   * Admin token for write calls if required by the service.
-   * Defaults to process.env.IDENTITY_ADMIN_TOKEN.
-   */
-  adminToken?: string;
+  ethPrivateKey?: Hex;
+  /** Override EIP-712 domain (defaults to values from GET /health during init). */
+  eip712Domain?: ClankerEip712Domain;
 }
 
 export class IdentityClient {
   private readonly botId: string;
   private readonly operatorId: string;
   private readonly baseUrl: string;
+  private readonly mqttAuthBaseUrl: string;
   private readonly keyPath: string;
-  private readonly adminToken?: string;
+  private readonly ethPrivateKeyOverride?: Hex;
+  private readonly eip712DomainOverride?: ClankerEip712Domain;
+  private eip712Domain?: ClankerEip712Domain;
 
   constructor(options: IdentityClientOptions) {
     this.botId = options.botId;
     this.operatorId = options.operatorId;
     this.baseUrl = options.identityServiceUrl ?? process.env.IDENTITY_SERVICE_URL ?? "http://localhost:8080";
+    this.mqttAuthBaseUrl =
+      options.mqttAuthServiceUrl ?? process.env.MQTT_AUTH_SERVICE_URL ?? "http://localhost:9090";
     const defaultKeyPath = path.join(os.homedir(), ".openclaw", "keys", `${this.botId}.key`);
     this.keyPath = options.keyPath ?? defaultKeyPath;
-    this.adminToken = options.adminToken ?? process.env.IDENTITY_ADMIN_TOKEN;
+    this.ethPrivateKeyOverride =
+      options.ethPrivateKey ?? (process.env.BOT_ETH_PRIVATE_KEY as Hex | undefined);
+    this.eip712DomainOverride = options.eip712Domain;
   }
 
-  /**
-   * Ensure a private key exists on disk, returning the 32-byte private key.
-   */
-  private async loadOrCreatePrivateKey(): Promise<Uint8Array> {
-    try {
-      const raw = await fs.readFile(this.keyPath, "utf8");
-      const bytes = Buffer.from(raw.trim(), "base64");
-      if (bytes.length !== 32) {
-        throw new Error("invalid key length");
-      }
-      return new Uint8Array(bytes);
-    } catch {
-      await fs.mkdir(path.dirname(this.keyPath), { recursive: true });
-      const priv = ed25519.utils.randomPrivateKey();
-      const b64 = Buffer.from(priv).toString("base64");
-      await fs.writeFile(this.keyPath, `${b64}\n`, { encoding: "utf8", mode: 0o600 });
-      return priv;
-    }
+  private async readKeyFile(): Promise<string> {
+    return (await fs.readFile(this.keyPath, "utf8")).trim();
   }
 
-  /**
-   * Derive the base64-encoded public key from the local private key.
-   */
-  async getPublicKeyBase64(): Promise<string> {
-    const priv = await this.loadOrCreatePrivateKey();
-    const pub = await ed25519.getPublicKeyAsync(priv);
-    return Buffer.from(pub).toString("base64");
+  private async loadEthAccount(): Promise<PrivateKeyAccount> {
+    const fromOpt = this.ethPrivateKeyOverride ?? (process.env.BOT_ETH_PRIVATE_KEY as Hex | undefined);
+    if (fromOpt) {
+      return privateKeyToAccount(fromOpt);
+    }
+    const raw = await this.readKeyFile();
+    if (!isHexEthPrivateKey(raw)) {
+      throw new Error(
+        `expected secp256k1-eth private key at ${this.keyPath} (0x + 64 hex chars) or set BOT_ETH_PRIVATE_KEY`,
+      );
+    }
+    return privateKeyToAccount(raw as Hex);
   }
 
-  private authHeaders(): HeadersInit {
-    const headers: HeadersInit = { "content-type": "application/json" };
-    if (this.adminToken) {
-      headers["authorization"] = `Bearer ${this.adminToken}`;
-    }
-    return headers;
-  }
-
-  private async postJson<T>(pathName: string, body: unknown, requireAuth = false): Promise<T> {
-    const url = new URL(pathName, this.baseUrl).toString();
-    const headers: HeadersInit = { "content-type": "application/json" };
-    if (requireAuth && this.adminToken) {
-      headers["authorization"] = `Bearer ${this.adminToken}`;
-    }
-    const res = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    });
-    const text = await res.text();
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      throw new Error(`Unexpected response from identity service: ${text}`);
-    }
-    if (!res.ok) {
-      const err = parsed as { error?: string; message?: string };
-      throw new Error(err.message || err.error || `HTTP ${res.status}`);
-    }
-    return parsed as T;
+  getActiveEthPublicKey(bot: BotRecord): string | undefined {
+    return bot.public_keys?.find((k) => k.algorithm === "secp256k1-eth" && k.status === "active")
+      ?.public_key;
   }
 
   private async getJson<T>(pathName: string): Promise<T> {
@@ -129,20 +100,56 @@ export class IdentityClient {
     return parsed as T;
   }
 
-  /**
-   * Verify that the operator and bot exist in the identity service and that
-   * this instance's public key is registered on the bot. Does not create
-   * operator or bot; they must be minted by the operator first.
-   * Safe to call multiple times.
-   */
+  private async fetchAndValidateEip712Domain(): Promise<ClankerEip712Domain> {
+    if (this.eip712DomainOverride) {
+      this.eip712Domain = this.eip712DomainOverride;
+      return this.eip712DomainOverride;
+    }
+    const health = await this.getJson<IdentityBackendHealth>("/health");
+    if (health.ok === false || health.chainOk === false) {
+      throw new Error(
+        "Identity service is degraded (chain indexer unreachable or stale); refusing init",
+      );
+    }
+    if (
+      health.chainId === undefined ||
+      !health.registryAddress?.startsWith("0x")
+    ) {
+      throw new Error("identity service /health missing chainId or registryAddress for EIP-712");
+    }
+    this.eip712Domain = {
+      chainId: health.chainId,
+      registryAddress: health.registryAddress as Address,
+    };
+    return this.eip712Domain;
+  }
+
+  private getEip712Domain(): ClankerEip712Domain {
+    if (this.eip712DomainOverride) {
+      return this.eip712DomainOverride;
+    }
+    if (!this.eip712Domain) {
+      throw new Error("Identity client not initialized; call init() first");
+    }
+    return this.eip712Domain;
+  }
+
   async init(): Promise<void> {
+    await this.fetchAndValidateEip712Domain();
+
     try {
-      await this.getJson<OperatorRecord>(
+      const operator = await this.getJson<OperatorRecord>(
         `/v1/operators/${encodeURIComponent(this.operatorId)}`,
       );
-    } catch {
+      if (operator.status !== "active") {
+        throw new Error(`Operator status is ${operator.status}; expected active`);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.includes("Operator status")) {
+        throw err;
+      }
       throw new Error(
-        "Operator not registered. Operator must be minted first (genesis or mint-operator).",
+        "Operator not registered. Register the operator on-chain first (clanker chain mint-operator).",
       );
     }
 
@@ -153,18 +160,23 @@ export class IdentityClient {
       );
     } catch {
       throw new Error(
-        "Bot not registered or key not found; operator must mint this bot with your public key.",
+        "Bot not registered; operator must register this bot on-chain with your botKey address.",
       );
     }
 
-    const publicKey = await this.getPublicKeyBase64();
-    const hasKey =
-      bot.public_keys?.some(
-        (k) => k.public_key === publicKey && k.status === "active",
-      ) ?? false;
-    if (!hasKey) {
+    if (bot.status !== "active") {
+      throw new Error(`Bot status is ${bot.status}; expected active`);
+    }
+
+    const onchainKey = this.getActiveEthPublicKey(bot);
+    if (!onchainKey?.startsWith("0x")) {
+      throw new Error("Bot has no active secp256k1-eth key");
+    }
+
+    const account = await this.loadEthAccount();
+    if (account.address.toLowerCase() !== onchainKey.toLowerCase()) {
       throw new Error(
-        "Bot not registered or key not found; operator must mint this bot with your public key.",
+        `local secp256k1 key address ${account.address} does not match ledger botKey ${onchainKey}`,
       );
     }
   }
@@ -173,80 +185,87 @@ export class IdentityClient {
     return this.getJson<BotRecord>(`/v1/bots/${encodeURIComponent(this.botId)}`);
   }
 
-  /**
-   * Canonical JSON serialization used for signing, following bot-comms.md.
-   */
-  private static canonicalizeForSignature(msg: IdentityMessageEnvelope): string {
-    const canonicalFields: Record<string, unknown> = {
-      body: msg.body,
-      correlation_id: msg.correlation_id,
-      from: msg.from,
-      from_id: msg.from_id,
-      message_id: msg.message_id,
-      operator_id: msg.operator_id,
-      subtype: msg.subtype,
-      timestamp: msg.timestamp,
-      to: msg.to,
-      to_id: msg.to_id,
-      type: msg.type,
-    };
-    for (const key of Object.keys(canonicalFields)) {
-      if (canonicalFields[key] === undefined || canonicalFields[key] === null) {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        delete canonicalFields[key];
+  async signMessage(msg: IdentityMessageEnvelope): Promise<{
+    signature: Hex;
+    signature_scheme: typeof CLANKER_MESSAGE_SIGNATURE_SCHEME;
+  }> {
+    const domain = this.getEip712Domain();
+    const account = await this.loadEthAccount();
+    return signEnvelope(account, msg, domain);
+  }
+
+  async verifyMessage(
+    msg: IdentityMessageEnvelope,
+    signature: Hex,
+    fromBotId: string,
+  ): Promise<boolean> {
+    const domain = this.getEip712Domain();
+    let bot: BotRecord;
+    try {
+      bot = await this.getJson<BotRecord>(`/v1/bots/${encodeURIComponent(fromBotId)}`);
+    } catch {
+      return false;
+    }
+    if (bot.status !== "active") {
+      return false;
+    }
+    if (bot.operator_id) {
+      try {
+        const operator = await this.getJson<OperatorRecord>(
+          `/v1/operators/${encodeURIComponent(bot.operator_id)}`,
+        );
+        if (operator.status !== "active") {
+          return false;
+        }
+      } catch {
+        return false;
       }
     }
-    const sortedKeys = Object.keys(canonicalFields).sort();
-    return JSON.stringify(canonicalFields, sortedKeys as (keyof typeof canonicalFields)[]);
-  }
-
-  /**
-   * Sign a message envelope using the local Ed25519 private key.
-   * Returns base64(signature) and signature_scheme.
-   */
-  async signMessage(msg: IdentityMessageEnvelope): Promise<{
-    signature: string;
-    signature_scheme: "ed25519";
-  }> {
-    const priv = await this.loadOrCreatePrivateKey();
-    const canonical = IdentityClient.canonicalizeForSignature(msg);
-    const bytes = new TextEncoder().encode(canonical);
-    const sig = await ed25519.signAsync(bytes, priv);
-    return {
-      signature: Buffer.from(sig).toString("base64"),
-      signature_scheme: "ed25519",
-    };
-  }
-
-  /**
-   * Issue a short-lived JWT for MQTT broker authentication (EdDSA / Ed25519).
-   * Use as the MQTT CONNECT password with username = bot_id.
-   * @param ttlSec Token lifetime in seconds (default 300).
-   * @returns Compact JWT string.
-   */
-  async issueMqttToken(ttlSec: number = 300): Promise<string> {
-    const priv = await this.loadOrCreatePrivateKey();
-    const pub = await ed25519.getPublicKeyAsync(priv);
-    const jwk = {
-      kty: "OKP" as const,
-      crv: "Ed25519" as const,
-      d: base64url(priv),
-      x: base64url(pub),
-    };
-    const key = await importJWK(jwk, "EdDSA");
-    if (!key) {
-      throw new Error("Failed to import key for MQTT token");
+    const onchainKey = this.getActiveEthPublicKey(bot);
+    if (!onchainKey?.startsWith("0x")) {
+      return false;
     }
-    const exp = Math.floor(Date.now() / 1000) + ttlSec;
-    const jwt = await new SignJWT({})
-      .setProtectedHeader({ alg: "EdDSA", typ: "JWT" })
-      .setSubject(this.botId)
-      .setAudience(MQTT_TOKEN_AUD)
-      .setExpirationTime(exp)
-      .sign(key);
-    return jwt;
+    return verifyEnvelope(msg, signature, onchainKey as Address, domain);
+  }
+
+  async issueMqttConnectPassword(): Promise<string> {
+    return this.issueMqttSiwePassword();
+  }
+
+  async issueMqttSiwePassword(): Promise<string> {
+    const bot = await this.getBot();
+    const onchainKey = this.getActiveEthPublicKey(bot);
+    if (!onchainKey?.startsWith("0x")) {
+      throw new Error("Bot has no active secp256k1-eth key");
+    }
+
+    const account = await this.loadEthAccount();
+    if (account.address.toLowerCase() !== onchainKey.toLowerCase()) {
+      throw new Error(
+        `local secp256k1 key address ${account.address} does not match ledger botKey ${onchainKey}`,
+      );
+    }
+
+    const url = new URL("/nonce", this.mqttAuthBaseUrl);
+    url.searchParams.set("bot_id", this.botId);
+    const res = await fetch(url.toString(), { method: "GET" });
+    const text = await res.text();
+    let parsed: { nonce?: string; message?: string };
+    try {
+      parsed = JSON.parse(text) as { nonce?: string; message?: string };
+    } catch {
+      throw new Error(`Unexpected nonce response: ${text}`);
+    }
+    if (!res.ok || !parsed.nonce || !parsed.message) {
+      throw new Error(
+        (parsed as { message?: string }).message || `nonce request failed: HTTP ${res.status}`,
+      );
+    }
+
+    const sig = await account.signMessage({ message: parsed.message });
+    return `${parsed.nonce}.${sig}`;
   }
 }
 
 export * from "./types.js";
-
+export * from "./eip712.js";
