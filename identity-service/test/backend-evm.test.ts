@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "fs";
+import { mkdtempSync, unlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import {
@@ -281,6 +281,80 @@ test("EvmBackend indexes OperatorTransferred", async () => {
   await backend!.syncFromChain();
   const op = await backend!.getOperator(transferOpLabel);
   expect(op?.public_keys?.[0]?.public_key?.toLowerCase()).toBe(newOwner.address.toLowerCase());
+});
+
+test("EvmBackend hydrates revoked entities from persisted snapshot", async () => {
+  if (skip) return;
+  const revokedBotLabel = "openclaw.evm.hydrate-revoke";
+  const hydrateSnapshotPath = `${snapshotPath}.hydrate-isolated`;
+  const now = new Date().toISOString();
+  const healthBefore = await backend!.health();
+  const lastBlock = healthBefore.lastBlock ?? "5";
+  const snapshot = {
+    version: 1,
+    created: now,
+    updated: now,
+    operators: {
+      [operatorLabel]: {
+        operator_id: operatorLabel,
+        status: "retired",
+        created: now,
+        updated: now,
+        public_keys: [
+          {
+            key_id: "op-k1",
+            algorithm: "secp256k1-eth",
+            public_key: privateKeyToAccount(ANVIL_DEFAULT_KEY).address,
+            created: now,
+            status: "revoked",
+          },
+        ],
+      },
+    },
+    bots: {
+      [revokedBotLabel]: {
+        bot_id: revokedBotLabel,
+        operator_id: operatorLabel,
+        status: "retired",
+        created: now,
+        updated: now,
+        public_keys: [
+          {
+            key_id: "bot-k1",
+            algorithm: "secp256k1-eth",
+            public_key: privateKeyToAccount(ANVIL_KEY_1).address,
+            created: now,
+            status: "revoked",
+          },
+        ],
+      },
+    },
+    operations: [],
+    meta: {
+      lastIndexedBlock: lastBlock,
+      chainId: 31337,
+      registryAddress: registry,
+    },
+  };
+  writeFileSync(hydrateSnapshotPath, JSON.stringify(snapshot));
+
+  const hydrated = new EvmBackend({
+    rpcUrl,
+    registry,
+    deploymentBlock,
+    snapshotPath: hydrateSnapshotPath,
+    pollMs: 100,
+  });
+  await hydrated.start();
+
+  const bot = await hydrated.getBot(revokedBotLabel);
+  expect(bot?.status).toBe("retired");
+  expect(bot?.public_keys?.[0]?.status).toBe("revoked");
+  const op = await hydrated.getOperator(operatorLabel);
+  expect(op?.status).toBe("retired");
+
+  await hydrated.stop();
+  unlinkSync(hydrateSnapshotPath);
 });
 
 test("EvmBackend marks revoked bot as retired", async () => {
