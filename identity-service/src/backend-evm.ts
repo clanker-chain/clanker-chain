@@ -235,6 +235,16 @@ export class EvmBackend implements IdentityBackend {
     }
   }
 
+  private hydrateSecp256k1EthKey(
+    publicKeys: PublicKeyRecord[] | undefined,
+  ): PublicKeyRecord | undefined {
+    if (!publicKeys?.length) return undefined;
+    return (
+      publicKeys.find((k) => k.algorithm === "secp256k1-eth" && k.status === "active") ??
+      publicKeys.find((k) => k.algorithm === "secp256k1-eth" && k.status === "revoked")
+    );
+  }
+
   private hydrateFromSnapshot(ledger: IdentityLedger): void {
     this.operatorById.clear();
     this.botById.clear();
@@ -243,7 +253,7 @@ export class EvmBackend implements IdentityBackend {
 
     for (const op of Object.values(ledger.operators)) {
       const id = norm32(idKeyFromLabel(op.operator_id));
-      const ethKey = op.public_keys?.find((k) => k.algorithm === "secp256k1-eth" && k.status === "active");
+      const ethKey = this.hydrateSecp256k1EthKey(op.public_keys);
       if (!ethKey?.public_key.startsWith("0x")) continue;
       const owner = ethKey.public_key as Hex;
       const reg = BigInt(Math.floor(Date.parse(op.created) / 1000));
@@ -260,7 +270,7 @@ export class EvmBackend implements IdentityBackend {
 
     for (const bot of Object.values(ledger.bots)) {
       const id = norm32(idKeyFromLabel(bot.bot_id));
-      const ethKey = bot.public_keys?.find((k) => k.algorithm === "secp256k1-eth" && k.status === "active");
+      const ethKey = this.hydrateSecp256k1EthKey(bot.public_keys);
       if (!ethKey?.public_key.startsWith("0x")) continue;
       const operatorIdBytes = norm32(idKeyFromLabel(bot.operator_id));
       const reg = BigInt(Math.floor(Date.parse(bot.created) / 1000));
