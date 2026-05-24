@@ -1,42 +1,19 @@
 import { IdentityClient } from '@clanker-chain/identity-node-client';
 import { MqttClient, type ReceivedMessage } from '@clanker-chain/mqtt-node-client';
+import {
+  attachSignature,
+  bodyToText,
+  buildCoordinationEnvelope,
+  isRecord,
+  parseSignedEnvelope,
+  readString,
+} from './wire-format.js';
 import type {
   MqttChannelConfig,
   InboundMessage,
   OutboundMessage,
-  MqttMessage,
   MessageHandler,
 } from './types.js';
-
-type MessagePayload = Record<string, unknown>;
-
-function isRecord(value: unknown): value is MessagePayload {
-  return typeof value === 'object' && value !== null;
-}
-
-function readString(value: unknown): string | undefined {
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
-}
-
-function valueToText(value: unknown): string {
-  if (typeof value === 'string') {
-    return value;
-  }
-
-  if (value === undefined || value === null) {
-    return '';
-  }
-
-  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
-    return String(value);
-  }
-
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
 
 function applyBotIdPlaceholders(topic: string, botId: string): string {
   return topic.replace(/\{botId\}/g, botId);
@@ -44,7 +21,7 @@ function applyBotIdPlaceholders(topic: string, botId: string): string {
 
 function toInboundMessage(msg: ReceivedMessage, inboxTopic: string): InboundMessage {
   const payload = isRecord(msg.payload) ? msg.payload : undefined;
-  const from = readString(payload?.from) ?? readString(payload?.from_id) ?? msg.topic;
+  const from = readString(payload?.from_id) ?? readString(payload?.from) ?? msg.topic;
   const body = payload?.body ?? payload?.text ?? msg.payload;
   const messageId =
     readString(payload?.message_id) ??
@@ -56,7 +33,7 @@ function toInboundMessage(msg: ReceivedMessage, inboxTopic: string): InboundMess
   return {
     id: messageId,
     from,
-    text: valueToText(body),
+    text: bodyToText(body),
     channel: 'mqtt',
     chatType: msg.topic === inboxTopic ? 'direct' : 'group',
     timestamp: new Date(timestamp),
@@ -87,7 +64,7 @@ export class MqttChannelProvider {
 
   constructor(config: MqttChannelConfig) {
     if (!config.identityServiceUrl) {
-      throw new Error('MqttChannelProvider requires identityServiceUrl for JWT auth');
+      throw new Error('MqttChannelProvider requires identityServiceUrl');
     }
 
     // Set defaults
@@ -120,6 +97,7 @@ export class MqttChannelProvider {
       botId: config.botId,
       operatorId: config.operatorId,
       identityServiceUrl: config.identityServiceUrl,
+      mqttAuthServiceUrl: config.mqttAuthServiceUrl,
     });
 
     this.mqttClient = new MqttClient();
@@ -138,9 +116,9 @@ export class MqttChannelProvider {
     await this.mqttClient.connect({
       brokerUrl: this.config.brokerUrl,
       clientId: this.config.botId,
-      getPassword: async () => this.identityClient.issueMqttToken(),
+      getPassword: () => this.identityClient.issueMqttConnectPassword(),
     });
-    console.log('[mqtt-channel] JWT token issued');
+    console.log('[mqtt-channel] MQTT CONNECT password issued');
     console.log('[mqtt-channel] Connected to MQTT broker');
 
     const topics = [this.config.topics.inbox!, this.config.topics.announce!];
@@ -160,7 +138,7 @@ export class MqttChannelProvider {
     console.log('[mqtt-channel] Bot ID:', this.config.botId);
     console.log('[mqtt-channel] Operator ID:', this.config.operatorId);
 
-    // Initialize identity client and get JWT token
+    // Initialize identity client (SIWE CONNECT + EIP-712 signing)
     console.log('[mqtt-channel] Initializing identity client...');
     await this.identityClient.init();
     await this.connectAndSubscribe();
@@ -221,6 +199,8 @@ export class MqttChannelProvider {
 
   /**
    * Publish a JSON payload to an arbitrary topic (e.g. announce / group replies).
+   * Does not sign — inbound peers using strict verification will drop unsigned payloads.
+   * Prefer {@link sendMessage} for coordination traffic.
    */
   async publishJson(topic: string, payload: Record<string, unknown>): Promise<void> {
     console.log('[mqtt-channel] Publishing JSON to:', topic);
@@ -233,17 +213,19 @@ export class MqttChannelProvider {
    */
   async sendMessage(message: OutboundMessage): Promise<void> {
     const topic = `bots/${message.to}/inbox`;
-    
-    const mqttMessage: MqttMessage = {
-      from: this.config.botId,
+    const envelope = buildCoordinationEnvelope({
+      botId: this.config.botId,
+      operatorId: this.config.operatorId,
       to: message.to,
-      timestamp: new Date().toISOString(),
-      body: message.text,
+      text: message.text,
       replyTo: message.replyTo,
-    };
+    });
 
-    console.log('[mqtt-channel] Publishing message to:', topic);
-    await this.mqttClient.publish(topic, mqttMessage);
+    const { signature, signature_scheme } = await this.identityClient.signMessage(envelope);
+    const wirePayload = attachSignature(envelope, signature, signature_scheme);
+
+    console.log('[mqtt-channel] Publishing signed message to:', topic);
+    await this.mqttClient.publish(topic, wirePayload);
   }
 
   /**
@@ -281,15 +263,40 @@ export class MqttChannelProvider {
         const messages = await this.mqttClient.poll(this.config.pollIntervalMs);
 
         for (const msg of messages) {
-          if (this.messageHandler) {
-            try {
-              const inboundMessage = toInboundMessage(msg, this.config.topics.inbox!);
+          if (!this.messageHandler) continue;
 
-              console.log('[mqtt-channel] Received message from:', inboundMessage.from);
-              await this.messageHandler(inboundMessage);
-            } catch (error) {
-              console.error('[mqtt-channel] Error handling message:', error);
+          try {
+            const payload = isRecord(msg.payload) ? msg.payload : undefined;
+            const signed = parseSignedEnvelope(payload);
+            if (!signed) {
+              console.warn(
+                "[mqtt-channel] Dropping unsigned or malformed MQTT message on",
+                msg.topic,
+              );
+              continue;
             }
+
+            const verified = await this.identityClient.verifyMessage(
+              signed.envelope,
+              signed.signature as `0x${string}`,
+              signed.envelope.from_id,
+            );
+            if (!verified) {
+              console.warn(
+                "[mqtt-channel] Invalid EIP-712 signature from",
+                signed.envelope.from_id,
+                "on",
+                msg.topic,
+              );
+              continue;
+            }
+
+            const inboundMessage = toInboundMessage(msg, this.config.topics.inbox!);
+
+            console.log('[mqtt-channel] Received verified message from:', inboundMessage.from);
+            await this.messageHandler(inboundMessage);
+          } catch (error) {
+            console.error('[mqtt-channel] Error handling message:', error);
           }
         }
       } catch (error) {

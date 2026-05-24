@@ -349,6 +349,21 @@ Example for `france-bot`:
   - Optionally begin experimenting with identity tokens embedded in:
     - MQTT `password` field (CONNECT), or
     - Message-level `identity_token`.
+
+#### MQTT CONNECT: SIWE-style broker auth (`mqtt-auth-service`)
+
+When the bot’s identity record includes an on-chain **`secp256k1-eth`** key (EVM `botKey` / address from `identity-service`), CONNECT should use:
+
+1. **`GET`** `https://<mqtt-auth-host>/nonce?bot_id=<bot_id>` (or **`POST /nonce`** with JSON `{ "bot_id": "<bot_id>" }`). Response JSON includes:
+   - `nonce` — opaque string (store until CONNECT).
+   - `message` — **exact** ASCII string the bot must sign (do not reconstruct client-side).
+   - `expires_at` — ISO time; nonces expire after ~5 minutes.
+2. **Sign** `message` with **EIP-191 `personal_sign`** (same framing wallets use for arbitrary ASCII).
+3. **CONNECT** to Mosquitto with `username = <bot_id>` and  
+   `password = <nonce> + "." + <signatureHex>`  
+   where `signatureHex` is `0x` + 130 hex chars (65-byte ECDSA signature).
+
+The auth plugin calls `mqtt-auth-service` **`/auth`**; the service recovers the signer address and checks it against the active `secp256k1-eth` public key from **`GET /v1/bots/:id`** on `identity-service`. **JWT / Ed25519 CONNECT is not supported** (CalVer `2026.5.23` cutover).
 - **Phase 3+ (higher security)**:
   - Migrate broker authentication to be fully **on-chain identity aware**:
     - Use **mutual TLS** where each bot presents a client cert whose public key is registered on-chain, or
@@ -416,54 +431,28 @@ Example for `france-bot`:
     - Sign a **canonical representation** of the message envelope, not just the body.
     - Reuse the same signing API and keys as identity tokens.
 
-### Canonical Signing Format
+### Canonical Signing Format (EIP-712)
 
-To ensure interoperability across implementations, all bots must use the same canonicalization algorithm when signing and verifying messages:
+Bots sign message envelopes with **EIP-712 typed data** (`signature_scheme: "eip712-secp256k1"`). Implementation: `@clanker-chain/identity-node-client` (`signMessage` / `verifyMessage`).
 
-- **Fields included in the signature**:
-  - `from`, `from_id`, `operator_id`, `to`, `to_id`, `type`, `subtype`, `timestamp`, `message_id`, `correlation_id`, `body`
-  - Omit any of these fields that are `null`/`undefined` in the concrete message.
-  - **Do not** include `signature`, `signature_scheme`, or `identity_token` in the signed content.
-- **Canonicalization rules**:
-  - Build an object containing exactly the included fields.
-  - Serialize to JSON with:
-    - Keys sorted lexicographically.
-    - No additional whitespace beyond what the JSON encoder requires.
-    - UTF-8 encoding of the resulting string.
-  - Sign the resulting byte sequence with the bot’s Ed25519 private key.
+**Domain** (from identity `GET /health`):
 
-Conceptual example (JavaScript-style):
-
-```javascript
-const canonicalFields = {
-  from: msg.from,
-  from_id: msg.from_id,
-  operator_id: msg.operator_id,
-  to: msg.to,
-  to_id: msg.to_id,
-  type: msg.type,
-  subtype: msg.subtype,
-  timestamp: msg.timestamp,
-  message_id: msg.message_id,
-  correlation_id: msg.correlation_id,
-  body: msg.body
-};
-
-// Remove undefined/null fields
-for (const key of Object.keys(canonicalFields)) {
-  if (canonicalFields[key] === undefined || canonicalFields[key] === null) {
-    delete canonicalFields[key];
-  }
-}
-
-const canonical = JSON.stringify(
-  canonicalFields,
-  Object.keys(canonicalFields).sort()
-);
-const signature = ed25519_sign(privateKey, canonical);
+```text
+name: ClankerChain
+version: 1
+chainId: <from health>
+verifyingContract: <registryAddress from health>
 ```
 
-Other languages must produce the same canonical JSON string (sorted keys, same included fields) to ensure signatures verify consistently.
+**Struct `Message`** (all fields type `string`):
+
+`from`, `from_id`, `operator_id`, `to`, `to_id`, `type`, `subtype`, `timestamp`, `message_id`, `correlation_id`, `body`
+
+- Omitted optional envelope fields → **empty string** `""` at sign/verify time.
+- `body` → `JSON.stringify(body)` (stable JSON encoding).
+- **Do not** include `signature`, `signature_scheme`, or `identity_token` in the struct.
+
+Verifiers recover the signer address via `ecrecover` and compare to the active `secp256k1-eth` / `botKey` from `GET /v1/bots/:from_id`.
 
 ---
 

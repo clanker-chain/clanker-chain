@@ -66,46 +66,7 @@ run_bun_package() {
   if [ -f "${dir}/package.json" ]; then
     # Run tests only if a test script exists.
     if node -e "const p=require('${dir}/package.json'); process.exit(p.scripts && p.scripts.test ? 0 : 1);" ; then
-      local server_pid=""
-      # Some tests expect local services to be running (e.g. identity-service).
-      if [ "$(basename "$dir")" = "identity-service" ]; then
-        # Always start a fresh identity-service instance on a free port.
-        identity_port=""
-        for candidate in 8080 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090; do
-          if bun -e "fetch('http://localhost:${candidate}/v1/operators', { method: 'GET' }).then(() => process.exit(0)).catch(() => process.exit(1))" >/dev/null 2>&1; then
-            continue
-          else
-            identity_port="$candidate"
-            break
-          fi
-        done
-
-        if [ -z "$identity_port" ]; then
-          echo "ERROR: Could not find a free port for identity-service tests." >&2
-          exit 1
-        fi
-
-        export IDENTITY_SERVICE_PORT="$identity_port"
-        export IDENTITY_SERVICE_URL="http://localhost:${identity_port}"
-
-        log "Starting identity-service server for tests on ${IDENTITY_SERVICE_URL}"
-        (cd "$dir" && bun run src/server.ts) &
-        server_pid="$!"
-
-        # Wait for the server to accept connections.
-        for _ in $(seq 1 80); do
-          if bun -e "fetch('${IDENTITY_SERVICE_URL}/v1/operators', { method: 'GET' }).then(() => process.exit(0)).catch(() => process.exit(1))" >/dev/null 2>&1; then
-            break
-          fi
-          sleep 0.25
-        done
-      fi
-
       (cd "$dir" && bun run test)
-
-      if [ -n "$server_pid" ]; then
-        kill "$server_pid" >/dev/null 2>&1 || true
-      fi
     else
       log "No bun test script in ${dir} (skipping tests)."
     fi
@@ -117,6 +78,30 @@ run_bun_package() {
   else
     log "No tsconfig.json in ${dir} (skipping typecheck)."
   fi
+}
+
+run_foundry_chain() {
+  if [ -d "${HOME}/.foundry/bin" ]; then
+    PATH="${HOME}/.foundry/bin:${PATH}"
+    export PATH
+  fi
+
+  if ! have_cmd forge; then
+    if [ "$CI_MODE" = "1" ]; then
+      echo "ERROR: forge is required in --ci mode (Foundry toolchain)." >&2
+      exit 1
+    fi
+    log "forge not on PATH — skipping chain/ Solidity tests. Install Foundry: https://book.getfoundry.sh/getting-started/installation"
+    return 0
+  fi
+
+  if [ ! -d "${ROOT_DIR}/chain" ]; then
+    log "No chain/ directory (skipping Foundry tests)."
+    return 0
+  fi
+
+  log "Foundry tests: chain/"
+  (cd "${ROOT_DIR}/chain" && forge test -vvv)
 }
 
 run_npm_package() {
@@ -160,6 +145,9 @@ main() {
   run_npm_package "${ROOT_DIR}/identity-client-plugin"
   run_npm_package "${ROOT_DIR}/mqtt-node-client"
   run_npm_package "${ROOT_DIR}/identity-node-client"
+  if [ -f "${ROOT_DIR}/identity-node-client/package.json" ]; then
+    (cd "${ROOT_DIR}/identity-node-client" && npm run test)
+  fi
 
   # mqtt-channel-plugin uses workspace:* dependencies and doesn't ship a lockfile,
   # so we avoid npm install here. Instead, we symlink the local node clients and
@@ -169,6 +157,7 @@ main() {
   ln -sf "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/identity-node-client"
   ln -sf "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/mqtt-node-client"
   (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun x tsc -p tsconfig.json)
+  (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun test test/wire-format.test.ts)
 
   # mqtt-client-plugin depends on @clanker-chain/mqtt-node-client and
   # @clanker-chain/identity-node-client which are local packages (not yet on npm
@@ -177,6 +166,14 @@ main() {
   mkdir -p "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain"
   ln -sf "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/identity-node-client"
   ln -sf "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/mqtt-node-client"
+
+  if [ -f "${ROOT_DIR}/mqtt-client-plugin/tsconfig.json" ]; then
+    (cd "${ROOT_DIR}/mqtt-client-plugin" && bun x tsc -p tsconfig.json)
+  else
+    log "No mqtt-client-plugin/tsconfig.json (skipping TS check for mqtt-client-plugin)."
+  fi
+
+  run_foundry_chain
 
   if [ "$SKIP_TARBALL_VALIDATION" = "1" ]; then
     log "Skipping tarball validation as requested."

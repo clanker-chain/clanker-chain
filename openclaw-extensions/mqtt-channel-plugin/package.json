@@ -1,6 +1,6 @@
 {
   "name": "@clanker-chain/mqtt-channel-plugin",
-  "version": "0.0.4",
+  "version": "2026.5.23",
   "description": "OpenClaw channel plugin: MQTT bot-to-bot messaging (Clanker Chain)",
   "type": "module",
   "main": "dist/index.js",
@@ -12,7 +12,8 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "bun test test/wire-format.test.ts"
   },
   "openclaw": {
     "extensions": ["./dist/index.js"],
@@ -32,8 +33,8 @@
     }
   },
   "dependencies": {
-    "@clanker-chain/identity-node-client": "0.0.1",
-    "@clanker-chain/mqtt-node-client": "0.0.1"
+    "@clanker-chain/identity-node-client": "2026.5.23",
+    "@clanker-chain/mqtt-node-client": "2026.5.23"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -23,3 +23,9 @@ logs/
 
 # Optional: uncomment if you want to keep ledger out of version control
 # identity/bot-identity-ledger.json
+
+# Foundry build artifacts (chain/)
+chain/cache/
+chain/out/
+chain/broadcast/
+chain/.anvil-state.json
