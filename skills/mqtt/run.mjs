@@ -30,22 +30,23 @@ Env: MQTT_BROKER_URL, MQTT_CLIENT_ID
 `);
 }
 
-async function getToken(botId, operatorId) {
+async function createIdentity(botId, operatorId) {
   const identity = new IdentityClient({ botId, operatorId });
-  return identity.issueMqttToken(300);
+  await identity.init();
+  return identity;
 }
 
 async function withConnection(botId, operatorId, fn) {
   if (!brokerUrl || !clientId) {
     throw new Error("MQTT_BROKER_URL and MQTT_CLIENT_ID are required");
   }
-  const token = await getToken(botId, operatorId);
+  const identity = await createIdentity(botId, operatorId);
   const mqtt = new MqttClient();
   await mqtt.connect({
     brokerUrl,
     clientId,
     username: botId,
-    getPassword: async () => token,
+    getPassword: () => identity.issueMqttConnectPassword(),
   });
   try {
     return await fn(mqtt);

@@ -1,150 +1,108 @@
 import { expect, test } from "bun:test";
-import { getLedgerSnapshot, loadLedger, upsertOperator } from "../src/ledger";
-import { isTimestampRecent, validateMintOperator } from "../src/validation";
-import { verifyEd25519 } from "../src/crypto";
-import * as ed25519 from "@noble/ed25519";
+import { getDefaultLedgerPath } from "../src/ledger";
+import { createFetchHandler } from "../src/routes";
+import type { IdentityBackend, IdentityBackendHealth } from "../src/backend";
+import type { BotRecord, IdentityLedger, OperatorRecord } from "../src/ledger";
 
-test("ledger loads with operators, bots, and operations", async () => {
-  const ledger = await loadLedger();
-  expect(ledger).toHaveProperty("operators");
-  expect(ledger).toHaveProperty("bots");
-  expect(ledger).toHaveProperty("operations");
-  expect(Array.isArray(ledger.operations)).toBe(true);
-});
+class MockBackend implements IdentityBackend {
+  constructor(
+    private healthState: IdentityBackendHealth,
+    private operators: Record<string, OperatorRecord> = {},
+    private bots: Record<string, BotRecord> = {},
+  ) {}
 
-test("ledger snapshot is a clone", async () => {
-  const ledger = await getLedgerSnapshot();
-  const copy = await getLedgerSnapshot();
-  const operatorIds = Object.keys(ledger.operators);
-  if (operatorIds.length > 0) {
-    const id = operatorIds[0];
-    copy.operators[id].display_name = "mutated";
-    expect(ledger.operators[id].display_name).not.toBe("mutated");
+  async getBot(botId: string): Promise<BotRecord | undefined> {
+    return this.bots[botId];
   }
+
+  async getOperator(operatorId: string): Promise<OperatorRecord | undefined> {
+    return this.operators[operatorId];
+  }
+
+  async getLedgerSnapshot(): Promise<IdentityLedger> {
+    return {
+      version: 1,
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+      operators: this.operators,
+      bots: this.bots,
+      operations: [],
+    };
+  }
+
+  async health(): Promise<IdentityBackendHealth> {
+    return this.healthState;
+  }
+}
+
+test("getDefaultLedgerPath returns a path ending in bot-identity-ledger.json", () => {
+  const p = getDefaultLedgerPath();
+  expect(p.endsWith("bot-identity-ledger.json")).toBe(true);
 });
 
-test("isTimestampRecent accepts now and rejects old timestamp", () => {
-  expect(isTimestampRecent(new Date().toISOString())).toBe(true);
-  expect(isTimestampRecent("2020-01-01T00:00:00.000Z")).toBe(false);
+test("GET /health returns backend health", async () => {
+  const backend = new MockBackend({
+    ok: true,
+    mode: "evm",
+    chainId: 31337,
+    registryAddress: "0xabc",
+    chainOk: true,
+  });
+  const fetch = createFetchHandler(backend);
+  const res = await fetch(new Request("http://localhost/health"));
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as IdentityBackendHealth;
+  expect(body.ok).toBe(true);
+  expect(body.chainId).toBe(31337);
 });
 
-test("validateMintOperator accepts valid body with recent timestamp", () => {
-  const timestamp = new Date().toISOString();
-  const public_key = Buffer.alloc(32).fill(1).toString("base64");
-  const message = `mint-operator:org.openclaw.test:${public_key}:${timestamp}`;
-  const body = {
-    operator_id: "org.openclaw.test",
-    display_name: "Test",
-    public_key,
-    signature: Buffer.alloc(64).fill(2).toString("base64"),
-    message,
-  };
-  const result = validateMintOperator(body);
-  expect(result.operator_id).toBe("org.openclaw.test");
-  expect(result.message).toBe(message);
+test("GET /health ok false when chain unreachable", async () => {
+  const backend = new MockBackend({ ok: false, mode: "evm", chainOk: false });
+  const fetch = createFetchHandler(backend);
+  const res = await fetch(new Request("http://localhost/health"));
+  const body = (await res.json()) as IdentityBackendHealth;
+  expect(body.ok).toBe(false);
 });
 
-test("validateMintOperator rejects message with old timestamp", () => {
-  const timestamp = "2020-01-01T00:00:00.000Z";
-  const public_key = Buffer.alloc(32).fill(1).toString("base64");
-  const message = `mint-operator:org.openclaw.test:${public_key}:${timestamp}`;
-  const body = {
-    operator_id: "org.openclaw.test",
-    public_key,
-    signature: Buffer.alloc(64).fill(2).toString("base64"),
-    message,
-  };
-  expect(() => validateMintOperator(body)).toThrow("timestamp");
-});
-
-test("verifyEd25519 verifies valid signature", async () => {
-  const priv = ed25519.utils.randomPrivateKey();
-  const pub = await ed25519.getPublicKeyAsync(priv);
-  const message = "hello";
-  const sig = await ed25519.signAsync(new TextEncoder().encode(message), priv);
-  const ok = await verifyEd25519(
-    message,
-    Buffer.from(sig).toString("base64"),
-    Buffer.from(pub).toString("base64"),
-  );
-  expect(ok).toBe(true);
-});
-
-test("verifyEd25519 rejects invalid signature", async () => {
-  const priv = ed25519.utils.randomPrivateKey();
-  const pub = await ed25519.getPublicKeyAsync(priv);
-  const ok = await verifyEd25519(
-    "hello",
-    Buffer.alloc(64).fill(0).toString("base64"),
-    Buffer.from(pub).toString("base64"),
-  );
-  expect(ok).toBe(false);
-});
-
-test("POST /v1/bots accepts mint-bot-token payload and GET /v1/bots returns bot record", async () => {
-  // Arrange: create an operator with a real keypair so we can sign a mint-bot payload.
-  const operatorPriv = ed25519.utils.randomPrivateKey();
-  const operatorPub = await ed25519.getPublicKeyAsync(operatorPriv);
-  const operatorPublicKeyB64 = Buffer.from(operatorPub).toString("base64");
-  const operatorId = "org.openclaw.test-operator";
-  const now = new Date().toISOString();
-
-  await upsertOperator({
-    operator_id: operatorId,
-    display_name: "Test Operator",
-    public_keys: [
-      {
-        key_id: `${operatorId}-test-key`,
-        algorithm: "ed25519",
-        public_key: operatorPublicKeyB64,
-        created: now,
-        status: "active",
-      },
-    ],
+test("GET /v1/bots/:id returns bot or 404", async () => {
+  const bot: BotRecord = {
+    bot_id: "openclaw.test.bot",
+    operator_id: "org.openclaw.pat",
     status: "active",
-    created: now,
-    updated: now,
-  });
-
-  // BOT_ID_REGEX requires 3 segments separated by dots.
-  // Use a unique botId so the test is idempotent across repeated local runs.
-  const botId = `openclaw.test-bot.local-${Math.floor(Date.now() / 1000)}`;
-  const botPriv = ed25519.utils.randomPrivateKey();
-  const botPub = await ed25519.getPublicKeyAsync(botPriv);
-  const botPublicKeyB64 = Buffer.from(botPub).toString("base64");
-  const timestamp = new Date().toISOString();
-  const message = `mint-bot:${botId}:${operatorId}:${botPublicKeyB64}:${timestamp}`;
-  const msgBytes = new TextEncoder().encode(message);
-  const operatorSig = await ed25519.signAsync(msgBytes, operatorPriv);
-  const operatorSignatureB64 = Buffer.from(operatorSig).toString("base64");
-
-  const payload = {
-    bot_id: botId,
-    operator_id: operatorId,
-    display_name: "Test Bot",
-    bot_public_key: botPublicKeyB64,
-    operator_signature: operatorSignatureB64,
-    message,
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
   };
+  const backend = new MockBackend({ ok: true, mode: "evm" }, {}, { [bot.bot_id]: bot });
+  const fetch = createFetchHandler(backend);
 
-  const baseUrl = process.env.IDENTITY_SERVICE_URL ?? "http://localhost:8080";
+  const hit = await fetch(new Request("http://localhost/v1/bots/openclaw.test.bot"));
+  expect(hit.status).toBe(200);
+  expect(((await hit.json()) as BotRecord).bot_id).toBe(bot.bot_id);
 
-  // Act: POST the mint-bot payload to /v1/bots.
-  const postRes = await fetch(`${baseUrl}/v1/bots`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  expect(postRes.status).toBe(201);
-  const createdBot = (await postRes.json()) as { bot_id: string };
-  expect(createdBot.bot_id).toBe(botId);
-
-  // Act: GET the bot back.
-  const getRes = await fetch(`${baseUrl}/v1/bots/${encodeURIComponent(botId)}`);
-  expect(getRes.status).toBe(200);
-  const fetchedBot = (await getRes.json()) as { bot_id: string; operator_id: string };
-  expect(fetchedBot.bot_id).toBe(botId);
-  expect(fetchedBot.operator_id).toBe(operatorId);
+  const miss = await fetch(new Request("http://localhost/v1/bots/missing"));
+  expect(miss.status).toBe(404);
 });
 
+test("GET /v1/operators/:id returns operator or 404", async () => {
+  const op: OperatorRecord = {
+    operator_id: "org.openclaw.pat",
+    status: "active",
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+  };
+  const backend = new MockBackend({ ok: true, mode: "evm" }, { [op.operator_id]: op });
+  const fetch = createFetchHandler(backend);
+
+  const hit = await fetch(new Request("http://localhost/v1/operators/org.openclaw.pat"));
+  expect(hit.status).toBe(200);
+
+  const miss = await fetch(new Request("http://localhost/v1/operators/nope"));
+  expect(miss.status).toBe(404);
+});
+
+test("POST /v1/bots returns 404 (read-only API)", async () => {
+  const backend = new MockBackend({ ok: true, mode: "evm" });
+  const fetch = createFetchHandler(backend);
+  const res = await fetch(new Request("http://localhost/v1/bots", { method: "POST" }));
+  expect(res.status).toBe(404);
+});

@@ -2,24 +2,8 @@
 /**
  * Runner for the MQTT skill. Invoke from OpenClaw via exec.
  *
- * Usage:
- *   node run.mjs connect <bot_id> <operator_id>
- *   node run.mjs publish <bot_id> <operator_id> <topic> '<json>'
- *   node run.mjs subscribe <bot_id> <operator_id> <topic1> [topic2 ...]
- *   node run.mjs poll <bot_id> <operator_id> [timeout_ms] [topic1] [topic2 ...]
- *
- * Env:
- *   - MQTT_BROKER_URL (required)
- *   - MQTT_CLIENT_ID (required)
- *   - IDENTITY_SERVICE_URL (optional, enables identity-backed JWT auth)
- *   - MQTT_PASSWORD (optional, static JWT or opaque password)
- *   - MQTT_STATIC_PASSWORD (optional, simple static password)
- *
- * Auth precedence:
- *   1) IDENTITY_SERVICE_URL set  -> identity-node-client issues JWT per connection
- *   2) MQTT_PASSWORD set         -> used as-is as MQTT password
- *   3) MQTT_STATIC_PASSWORD set  -> used as-is as MQTT password
- *   otherwise                    -> error
+ * Auth: SIWE via identity-node-client (requires IDENTITY_SERVICE_URL, secp256k1 key).
+ * Dev-only: MQTT_STATIC_PASSWORD for Mosquitto without identity.
  */
 
 import { MqttClient, topicForInbox, topicForAnnounce } from "@clanker-chain/mqtt-node-client";
@@ -29,7 +13,6 @@ const [,, cmd, ...args] = process.argv;
 const brokerUrl = process.env.MQTT_BROKER_URL;
 const clientId = process.env.MQTT_CLIENT_ID;
 const displayName = process.env.MQTT_BOT_DISPLAY_NAME || clientId;
-const mqttPassword = process.env.MQTT_PASSWORD;
 const mqttStaticPassword = process.env.MQTT_STATIC_PASSWORD;
 const identityServiceUrl = process.env.IDENTITY_SERVICE_URL;
 
@@ -40,20 +23,13 @@ function usage() {
   node run.mjs subscribe <bot_id> <operator_id> <topic1> [topic2 ...]
   node run.mjs poll <bot_id> <operator_id> [timeout_ms] [topic1] [topic2 ...]
 Env:
-  - MQTT_BROKER_URL (required)
-  - MQTT_CLIENT_ID (required)
-  - IDENTITY_SERVICE_URL (optional, enables identity-backed JWT auth)
-  - MQTT_PASSWORD (optional, static JWT or opaque password)
-  - MQTT_STATIC_PASSWORD (optional, simple static password)
-Auth precedence:
-  1) IDENTITY_SERVICE_URL
-  2) MQTT_PASSWORD
-  3) MQTT_STATIC_PASSWORD
+  - MQTT_BROKER_URL, MQTT_CLIENT_ID (required)
+  - IDENTITY_SERVICE_URL, MQTT_AUTH_SERVICE_URL (production SIWE auth)
+  - MQTT_STATIC_PASSWORD (dev-only, no identity)
 `);
 }
 
 async function createAuth(botId, operatorId) {
-  // Identity-backed JWT (recommended)
   if (identityServiceUrl) {
     const { IdentityClient } = await import("@clanker-chain/identity-node-client");
     const identity = new IdentityClient({
@@ -61,25 +37,14 @@ async function createAuth(botId, operatorId) {
       operatorId,
       identityServiceUrl,
     });
-    // Ensure operator/bot/key are registered; throws with clear error otherwise.
     await identity.init();
     return {
-      authMode: "identity",
+      authMode: "siwe",
       username: botId,
-      getPassword: async () => identity.issueMqttToken(300),
+      getPassword: () => identity.issueMqttConnectPassword(),
     };
   }
 
-  // Static JWT or opaque password
-  if (mqttPassword) {
-    return {
-      authMode: "jwt",
-      username: botId,
-      getPassword: async () => mqttPassword,
-    };
-  }
-
-  // Simple static password
   if (mqttStaticPassword) {
     return {
       authMode: "static",
@@ -89,7 +54,7 @@ async function createAuth(botId, operatorId) {
   }
 
   throw new Error(
-    "No MQTT auth configured. Set IDENTITY_SERVICE_URL, MQTT_PASSWORD, or MQTT_STATIC_PASSWORD."
+    "No MQTT auth configured. Set IDENTITY_SERVICE_URL (SIWE) or MQTT_STATIC_PASSWORD (dev only).",
   );
 }
 

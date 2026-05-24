@@ -1,50 +1,38 @@
-### Identity ledger and keys
+### Identity snapshot (EVM indexer)
 
-This directory contains the **local, append-only identity ledger** for the bot mesh, as described in `bot-comms.md`.
+This directory holds a **materialized snapshot** of on-chain `ClankerIdentity` state, written by `identity-service` (`EvmBackend`).
 
 ---
 
 ## Files
 
-- `bot-identity-ledger.json`  
-  - Logical ledger for operators and bots.
-  - PoC storage backing the identity access layer (`get_bot`, `get_operator`, `list_keys`, etc.).
-  - Mirrors the structure described in `bot-comms.md`:
-    - `operators[operator_id]` entries with public keys and metadata.
-    - `bots[bot_id]` entries with public keys, aliases, and status.
+- **`bot-identity-ledger.json`**
+  - Read-only cache of indexed chain events (operators, bots, active `secp256k1-eth` keys).
+  - **Not** an append-only JSON ledger and **not** edited by hand.
+  - Includes `meta` (`lastIndexedBlock`, `chainId`, `registryAddress`) from the indexer.
+  - The empty `operations` array is a legacy schema field; writes happen on-chain only.
+
+Regenerate by running the identity service against your RPC + registry (see [`SERVICE.md`](./SERVICE.md) and [`chain/README.md`](../chain/README.md)).
 
 ---
 
-## Where private keys live
+## Keys
 
-Per `bot-comms.md`, **private keys are stored on each bot machine**, not in this repo.
+Bot private keys live on each bot host:
 
-- Each bot keeps its Ed25519 keypair at:
+- `~/.openclaw/keys/{bot_id}.key` — **secp256k1** (`0x` + 64 hex chars)
 
-  - `~/.openclaw/keys/{bot_id}.key`
+Public keys in the snapshot use `algorithm: "secp256k1-eth"` and a **20-byte Ethereum address** (`0x…`), not Ed25519/base64.
 
-- On startup, a bot:
-  - Loads or generates this keypair.
-  - Ensures its **public key** is registered in `bot-identity-ledger.json` under its `bot_id`.
+Register and rotate on-chain:
 
-For this PoC:
-
-- Replace the placeholder `public_key` values in `bot-identity-ledger.json` with the **base64-encoded public keys** derived from each bot’s local key file.
-- Keep this ledger file **append-only**:
-  - Add new keys with `status: "active"`.
-  - Mark old keys `status: "revoked"` instead of deleting them.
+```bash
+node clanker-cli/bin/clanker.mjs chain mint-operator org.openclaw.pat --registry "$REGISTRY"
+node clanker-cli/bin/clanker.mjs chain mint-bot openclaw.france.prod-1 org.openclaw.pat --registry "$REGISTRY"
+```
 
 ---
 
-## Updating the ledger
+## API reference
 
-For now, you can treat updates as being managed by a single "identity manager" on the machine that hosts this repo:
-
-1. Generate or load keys for each bot on its machine.
-2. Export the bot’s public key (base64).
-3. Edit `bot-identity-ledger.json`:
-   - Add or update the relevant `operators[operator_id]` / `bots[bot_id]` entry.
-   - Bump the `updated` timestamp if needed.
-
-Later phases can replace this JSON file with a more robust ledger backend while keeping the access-layer API stable.
-
+See [`references/api-spec.md`](./references/api-spec.md) and [`SERVICE.md`](./SERVICE.md).

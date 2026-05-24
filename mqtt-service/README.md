@@ -1,46 +1,34 @@
 # MQTT service
 
-Runs the MQTT broker (Mosquitto with HTTP auth plugin) and the mqtt-auth-service. Bots connect with username = `bot_id` and password = JWT from `identity_issue_mqtt_token`.
+Runs the MQTT broker (Mosquitto with HTTP auth plugin) and the mqtt-auth-service. Bots connect with `username = bot_id` and a **SIWE-style** password from `identity-node-client` (`issueMqttConnectPassword()`).
 
 ## Prerequisites
 
-- Identity service running and reachable (for auth service to fetch bot keys).
+- Identity service (EVM mode) running and reachable.
 - Docker and Docker Compose.
 
 ## Configuration
 
-- **IDENTITY_SERVICE_URL**: URL of the identity service. Default `http://host.docker.internal:8080` so the auth container can reach the identity service on the host. Set to e.g. `http://identity:8080` if the identity service runs in the same Compose network.
+- **IDENTITY_SERVICE_URL**: URL of the identity service. Default `http://host.docker.internal:8080`.
 
 ## Run
 
 ```bash
-# From repo root
 cd mqtt-service
-docker compose up -d
+docker compose build mqtt-auth && docker compose up -d
 ```
 
 - Broker: `mqtt://localhost:1883`
-- Auth service: `http://localhost:9090` (used by Mosquitto; bots don't call it directly).
+- Auth service: `http://localhost:9090`
 
 ## Test connect
 
-1. Start identity service, then mqtt-auth-service, then `docker compose up` in mqtt-service.
-2. From repo root, run the integration test (requires france-bot and tooter-bot registered with keys):
-
 ```bash
-MQTT_BROKER_URL=mqtt://localhost:1883 IDENTITY_SERVICE_URL=http://localhost:8080 node mqtt-service/test-connect.mjs
+cd identity-node-client && npm run build
+cd ../mqtt-node-client && npm run build
+
+BOT_ETH_PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \
+  node mqtt-service/test-connect.mjs
 ```
 
-This connects as france-bot with a JWT, publishes to `bots/all/announce` and to `bots/tooter-bot/inbox`, then polls for 2s and exits.
-
-Alternatively, get a token and connect with any MQTT client:
-
-```bash
-cd identity-node-client && node -e "
-import('./dist/index.js').then(({ IdentityClient }) => {
-  const c = new IdentityClient({ botId: 'openclaw.france.prod-1', operatorId: 'org.openclaw.pat' });
-  c.issueMqttToken(300).then(t => console.log(t));
-});
-"
-# Use the token as password with username openclaw.france.prod-1 in an MQTT client.
-```
+Rebuild **mqtt-auth** after auth changes: `docker compose build mqtt-auth && docker compose up -d`.
