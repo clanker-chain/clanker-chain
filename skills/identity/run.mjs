@@ -7,9 +7,9 @@
  *   node run.mjs verify <bot_id> <operator_id>
  *   node run.mjs get-bot <bot_id>
  *   node run.mjs sign '<envelope_json>'
- *   node run.mjs issue-mqtt-token [ttl_sec]
+ *   node run.mjs issue-mqtt-password
  *
- * Env: IDENTITY_SERVICE_URL, IDENTITY_ADMIN_TOKEN (optional).
+ * Env: IDENTITY_SERVICE_URL, MQTT_AUTH_SERVICE_URL, BOT_ETH_PRIVATE_KEY (optional).
  */
 
 import { IdentityClient } from "@clanker-chain/identity-node-client";
@@ -22,7 +22,7 @@ function usage() {
   node run.mjs verify <bot_id> <operator_id>
   node run.mjs get-bot <bot_id>
   node run.mjs sign '<envelope_json>'
-  node run.mjs issue-mqtt-token [ttl_sec]
+  node run.mjs issue-mqtt-password <bot_id> <operator_id>
 `);
 }
 
@@ -42,13 +42,11 @@ async function main() {
       }
       const client = new IdentityClient({ botId, operatorId });
       const identityServiceUrl = process.env.IDENTITY_SERVICE_URL ?? "http://localhost:8080";
-
-      const publicKey = await client.getPublicKeyBase64();
       await client.init();
       const bot = await client.getBot();
-      const hasActiveKey =
-        Array.isArray(bot.public_keys) &&
-        bot.public_keys.some((k) => k.public_key === publicKey && k.status === "active");
+      const onchainKey = bot.public_keys?.find(
+        (k) => k.algorithm === "secp256k1-eth" && k.status === "active",
+      )?.public_key;
 
       console.log(
         JSON.stringify({
@@ -56,8 +54,7 @@ async function main() {
           bot_id: botId,
           operator_id: operatorId,
           identity_service_url: identityServiceUrl,
-          public_key: publicKey,
-          bot_has_active_key: hasActiveKey,
+          bot_key: onchainKey,
           bot,
         }),
       );
@@ -82,53 +79,20 @@ async function main() {
         identity_service_url: identityServiceUrl,
         operator: { exists: false },
         bot: { exists: false },
-        key: { matches: false, public_key: undefined },
+        key: { matches: false, bot_key: undefined },
         error: undefined,
       };
 
       try {
-        const publicKey = await client.getPublicKeyBase64();
-        result.key.public_key = publicKey;
-
-        const opRes = await fetch(
-          `${identityServiceUrl}/v1/operators/${encodeURIComponent(operatorId)}`,
-        );
-        if (!opRes.ok) {
-          const text = await opRes.text();
-          result.error =
-            text || `operator lookup failed with status ${opRes.status}`;
-          console.log(JSON.stringify(result));
-          return;
-        }
-        result.operator.exists = true;
-
-        const botRes = await fetch(
-          `${identityServiceUrl}/v1/bots/${encodeURIComponent(botId)}`,
-        );
-        if (!botRes.ok) {
-          const text = await botRes.text();
-          result.error = text || `bot lookup failed with status ${botRes.status}`;
-          console.log(JSON.stringify(result));
-          return;
-        }
-        const bot = await botRes.json();
-        result.bot.exists = true;
-
-        const hasKey =
-          Array.isArray(bot.public_keys) &&
-          bot.public_keys.some(
-            (k) => k.public_key === publicKey && k.status === "active",
-          );
-        result.key.matches = hasKey;
-
-        if (!hasKey) {
-          result.error =
-            "bot exists but does not have an active public key matching the local key";
-          console.log(JSON.stringify(result));
-          return;
-        }
-
+        await client.init();
         result.ok = true;
+        result.operator.exists = true;
+        result.bot.exists = true;
+        const bot = await client.getBot();
+        result.key.bot_key = bot.public_keys?.find(
+          (k) => k.algorithm === "secp256k1-eth" && k.status === "active",
+        )?.public_key;
+        result.key.matches = true;
         console.log(JSON.stringify(result));
         return;
       } catch (err) {
@@ -166,26 +130,23 @@ async function main() {
         process.exit(1);
       }
       const client = new IdentityClient({ botId, operatorId });
+      await client.init();
       const { signature, signature_scheme } = await client.signMessage(envelope);
       console.log(JSON.stringify({ signature, signature_scheme, envelope: { ...envelope, signature, signature_scheme } }));
       return;
     }
 
-    if (cmd === "issue-mqtt-token") {
-      const [botId, operatorId, ttlSecStr] = args;
+    if (cmd === "issue-mqtt-password") {
+      const [botId, operatorId] = args;
       if (!botId || !operatorId) {
-        console.error("identity issue-mqtt-token requires bot_id and operator_id");
+        console.error("identity issue-mqtt-password requires bot_id and operator_id");
         usage();
         process.exit(1);
       }
-      const ttlSec = ttlSecStr ? parseInt(ttlSecStr, 10) : 300;
-      if (Number.isNaN(ttlSec) || ttlSec < 1) {
-        console.error("ttl_sec must be a positive number");
-        process.exit(1);
-      }
       const client = new IdentityClient({ botId, operatorId });
-      const token = await client.issueMqttToken(ttlSec);
-      console.log(token);
+      await client.init();
+      const password = await client.issueMqttConnectPassword();
+      console.log(password);
       return;
     }
 

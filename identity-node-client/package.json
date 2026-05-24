@@ -1,20 +1,21 @@
 {
   "name": "@clanker-chain/identity-node-client",
-  "version": "0.0.1",
+  "version": "2026.5.23",
   "private": false,
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test test/eip712.test.ts test/init.test.ts test/verify.test.ts"
   },
   "dependencies": {
-    "@noble/ed25519": "^2.1.0",
-    "jose": "^5.9.6"
+    "viem": "^2.21.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
-    "@types/node": "^22.10.2"
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.0"
   }
 }
-
