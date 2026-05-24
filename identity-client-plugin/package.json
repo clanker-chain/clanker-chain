@@ -1,7 +1,7 @@
 {
   "name": "@clanker-chain/identity-plugin",
-  "version": "0.0.2",
-  "description": "Identity client and identity skill for clanker-chain bots.",
+  "version": "2026.5.23",
+  "description": "DEPRECATED — use @clanker-chain/identity-node-client instead.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "openclaw": {

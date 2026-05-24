@@ -70,17 +70,23 @@ function usage() {
 
 Usage:
   clanker init-openclaw
-  clanker mint <bot_id> [operator_id]
   clanker chain up [--host 0.0.0.0] [--port 8545] [--state <path>]
   clanker chain deploy [--rpc <url>] [--key <hex>]
+  clanker chain mint-operator <label> [--rpc <url>] [--registry <addr>] [--key <hex>]
+  clanker chain mint-bot <bot_label> <operator_label> [--bot-key <hex>] [--rpc ...] [--registry ...] [--key ...]
+  clanker chain rotate-bot-key <bot_label> <new_key_address> [--rpc ...] [--registry ...] [--key ...]
+  clanker chain revoke-bot <bot_label> [--rpc ...] [--registry ...] [--key ...]
   clanker check mqtt <bot_id> <operator_id>
   clanker check identity [operator_id]
 
 Commands:
   init-openclaw           Wire clanker-chain-identity and clanker-chain-mqtt into the current OpenClaw repo (.env + basic config).
-  mint                    Wraps identity-service/scripts/quick-mint.sh to mint an operator and bot.
   chain up                Start local Anvil (Foundry). Default: --host 0.0.0.0 --port 8545 --state chain/.anvil-state.json under the repo root.
   chain deploy            Deploy ClankerIdentity via forge script (defaults: Anvil RPC + Anvil test account #0 key — dev only).
+  chain mint-operator     Register an operator on ClankerIdentity (label = operator_id string).
+  chain mint-bot          Register a bot; generates bot key unless --bot-key is set; writes ~/.openclaw/keys/<bot_label>.key.
+  chain rotate-bot-key    Rotate bot signing key on-chain.
+  chain revoke-bot        Revoke a bot on-chain.
   check mqtt              Run scripts/check-mqtt.sh with the given bot and operator ids.
   check identity          Run scripts/check-identity.sh for the given operator id (default: org.openclaw.operator).
 `);
@@ -99,9 +105,18 @@ async function main() {
   if (cmd === "chain") {
     const [sub, ...chainArgv] = rest;
     if (!sub || sub === "-h" || sub === "--help") {
-      console.error("Usage: clanker chain up | clanker chain deploy");
+      console.error(
+        "Usage: clanker chain up | deploy | mint-operator | mint-bot | rotate-bot-key | revoke-bot",
+      );
       process.exit(1);
     }
+
+    const {
+      chainMintOperator,
+      chainMintBot,
+      chainRotateBotKey,
+      chainRevokeBot,
+    } = await import("./chain-identity.mjs");
 
     if (sub === "up") {
       const flags = parseChainFlags(chainArgv, {
@@ -182,23 +197,48 @@ async function main() {
       process.exit(result.status ?? 0);
     }
 
-    console.error(`Unknown chain subcommand: ${sub}. Use 'up' or 'deploy'.`);
-    process.exit(1);
-  }
+    if (sub === "mint-operator") {
+      const [label, ...flags] = chainArgv;
+      if (!label) {
+        console.error("chain mint-operator requires <label>");
+        process.exit(1);
+      }
+      await chainMintOperator(label, flags);
+      return;
+    }
 
-  if (cmd === "mint") {
-    const [botId, operatorId] = rest;
-    if (!botId) {
-      console.error("mint requires <bot_id> [operator_id]");
-      process.exit(1);
+    if (sub === "mint-bot") {
+      const [botLabel, operatorLabel, ...flags] = chainArgv;
+      if (!botLabel || !operatorLabel) {
+        console.error("chain mint-bot requires <bot_label> <operator_label>");
+        process.exit(1);
+      }
+      await chainMintBot(botLabel, operatorLabel, flags);
+      return;
     }
-    const scriptPath = join(repoRoot, "identity-service", "scripts", "quick-mint.sh");
-    if (!existsSync(scriptPath)) {
-      console.error(`quick-mint.sh not found at ${scriptPath}`);
-      process.exit(1);
+
+    if (sub === "rotate-bot-key") {
+      const [botLabel, newKey, ...flags] = chainArgv;
+      if (!botLabel || !newKey) {
+        console.error("chain rotate-bot-key requires <bot_label> <new_key_address>");
+        process.exit(1);
+      }
+      await chainRotateBotKey(botLabel, newKey, flags);
+      return;
     }
-    runScript(scriptPath, [botId, operatorId].filter(Boolean));
-    return;
+
+    if (sub === "revoke-bot") {
+      const [botLabel, ...flags] = chainArgv;
+      if (!botLabel) {
+        console.error("chain revoke-bot requires <bot_label>");
+        process.exit(1);
+      }
+      await chainRevokeBot(botLabel, flags);
+      return;
+    }
+
+    console.error(`Unknown chain subcommand: ${sub}. Use 'up', 'deploy', 'mint-operator', 'mint-bot', 'rotate-bot-key', or 'revoke-bot'.`);
+    process.exit(1);
   }
 
   if (cmd === "check") {

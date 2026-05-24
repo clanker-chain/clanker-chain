@@ -23,6 +23,9 @@ export interface MqttChannelConfig {
   
   /** Identity service URL */
   identityServiceUrl: string;
+
+  /** MQTT auth service URL (SIWE nonces). Default: http://localhost:9090 */
+  mqttAuthServiceUrl?: string;
   
   /** Topic configuration */
   topics?: {
@@ -93,6 +96,9 @@ export interface MqttMessage {
   
   /** Optional signature for verification */
   signature?: string;
+
+  /** Signature scheme (e.g. eip712-secp256k1) */
+  signature_scheme?: string;
 }
 
 export type MessageHandler = (message: InboundMessage) => void | Promise<void>;

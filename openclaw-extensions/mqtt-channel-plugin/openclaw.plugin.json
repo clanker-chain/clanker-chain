@@ -1,7 +1,7 @@
 {
   "id": "mqtt",
   "name": "MQTT Channel",
-  "version": "0.0.4",
+  "version": "2026.5.23",
   "description": "OpenClaw MQTT channel for bot-to-bot messaging (Clanker Chain)",
   "kind": "channel",
   "openclaw": ">=2026.4.15",
@@ -47,7 +47,11 @@
           },
           "identityServiceUrl": {
             "type": "string",
-            "description": "Identity service URL for JWT issuance (required)"
+            "description": "Identity service URL (EVM indexer, required)"
+          },
+          "mqttAuthServiceUrl": {
+            "type": "string",
+            "description": "MQTT auth service URL for SIWE nonces (e.g. http://127.0.0.1:9090)"
           },
           "accounts": {
             "type": "object",

@@ -1,21 +1,18 @@
 {
   "name": "identity-service",
-  "version": "0.1.0",
+  "version": "2026.5.23",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "bun run src/server.ts",
     "start": "bun run src/server.ts",
-    "cli": "bun run src/cli.ts",
-    "test": "bun test",
-    "bootstrap-genesis": "bun run scripts/bootstrap-genesis.ts"
+    "test": "bun test"
   },
   "dependencies": {
-    "@noble/ed25519": "^2.1.0"
+    "viem": "^2.21.0"
   },
   "devDependencies": {
     "bun-types": "latest",
     "@types/node": "latest"
   }
 }
-

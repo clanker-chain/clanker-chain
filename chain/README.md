@@ -13,6 +13,14 @@ foundryup
 
 Confirm `forge`, `cast`, and `anvil` are on your `PATH`.
 
+**First clone:** this repo uses a git submodule for `forge-std`:
+
+```bash
+git clone --recurse-submodules <repo-url>
+# or, after a clone without submodules:
+git submodule update --init chain/lib/forge-std
+```
+
 ## Tests
 
 From repo root or this directory:
@@ -70,6 +78,80 @@ cast call $REGISTRY "operators(bytes32)(address,uint64,uint64)" \
 ```
 
 Replace `$REGISTRY` with the deployed address from the deploy output. For a registered label, compute `bytes32 id = keccak256(bytes(label))` in Solidity (same value as `keccak256(abi.encodePacked(label))` for a string) and pass that `id` as the argument.
+
+## Register operators and bots (`cast`)
+
+Until `clanker chain mint-operator` / `mint-bot` exist, use **`cast send`**. Or use the repo CLI (CalVer `2026.5.23`):
+
+```bash
+export REGISTRY=0x5FbDB2315678afecb367f032d93F642f64180aa3
+export CHAIN_RPC_URL=http://127.0.0.1:8545
+
+node clanker-cli/bin/clanker.mjs chain mint-operator org.openclaw.pat --registry "$REGISTRY"
+node clanker-cli/bin/clanker.mjs chain mint-bot openclaw.france.prod-1 org.openclaw.pat --registry "$REGISTRY"
+```
+
+Legacy **`cast send`** examples below remain valid.
+
+### Operator id vs private key
+
+- **`OP_ID`** = `cast keccak $(cast from-utf8 "org.openclaw.pat")` — a **`bytes32`** chain id, **not** a wallet secret.
+- **`PK`** = a real **32-byte hex private key** (e.g. Anvil account #0: `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80`). Using `OP_ID` as `PK` derives a random address with **0 ETH** → `Out of gas: gas required exceeds allowance: 0`.
+
+### Register one operator
+
+Must be sent from the key that should **own** the operator (funded account on Anvil):
+
+```bash
+export REGISTRY=0x5FbDB2315678afecb367f032d93F642f64180aa3   # your deployed address
+
+cast send --rpc-url http://127.0.0.1:8545 \
+  --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+  "$REGISTRY" \
+  "registerOperator(string)" \
+  "org.openclaw.pat"
+```
+
+### Register a bot under that operator
+
+```bash
+export OP_ID=$(cast keccak $(cast from-utf8 "org.openclaw.pat"))
+
+cast send --rpc-url http://127.0.0.1:8545 \
+  --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+  "$REGISTRY" \
+  "registerBot(bytes32,string,address)" \
+  "$OP_ID" \
+  "openclaw.france.prod-1" \
+  0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+```
+
+The last argument is the **`botKey`** (20-byte address). Use a **different** funded address per bot; `ClankerIdentity` rejects duplicate active keys.
+
+### Second operator from another Anvil account
+
+Use a **different** `--private-key` (e.g. Anvil #2) for `registerOperator("org.openclaw.alice")`, then the **same** key for that operator’s `registerBot` calls.
+
+### Verify
+
+```bash
+export BOT_ID=$(cast keccak $(cast from-utf8 "openclaw.france.prod-1"))
+cast call "$REGISTRY" "bots(bytes32)(bytes32,address,uint64,uint64)" "$BOT_ID" --rpc-url http://127.0.0.1:8545
+```
+
+### Wired to identity-service and MQTT
+
+On-chain events are indexed by **identity-service** (`EvmBackend`) into a materialized snapshot at `identity/bot-identity-ledger.json`. **mqtt-auth-service** verifies SIWE CONNECT passwords against `secp256k1-eth` / `botKey` from `GET /v1/bots/:id`.
+
+Run identity-service with:
+
+```bash
+CHAIN_RPC_URL=http://127.0.0.1:8545 \
+REGISTRY_ADDRESS=$REGISTRY \
+bun run identity-service/src/server.ts
+```
+
+See [`identity/SERVICE.md`](../identity/SERVICE.md) and [`docs/blockchain-identity-plan.md`](../docs/blockchain-identity-plan.md).
 
 ## Repo integration
 

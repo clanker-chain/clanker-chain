@@ -6,23 +6,24 @@ This is a planning doc. No code changes are implied by reading it.
 
 ---
 
-## 1. Where we stand today
+## 1. Where we stood (pre-cutover snapshot)
 
-The current identity stack is already signature-rooted and replayable. The "ledger" file is closer to a single-writer rollup than to a config file.
+> **Note:** CalVer `2026.5.23` completed the hard cutover (see §1 status below). This subsection describes the legacy JSON ledger for historical context.
 
-- `identity/bot-identity-ledger.json` is an append-only log of `operations[]` (`mint-operator`, `mint-bot`, `add-bot-key`), each with `message`, `signature`, `timestamp`, `op_id`.
-- `identity-service/src/server.ts` verifies every write with `verifyEd25519(message, signature, publicKey)` before mutating state.
-- `mqtt-auth-service/src/server.ts` is a Mosquitto HTTP backend that takes `username = bot_id`, `password = EdDSA JWT`, fetches the bot's active public key from the identity service, and verifies the JWT with `jose.jwtVerify`.
-- Bot keys live at `~/.openclaw/keys/{bot_id}.key` (Ed25519). Operator keys are managed analogously.
-- `openclaw-extensions/mqtt-channel-plugin/src/MqttChannelProvider.ts` uses `IdentityClient` to mint short-lived JWTs and authenticate to the broker; per-message signing follows the canonical format in `bot-comms.md` lines 419–466.
+The former identity stack was signature-rooted and replayable. The "ledger" file was closer to a single-writer rollup than to a config file.
 
-What works:
+- `identity/bot-identity-ledger.json` was an append-only log of `operations[]` (`mint-operator`, `mint-bot`, `add-bot-key`), each with `message`, `signature`, `timestamp`, `op_id`.
+- `identity-service` verified writes with Ed25519 before mutating state.
+- `mqtt-auth-service` accepted EdDSA JWT CONNECT passwords.
+- Bot keys were Ed25519 at `~/.openclaw/keys/{bot_id}.key`.
+
+What worked:
 
 - Cryptographic provenance for every state change.
-- Anyone can re-run the identity service against the same ledger and recompute identical state.
-- Brokers never trust a username/password DB — every CONNECT is a signature check.
+- Anyone could re-run the identity service against the same ledger and recompute identical state.
+- Brokers never trusted a username/password DB — every CONNECT was a signature check.
 
-What's missing for "actually a blockchain":
+What was missing for "actually a blockchain":
 
 1. **Single writer.** One JSON file behind one Bun process with an in-process write lock. Two operators on two machines can't both append.
 2. **Tamper-evidence.** Operations are signed individually but not chained (no `prev_hash`); the host could rewrite history undetectably.
@@ -30,6 +31,14 @@ What's missing for "actually a blockchain":
 4. **Revocation freshness.** Relying parties trust whatever the identity service returns now — no inclusion proof, no "as-of block".
 5. **Cross-org governance.** No multi-sig, no recovery, no shared control of an operator id.
 6. **Public auditability.** Reputation needs a public, append-only feed nobody can rewrite.
+
+### Current integration status (CalVer 2026.5.23 — hard cutover)
+
+- **`chain/`** — `ClankerIdentity`, Foundry tests, `clanker chain up|deploy|mint-*`.
+- **identity-service** — EVM-only read API; indexes chain events; `GET /health` exposes EIP-712 domain.
+- **mqtt-auth-service** — SIWE-only CONNECT verification.
+- **identity-node-client** — secp256k1 keys, SIWE MQTT, EIP-712 message signing.
+- **No** JSON ledger writes, Ed25519 keys, or JWT CONNECT (legacy paths removed).
 
 ---
 
@@ -54,10 +63,7 @@ The smart-contract ecosystem standardizes on **secp256k1 keypairs**, **Keccak-25
 ### What changes on the wire
 
 - **Bot keys**: 32-byte secp256k1 private key on disk, 20-byte Ethereum address as the public identifier. Replace `algorithm: "ed25519"` records in the ledger with `algorithm: "secp256k1"`. File layout in `~/.openclaw/keys/{bot_id}.key` can stay the same.
-- **MQTT CONNECT auth**: keep `username = bot_id`, replace the password contents:
-  - **Option A (incremental):** ES256K JWT with the same claims as today — `iss/sub = bot_id`, `aud = clanker-mqtt`, `iat`, `exp`. `mqtt-auth-service` switches `algorithms: ["EdDSA"]` to `["ES256K"]` and recovers the address instead of importing a JWK.
-  - **Option B (idiomatic):** EIP-4361 (SIWE) message + signature. The auth service issues a nonce, the bot signs, the service `ecrecover`s and checks the address against the on-chain record.
-  - SIWE is the more standard path; ES256K JWTs are a smaller diff. Pick one; don't ship both.
+- **MQTT CONNECT auth**: keep `username = bot_id`. **Shipped:** SIWE-style **EIP-191 `personal_sign`** (not full EIP-4361) on the ASCII string `clanker-mqtt:auth:<bot_id>:<nonce>` where `nonce` is issued by `mqtt-auth-service` (`GET /nonce?bot_id=…`). CONNECT `password` is `<nonce>.<signatureHex>` (65-byte ECDSA sig). `mqtt-auth-service` uses `viem`’s `recoverMessageAddress`, compares to the active `secp256k1-eth` / `botKey` from `GET /v1/bots/:id`. Legacy EdDSA JWT path **removed** in CalVer `2026.5.23`.
 - **Per-message signatures**: the canonical-fields list in `bot-comms.md` stays the same, but they're hashed under an **EIP-712 typed-data domain** instead of sorted JSON + Ed25519:
 
   ```text
@@ -102,6 +108,15 @@ node clanker-cli/bin/clanker.mjs chain deploy   # Deploy ClankerIdentity (defaul
 
 Migration to public chain is two env vars: `CHAIN_RPC_URL` and `REGISTRY_ADDRESS`. ABI and code unchanged.
 
+### Manual registration with `cast` (until `clanker chain mint-*` exists)
+
+Full examples and pitfalls live in [`chain/README.md`](../chain/README.md). Short rules:
+
+- **`--rpc-url` and `--private-key` before** the contract address and function (avoids parser errors with some `cast` versions).
+- **`OP_ID` / `BOT_ID`** = `keccak256(bytes(label))` → use `cast keccak $(cast from-utf8 "your.label.here")`. Do **not** confuse that `bytes32` with a **private key** (`PK` must be a 32-byte secp256k1 secret, e.g. Anvil’s well-known dev keys).
+- **`registerOperator`** must be sent from the account that should **own** that operator; **`registerBot`** must use the **same** `--private-key` as that operator’s `owner`.
+- **`botKey`** in `registerBot` is an **Ethereum address** (the bot’s future signing identity on-chain). Two bots cannot share the same active `botKey` (`botKeyToId` enforces uniqueness).
+
 ---
 
 ## 5. Public chain choice
@@ -118,79 +133,44 @@ Test/staging deploy: **Base Sepolia** (free, same code).
 
 ---
 
-## 6. Registry contract
+## 6. Registry contract (`ClankerIdentity`)
 
-Designed so that **events are the source of truth** and **storage is a cache**. Indexers (and `identity-service`) materialize the existing `IdentityLedger` JSON shape from event logs. This is the pattern used by Uniswap, ENS, every NFT marketplace; it keeps gas low and makes history fully replayable.
+**Source of truth in repo:** [`chain/src/ClankerIdentity.sol`](../chain/src/ClankerIdentity.sol). The contract is intentionally minimal (notary only): **no** metadata URI, **no** status enum on-chain — “active” means `revokedAt == 0`; revoked records keep `registeredAt` and set `revokedAt`.
 
-Sketch (not committed code):
+**Ids:** `bytes32 operatorId = keccak256(bytes(operatorLabel))` and `bytes32 botId = keccak256(bytes(botLabel))` (e.g. labels `org.openclaw.pat`, `openclaw.france.prod-1`). **`msg.sender` must be the operator owner** to register or manage bots under that operator.
 
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+**Storage**
 
-contract ClankerIdentity {
-    enum Status { Active, Suspended, Retired }
+| Field | Purpose |
+| --- | --- |
+| `operators(bytes32)` | `owner`, `registeredAt`, `revokedAt` |
+| `bots(bytes32)` | `operatorId`, `botKey` (20-byte signing address), `registeredAt`, `revokedAt` |
+| `pendingOperatorOwner(bytes32)` | Two-step operator transfer |
+| `botKeyToId(address)` | At most one active bot per `botKey` |
 
-    struct Operator {
-        address owner;           // EOA or ERC-1271 contract (Safe, etc.)
-        uint64 registeredAt;     // block.timestamp at mint — age primitive
-        uint64 lastUpdatedAt;
-        Status status;
-        string metadataURI;      // ipfs:// or https:// — display name, contact
-    }
+**Functions:** `registerOperator`, `proposeOperatorTransfer`, `acceptOperatorTransfer`, `revokeOperator`, `registerBot`, `rotateBotKey`, `revokeBot`. Custom errors (no revert strings) for gas and clarity.
 
-    struct Bot {
-        bytes32 operatorId;
-        address botKey;          // bot's current signing address
-        uint64 registeredAt;     // age primitive
-        uint64 lastUpdatedAt;
-        Status status;
-        string metadataURI;
-    }
-
-    // operator_id is the chosen label ("org.openclaw.pat") hashed to bytes32
-    mapping(bytes32 => Operator) public operators;
-    mapping(bytes32 => Bot)      public bots;
-
-    event OperatorRegistered(bytes32 indexed id, address indexed owner, string label, string metadataURI);
-    event OperatorKeyRotated(bytes32 indexed id, address oldOwner, address newOwner);
-    event OperatorStatusChanged(bytes32 indexed id, Status status);
-
-    event BotRegistered(bytes32 indexed id, bytes32 indexed operatorId, address botKey, string label, string metadataURI);
-    event BotKeyRotated(bytes32 indexed id, address oldKey, address newKey);
-    event BotStatusChanged(bytes32 indexed id, Status status);
-
-    function registerOperator(string calldata label, string calldata metadataURI) external;
-    function rotateOperator(bytes32 id, address newOwner) external;       // only current owner
-
-    function registerBot(bytes32 operatorId, string calldata label, address botKey, string calldata metadataURI) external; // only operator owner
-    function rotateBotKey(bytes32 botId, address newKey) external;        // only operator owner
-    function setBotStatus(bytes32 botId, Status s) external;              // only operator owner
-}
-```
+**Events:** `OperatorRegistered`, `OperatorTransferProposed`, `OperatorTransferred`, `OperatorRevoked`, `BotRegistered`, `BotKeyRotated`, `BotRevoked`. Indexers replay these to build off-chain views and (future) the `IdentityLedger` cache.
 
 ### Design notes
 
-- **Operator id = chosen label, not address.** Keeps `org.openclaw.pat` readable; decouples display name from the keypair so rotation doesn't change the id. First-come-first-served on local dev. For prod, gate registration with ENS ownership of `*.openclaw.eth` or a small fee, to be decided before mainnet deploy.
-- **Bot key = `address`, not bytes32 pubkey.** The address is what `ecrecover` returns; one-line on-chain verification.
-- **`registeredAt` is your free age oracle.** Reputation services compute `block.timestamp - registeredAt` with no extra writes.
-- **Status enum, not boolean.** Distinguishes active / suspended / retired without a custodian field.
-- **`metadataURI` deferred off-chain.** Display names, contact info, profile data live in IPFS or HTTPS to keep on-chain storage minimal.
-- **No `IDENTITY_ADMIN_TOKEN` analogue.** All mutations are gated by `msg.sender` checks; ownership is the only authority.
+- **Operator id = hash of chosen label, not the owner address.** Readable labels off-chain; on-chain id is fixed bytes32. First-come-first-served on local dev. For prod, gate registration (ENS, fee, etc.) — see §10.
+- **`botKey` is an EVM `address`.** Aligns with secp256k1 + `ecrecover` on the wire (§3). `mqtt-auth-service` can verify CONNECT via that address (SIWE-style, §3) while legacy bots still use Ed25519 JWTs from the JSON ledger.
+- **`registeredAt` / `revokedAt` + block timestamps on events** — age and history for reputation indexers without extra on-chain fields.
+- **No admin token.** Only `msg.sender` checks against `operators[id].owner` (and two-step accept for transfers).
 
 ---
 
 ## 7. Reputation primitives
 
-### Bake into v1 (free, derived from registry events)
+### Derivable from the shipped registry (no extra contracts)
 
-- **Operator age**: `block.timestamp - operator.registeredAt`.
-- **Bot age**: `block.timestamp - bot.registeredAt`.
-- **Status history**: derived from `*StatusChanged` events.
-- **Operator → bot count**: derived from `BotRegistered` events.
-- **Key rotation cadence**: derived from `*KeyRotated` events.
+- **Operator / bot age:** `block.timestamp - registeredAt` from storage or mint tx time.
+- **Revocation history:** `OperatorRevoked`, `BotRevoked` events plus `revokedAt` on structs.
+- **Operator → bot count:** count `BotRegistered` where `operatorId` matches.
+- **Key rotation cadence:** `BotKeyRotated`, `OperatorTransferred` events.
 
-These cost nothing extra and cover the most common "is this identity new?" / "has this operator been around?" questions.
+These are free for any indexer reading logs + occasional `eth_call`.
 
 ### Add as separate contracts when needed
 
@@ -207,7 +187,7 @@ Three interfaces to introduce in the existing repo. Each is shippable on its own
 
 ### 8a. `IdentityBackend` interface
 
-In `identity-service/src/ledger.ts`. Today's file becomes `JsonFileBackend implements IdentityBackend`. Later, add `EvmBackend implements IdentityBackend` that materializes the same shape from contract events. The HTTP layer in `identity-service/src/server.ts` only knows the interface; `mqtt-auth-service`, `MqttChannelProvider`, and `clanker-cli` never need to learn about chains.
+In `identity-service/src/backend.ts` (types remain in `ledger.ts`). `JsonFileBackend implements IdentityBackend`. Later, add `EvmBackend implements IdentityBackend` that materializes the same shape from contract events. The HTTP layer in `identity-service/src/server.ts` only knows the interface; `mqtt-auth-service`, `MqttChannelProvider`, and `clanker-cli` never need to learn about chains.
 
 ```ts
 interface IdentityBackend {
@@ -234,15 +214,15 @@ So the JWT-vs-SIWE swap is one file. `Mosquitto`'s username/password CONNECT sem
 
 ## 9. PR sequence
 
-Each PR is reviewable on its own and shippable independently.
+Each PR is reviewable on its own and shippable independently. **Steps 5 and part of 7 below are already done** (see §1 “Current integration status” and [`chain/README.md`](../chain/README.md)).
 
-1. **Refactor only — `IdentityBackend` and `Signer` interfaces.** No behavior change, tests pass identically.
+1. ~~**Refactor only — `IdentityBackend` and `Signer` interfaces.**~~ **In progress / landed:** `IdentityBackend` + `JsonFileBackend` + `GET /health`; `Signer` interface still pending as a separate pass.
 2. **Add secp256k1 alongside ed25519.** Bots can register either; auth services accept either. Backwards-compatible. Lets `france-bot` and `tooter-bot` migrate one at a time.
 3. **EIP-712 message envelope.** Update `bot-comms.md` canonical signing section. Old Ed25519+JSON canonical still verifies for grandfathered messages; new ones use EIP-712.
-4. **CONNECT auth migration.** Either swap JWT alg to ES256K or replace with SIWE in `mqtt-auth-service`. Decide between the two in this PR.
-5. **Foundry project + `ClankerIdentity` contract + tests.** New `chain/` dir. Tests mirror `identity-service/test/server.test.ts` semantics.
-6. **`EvmBackend` indexer.** Watches contract events, materializes the same `IdentityLedger` shape, persists `bot-identity-ledger.json` as a cache. `identity-service` reads from it through the `IdentityBackend` interface from PR 1.
-7. **`clanker chain` CLI.** Subcommands `up`, `deploy`, `mint-operator`, `mint-bot`, `rotate-bot-key`, `set-bot-status`. Wraps Foundry / viem. Replaces (or shadows) the existing `clanker mint`.
+4. **CONNECT auth migration.** **In progress / landed:** SIWE-style EIP-191 signing in `mqtt-auth-service` + `GET /nonce`, with **EdDSA JWT** fallback for legacy ledger bots.
+5. ~~**Foundry project + `ClankerIdentity` contract + tests.**~~ **Done:** [`chain/`](../chain/) (Forge tests, `Deploy.s.sol`, CI via `scripts/ci-local.sh` + Foundry toolchain in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)).
+6. **`EvmBackend` indexer.** **In progress / landed:** `eth_getLogs` + poll loop, materialized `IdentityLedger` + `meta` snapshot, read-only fallback when RPC is down; wired behind `IDENTITY_BACKEND=evm` + env (`CHAIN_RPC_URL`, `REGISTRY_ADDRESS`, `DEPLOYMENT_BLOCK`, …).
+7. **`clanker chain` CLI — partial.** **`up`** and **`deploy`** are implemented (`clanker-cli/bin/clanker.mjs`). **Still to add:** `mint-operator`, `mint-bot`, `rotate-bot-key`, `set-bot-status` (wrapping `cast` / viem) to replace ad-hoc registration and the legacy `clanker mint` JSON path for on-chain workflows.
 8. **Cut over.** Once stable on local Anvil, deploy to Base Sepolia. Run both bots against it for ~1 week. Then mainnet.
 
 After PR 6, the identity-service HTTP API is **unchanged**, but its source of truth is a smart contract. Every relying party — MQTT auth, channel plugin, future dashboards — keeps calling `GET /v1/bots/:id` and gets back the same JSON, now derived from chain events with timestamps and history that any third party can independently re-verify.
