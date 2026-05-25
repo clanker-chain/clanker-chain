@@ -206,6 +206,29 @@ test("EvmBackend indexes ClankerIdentity and tracks rotateBotKey", async () => {
   expect(bot?.public_keys?.[0]?.public_key?.toLowerCase()).toBe(newKey.toLowerCase());
 });
 
+test("persistSnapshot skips disk write when only chain head advances", async () => {
+  if (skip) return;
+  expect(backend).not.toBeNull();
+
+  await backend!.syncFromChain();
+  const first = JSON.parse(await Bun.file(snapshotPath).text()) as {
+    updated: string;
+    created: string;
+    meta?: { lastIndexedBlock?: string };
+  };
+
+  await new Promise((r) => setTimeout(r, 50));
+  await backend!.syncFromChain();
+  const second = JSON.parse(await Bun.file(snapshotPath).text()) as {
+    updated: string;
+    created: string;
+    meta?: { lastIndexedBlock?: string };
+  };
+
+  expect(second.updated).toBe(first.updated);
+  expect(second.created).toBe(first.created);
+});
+
 test("EvmBackend clamps snapshot cursor when ahead of chain head", async () => {
   if (skip) return;
   expect(backend).not.toBeNull();
