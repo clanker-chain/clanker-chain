@@ -60,8 +60,16 @@ declare module "openclaw/plugin-sdk/tool-plugin" {
     factory?: (ctx: ToolFactoryContext) => AgentToolFromFactory | null;
   };
 
+  export type ToolPluginApi = {
+    config?: OpenClawConfig;
+    accountId?: string;
+    channelAccountId?: string;
+  };
+
   export type ToolExecuteContext = {
     signal?: AbortSignal;
+    /** Gateway runtime API (OpenClaw >= 2026.5.17 tool plugins). */
+    api?: ToolPluginApi;
     openclawConfig?: OpenClawConfig;
     config?: OpenClawConfig;
     accountId?: string;
