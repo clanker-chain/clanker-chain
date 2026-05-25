@@ -48,6 +48,8 @@ The **mint / registration step is performed by the operator on-chain**, not by t
 
 After this one-time registration, the **bot** uses this skill to verify its identity and sign messages; it does not perform registration itself.
 
+**OpenClaw outbound MQTT:** for signed direct messages to another bot, prefer the gateway tool **`mqtt_send`** from [`@clanker-chain/mqtt-tools`](../../openclaw-extensions/mqtt-tools-plugin/README.md) (or core `message` on profiles that include it). This skill covers `identity_sign` for custom/exec flows; the mqtt-tools plugin wraps sign + publish to `bots/{canonicalBotId}/inbox`.
+
 ---
 
 ## Commands

@@ -43,12 +43,13 @@ export class MqttClient {
     }
     const password = await options.getPassword();
     const username = options.username ?? options.clientId;
+    const clean = options.clean ?? false;
     return new Promise((resolve, reject) => {
       const c = mqtt.connect(options.brokerUrl, {
         clientId: options.clientId,
         username,
         password,
-        clean: false,
+        clean,
         reconnectPeriod: 0,
       });
       c.on("message", (topic: string, payload: Buffer) => {
@@ -93,6 +94,34 @@ export class MqttClient {
     this.client.publish(topic, body, {
       qos: opts.qos ?? 1,
       retain: opts.retain ?? false,
+    });
+  }
+
+  /**
+   * Publish and wait for broker acknowledgment (QoS 1+). Surfaces ACL/size errors.
+   */
+  publishAck(
+    topic: string,
+    payload: unknown,
+    options: MqttPublishOptions = {},
+  ): Promise<void> {
+    if (!this.client?.connected) {
+      return Promise.reject(new Error("Not connected"));
+    }
+    const opts = { ...defaultPublishOptions, ...options };
+    const qos = opts.qos ?? 1;
+    const body =
+      typeof payload === "string" ? payload : JSON.stringify(payload);
+    return new Promise((resolve, reject) => {
+      this.client!.publish(
+        topic,
+        body,
+        { qos, retain: opts.retain ?? false },
+        (err) => {
+          if (err) reject(err);
+          else resolve();
+        },
+      );
     });
   }
 

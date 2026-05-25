@@ -1,0 +1,44 @@
+{
+  "name": "@clanker-chain/mqtt-tools",
+  "version": "2026.5.24",
+  "description": "OpenClaw tool plugin: mqtt_send for signed bot-to-bot MQTT DMs (Clanker Chain)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "openclaw.plugin.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "test": "bun test test/"
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "peerDependencies": {
+    "@clanker-chain/mqtt-channel-plugin": "2026.5.23",
+    "openclaw": ">=2026.5.17"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    },
+    "@clanker-chain/mqtt-channel-plugin": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@clanker-chain/identity-node-client": "2026.5.23",
+    "@clanker-chain/mqtt-node-client": "2026.5.25",
+    "typebox": "^1.1.38"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3"
+  }
+}

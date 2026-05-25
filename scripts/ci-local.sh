@@ -159,6 +159,22 @@ main() {
   (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun x tsc -p tsconfig.json)
   (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun test test/wire-format.test.ts)
 
+  log "TS check/build for mqtt-tools-plugin (OpenClaw tool plugin)"
+  MQTT_TOOLS_DIR="${ROOT_DIR}/openclaw-extensions/mqtt-tools-plugin"
+  mkdir -p "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain"
+  ln -sf "${ROOT_DIR}/identity-node-client" "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain/identity-node-client"
+  ln -sf "${ROOT_DIR}/mqtt-node-client" "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain/mqtt-node-client"
+  # typebox is a runtime dep; do not run `npm install` in this package — it would fetch
+  # @clanker-chain/mqtt-node-client@2026.5.25 from npm before that CalVer is published.
+  if [ ! -d "${MQTT_TOOLS_DIR}/node_modules/typebox" ]; then
+    MQTT_TOOLS_TYPEBOX_TMP="$(mktemp -d)"
+    (cd "${MQTT_TOOLS_TYPEBOX_TMP}" && npm pack typebox@1.1.38 --silent && tar -xzf typebox-*.tgz)
+    mv "${MQTT_TOOLS_TYPEBOX_TMP}/package" "${MQTT_TOOLS_DIR}/node_modules/typebox"
+    rm -rf "${MQTT_TOOLS_TYPEBOX_TMP}"
+  fi
+  (cd "${MQTT_TOOLS_DIR}" && bun x tsc -p tsconfig.json)
+  (cd "${MQTT_TOOLS_DIR}" && bun test test/)
+
   # mqtt-client-plugin depends on @clanker-chain/mqtt-node-client and
   # @clanker-chain/identity-node-client which are local packages (not yet on npm
   # at dev time). Symlink them instead of running npm ci.
