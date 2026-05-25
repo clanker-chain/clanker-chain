@@ -1,17 +1,13 @@
 import { Type } from "typebox";
 import { defineToolPlugin } from "openclaw/plugin-sdk/tool-plugin";
-import type { OpenClawConfig, ToolExecuteContext } from "openclaw/plugin-sdk/plugin-entry";
 import {
+  resolveGatewayConfigFromToolContext,
   resolveMqttToolsConfig,
   resolveToolAccountId,
   validateMessageFields,
   validateRecipientBotId,
 } from "./mqtt-config.js";
 import { sendSignedDm } from "./send-signed-dm.js";
-
-function resolveGatewayConfig(context: ToolExecuteContext): OpenClawConfig {
-  return (context.openclawConfig ?? context.config ?? {}) as OpenClawConfig;
-}
 
 export default defineToolPlugin({
   id: "mqtt-tools",
@@ -52,7 +48,7 @@ export default defineToolPlugin({
         validateMessageFields(body, correlation);
 
         const accountId = resolveToolAccountId(context);
-        const mqtt = resolveMqttToolsConfig(resolveGatewayConfig(context), accountId);
+        const mqtt = resolveMqttToolsConfig(resolveGatewayConfigFromToolContext(context), accountId);
         return sendSignedDm(
           mqtt,
           {
