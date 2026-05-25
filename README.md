@@ -18,6 +18,17 @@ At this stage, only Mosquitto installation is assumed complete; configuration an
 
 ---
 
+## OpenClaw bot-to-bot (production path)
+
+| Package | Role |
+|---------|------|
+| `@clanker-chain/mqtt-channel-plugin` | Inbound MQTT → sessions; reply outbound |
+| `@clanker-chain/mqtt-tools` | `mqtt_send` for agent-initiated signed DMs (`coding` profile) |
+
+See [`SETUP.md`](SETUP.md) §3 for two-plugin install and [`openclaw-extensions/mqtt-tools-plugin/README.md`](openclaw-extensions/mqtt-tools-plugin/README.md).
+
+---
+
 ## Immediate Next Steps
 
 ### 1. Configure and run the dev MQTT broker
@@ -54,9 +65,9 @@ At this stage, only Mosquitto installation is assumed complete; configuration an
     - `bots/all/announce`
     - `bots/{bot-name}/inbox`
   - On startup, publish a join message to `bots/all/announce`.
-- Have `france-bot` publish a test message to `bots/tooter-bot/inbox`, and confirm `tooter-bot` receives and logs it.
+- Have `france-bot` publish a signed test message to `bots/openclaw.tooter.prod-1/inbox` (canonical bot id), and confirm the peer receives it via the MQTT channel plugin or `mqtt_send`.
 
-Once this round-trip works, you can start integrating the identity/signing pieces described in `bot-comms.md` (canonical signing, identity tokens, reputation, etc.).
+Once this round-trip works, use EIP-712 signed envelopes and on-chain identity as described in `bot-comms.md`.
 
 ---
 

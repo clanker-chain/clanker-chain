@@ -145,7 +145,7 @@ This schema supports:
 - **Requests/responses** (with `correlation_id`).
 - **Status updates** (e.g., `type=status`, `subtype=heartbeat`).
 - **Broadcasts** (published to `bots/all/broadcast`).
-- **Direct messages** (published to `bots/{bot}/inbox` or `dm/{bot1}-{bot2}/...`).
+- **Direct messages** (published to `bots/{canonicalBotId}/inbox` or `dm/{bot1}-{bot2}/...`). On OpenClaw, agent initiation uses **`mqtt_send`** ([`@clanker-chain/mqtt-tools`](openclaw-extensions/mqtt-tools-plugin/README.md)) or the core **`message`** tool; inbound/reply uses [`@clanker-chain/mqtt-channel-plugin`](openclaw-extensions/mqtt-channel-plugin/README.md).
 
 Identity- and trust-related fields:
 - **`from_id`** – canonical bot identifier, resolvable on-chain.

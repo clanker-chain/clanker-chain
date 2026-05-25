@@ -1,0 +1,141 @@
+name: MQTT tools plugin release
+
+on:
+  push:
+    tags:
+      - "mqtt-tools-plugin-v*"
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Ensure NPM_TOKEN is configured
+        run: |
+          if [ -z "${NPM_TOKEN:-}" ]; then
+            echo "ERROR: NPM_TOKEN secret is required for npm publish." >&2
+            exit 1
+          fi
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Verify tag matches package version
+        working-directory: openclaw-extensions/mqtt-tools-plugin
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#mqtt-tools-plugin-v}"
+          PKG_VERSION="$(node -e "console.log(require('./package.json').version)")"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "ERROR: Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)." >&2
+            exit 1
+          fi
+
+      - name: Build node-client dependencies
+        run: |
+          (cd identity-node-client && npm ci && npm run build)
+          (cd mqtt-node-client && npm ci && npm run build)
+
+      - name: Install and build mqtt-tools-plugin
+        working-directory: openclaw-extensions/mqtt-tools-plugin
+        run: |
+          mkdir -p node_modules/@clanker-chain
+          ln -sfn "${GITHUB_WORKSPACE}/identity-node-client" node_modules/@clanker-chain/identity-node-client
+          ln -sfn "${GITHUB_WORKSPACE}/mqtt-node-client" node_modules/@clanker-chain/mqtt-node-client
+          npm install
+          npm run build
+
+      - name: Validate pack output has extension entry
+        working-directory: openclaw-extensions/mqtt-tools-plugin
+        run: |
+          npm pack --dry-run --json > /tmp/mqtt-tools-pack.json
+          node - <<'NODE'
+          const fs = require("fs");
+          const pkg = require("./package.json");
+          const pack = JSON.parse(fs.readFileSync("/tmp/mqtt-tools-pack.json", "utf8"));
+          const files = new Set((pack[0]?.files ?? []).map((f) => f.path));
+          const extensions = pkg?.openclaw?.extensions ?? [];
+          if (!extensions.length) {
+            throw new Error("No openclaw.extensions entries found.");
+          }
+          for (const ext of extensions) {
+            const rel = ext.replace(/^\.\//, "");
+            if (!files.has(rel)) {
+              throw new Error(`Packed artifact missing extension entry: ${rel}`);
+            }
+          }
+          const manifest = JSON.parse(fs.readFileSync("openclaw.plugin.json", "utf8"));
+          const tools = manifest?.contracts?.tools ?? [];
+          if (!tools.includes("mqtt_send")) {
+            throw new Error("openclaw.plugin.json must list mqtt_send in contracts.tools");
+          }
+          NODE
+
+      - name: Check npm version availability
+        working-directory: openclaw-extensions/mqtt-tools-plugin
+        run: |
+          PKG_NAME="$(node -e "console.log(require('./package.json').name)")"
+          PKG_VERSION="$(node -e "console.log(require('./package.json').version)")"
+          if npm view "${PKG_NAME}@${PKG_VERSION}" version >/dev/null 2>&1; then
+            echo "ERROR: ${PKG_NAME}@${PKG_VERSION} is already published." >&2
+            exit 1
+          fi
+
+      - name: Publish package to npm
+        working-directory: openclaw-extensions/mqtt-tools-plugin
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create bundle tarball
+        working-directory: openclaw-extensions/mqtt-tools-plugin
+        run: |
+          PLUGIN_NAME="mqtt-tools-plugin"
+          BUNDLE_DIR="bundle"
+          rm -rf "$BUNDLE_DIR"
+          mkdir -p "$BUNDLE_DIR/$PLUGIN_NAME"
+
+          cp package.json openclaw.plugin.json README.md "$BUNDLE_DIR/$PLUGIN_NAME"/
+          cp -R dist "$BUNDLE_DIR/$PLUGIN_NAME"/
+          mkdir -p "$BUNDLE_DIR/$PLUGIN_NAME/node_modules/@clanker-chain"
+          cp -R "${GITHUB_WORKSPACE}/identity-node-client" "$BUNDLE_DIR/$PLUGIN_NAME/node_modules/@clanker-chain/identity-node-client"
+          cp -R "${GITHUB_WORKSPACE}/mqtt-node-client" "$BUNDLE_DIR/$PLUGIN_NAME/node_modules/@clanker-chain/mqtt-node-client"
+
+          TAR_NAME="$PLUGIN_NAME-${GITHUB_REF_NAME}.tgz"
+          tar -czf "$TAR_NAME" -C "$BUNDLE_DIR" "$PLUGIN_NAME"
+          if [ ! -f "$BUNDLE_DIR/$PLUGIN_NAME/dist/index.js" ]; then
+            echo "ERROR: bundle missing dist/index.js required by openclaw.extensions." >&2
+            exit 1
+          fi
+          echo "ASSET_PATH=$TAR_NAME" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: MQTT tools plugin ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload plugin bundle asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: openclaw-extensions/mqtt-tools-plugin/${{ env.ASSET_PATH }}
+          asset_name: mqtt-tools-plugin-${{ github.ref_name }}.tgz
+          asset_content_type: application/gzip
