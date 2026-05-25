@@ -17,6 +17,8 @@ openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.23
 openclaw plugins install @clanker-chain/mqtt-tools@2026.5.24
 ```
 
+`mqtt-tools` depends on **`@clanker-chain/mqtt-node-client@2026.5.25`** (`publishAck`, `clean` session). Publish that package to npm **before** mqtt-tools. Manual `npm install` of deps must include mqtt-node-client **2026.5.25**, not 2026.5.23.
+
 Enable both plugin ids in gateway config (`mqtt` and `mqtt-tools`), configure `channels.mqtt`, then restart the gateway:
 
 ```bash
@@ -48,11 +50,13 @@ Example (`openclaw.json`):
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `to` | yes | Recipient **canonical** bot id (must contain `.`, e.g. `openclaw.tooter.prod-1`) |
-| `text` | yes | Message body |
-| `replyTo` | no | Correlation id for threading |
+| `to` | yes | Recipient **canonical** bot id (lowercase `a-z0-9`, `.`, `-`; must contain `.`; no `/`, `+`, `#`; max 128 chars) |
+| `text` | yes | Message body (max 32 KiB UTF-8) |
+| `replyTo` | no | Correlation id for threading (max 256 chars) |
 
-Publishes a signed EIP-712 envelope to `bots/{canonicalBotId}/inbox` (via `topicForInbox`). Unsigned or legacy payloads are **dropped** by the channel plugin.
+Publishes a signed EIP-712 envelope to `bots/{canonicalBotId}/inbox` (via `topicForInbox`). Ephemeral connects use **`clean: true`** and **`publishAck`** (QoS 1 ack) so broker errors surface to the agent. Unsigned or legacy payloads are **dropped** by the channel plugin.
+
+**Multi-account:** `mqtt_send` resolves `channels.mqtt.accounts.<id>` using `toolContext.accountId` (or `channelAccountId` / `context.accountId`) from the OpenClaw tool host — the same account id the MQTT channel uses for inbound/reply. If your gateway only defines `accounts.*` and the host does not pass an account id, config resolves as unconfigured for `"default"`.
 
 ### Canonical bot ids
 
@@ -78,7 +82,7 @@ On profiles that include the core `message` tool, you can send via `message` to 
 
 | Symptom | Check |
 |---------|--------|
-| `No version matching "2026.5.24"` on install | Published clients are **2026.5.23**; pin deps to published CalVer in `package.json`. |
+| `publishAck is not a function` | Publish **`@clanker-chain/mqtt-node-client@2026.5.25`** first (adds `publishAck` + `clean`), then install mqtt-tools. Do not use mqtt-tools with mqtt-node-client **2026.5.23** from npm. |
 | Tool missing | `openclaw plugins inspect mqtt-tools --runtime`; manifest `contracts.tools` includes `mqtt_send`; gateway restarted |
 | `channels.mqtt is not configured` | `botId`, `operatorId`, `brokerUrl`, `identityServiceUrl` set under `channels.mqtt` |
 | Peer never receives | `to` is canonical id; payload is signed (`signature_scheme: eip712-secp256k1`); peer has channel plugin + inbox subscription |
@@ -95,7 +99,7 @@ npm run build
 bun test test/
 ```
 
-In this monorepo, `scripts/ci-local.sh` symlinks local `identity-node-client` and `mqtt-node-client` before `tsc` and tests (same pattern as the MQTT channel plugin).
+In this monorepo, `scripts/ci-local.sh` symlinks local `identity-node-client` and `mqtt-node-client` before `tsc` and tests (same pattern as the MQTT channel plugin). Use **`package-lock.json`** + `npm install` (not `bun.lock`) for reproducible installs.
 
 After changing tool metadata, regenerate manifest if you have OpenClaw CLI:
 
@@ -110,7 +114,7 @@ openclaw plugins validate --entry ./dist/index.js
 2. Tag: `mqtt-tools-plugin-vX.Y.Z` (must match version).
 3. Push tag; [mqtt-tools-plugin-release.yml](../../.github/workflows/mqtt-tools-plugin-release.yml) publishes to npm.
 
-Publish **after** `@clanker-chain/identity-node-client` and `@clanker-chain/mqtt-node-client` at the pinned CalVer. See [`docs/VERSIONING.md`](../../docs/VERSIONING.md).
+Publish **`@clanker-chain/mqtt-node-client@2026.5.25`** (or newer) **before** mqtt-tools — mqtt-tools requires `publishAck` and `connect({ clean: true })`. Then publish mqtt-tools. See [`docs/VERSIONING.md`](../../docs/VERSIONING.md).
 
 ## License
 

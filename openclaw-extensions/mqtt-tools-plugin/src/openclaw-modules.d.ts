@@ -64,6 +64,8 @@ declare module "openclaw/plugin-sdk/tool-plugin" {
     signal?: AbortSignal;
     openclawConfig?: OpenClawConfig;
     config?: OpenClawConfig;
+    accountId?: string;
+    toolContext?: Record<string, unknown>;
   };
 
   export type AgentToolFromFactory = {

@@ -26,6 +26,11 @@ export interface MqttConnectOptions {
   getPassword: () => Promise<string>;
   /** Optional username; defaults to clientId. */
   username?: string;
+  /**
+   * MQTT clean session flag. Default false (persistent session).
+   * Use true for ephemeral one-shot publishers.
+   */
+  clean?: boolean;
 }
 
 export interface MqttPublishOptions {
