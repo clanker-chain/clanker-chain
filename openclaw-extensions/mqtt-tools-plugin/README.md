@@ -14,7 +14,7 @@ OpenClaw **tool** plugin for agent-initiated signed bot-to-bot MQTT direct messa
 
 ```bash
 openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.23
-openclaw plugins install @clanker-chain/mqtt-tools@2026.5.24
+openclaw plugins install @clanker-chain/mqtt-tools@2026.5.25-1
 ```
 
 `mqtt-tools` depends on **`@clanker-chain/mqtt-node-client@2026.5.25`** (`publishAck`, `clean` session). Publish that package to npm **before** mqtt-tools. Manual `npm install` of deps must include mqtt-node-client **2026.5.25**, not 2026.5.23.
@@ -84,6 +84,7 @@ On profiles that include the core `message` tool, you can send via `message` to 
 |---------|--------|
 | `publishAck is not a function` | Publish **`@clanker-chain/mqtt-node-client@2026.5.25`** first (adds `publishAck` + `clean`), then install mqtt-tools. Do not use mqtt-tools with mqtt-node-client **2026.5.23** from npm. |
 | Tool missing | `openclaw plugins inspect mqtt-tools --runtime`; manifest `contracts.tools` includes `mqtt_send`; gateway restarted |
+| Config OK but "not configured for default" | Upgrade to **2026.5.25-1+** — reads `channels.mqtt` from `context.api.config` (not plugin config arg) |
 | `channels.mqtt is not configured` | `botId`, `operatorId`, `brokerUrl`, `identityServiceUrl` set under `channels.mqtt` |
 | Peer never receives | `to` is canonical id; payload is signed (`signature_scheme: eip712-secp256k1`); peer has channel plugin + inbox subscription |
 | CONNECT fails | Key file format (`0x` + 64 hex); `mqttAuthServiceUrl` reachable |
@@ -111,7 +112,7 @@ openclaw plugins validate --entry ./dist/index.js
 ## Publishing
 
 1. Bump `version` in `package.json` and `openclaw.plugin.json`.
-2. Tag: `mqtt-tools-plugin-vX.Y.Z` (must match version).
+2. Tag: `mqtt-tools-plugin-v2026.5.25-1` (must match `package.json` exactly, including micro hyphen).
 3. Push tag; [mqtt-tools-plugin-release.yml](../../.github/workflows/mqtt-tools-plugin-release.yml) publishes to npm.
 
 Publish **`@clanker-chain/mqtt-node-client@2026.5.25`** (or newer) **before** mqtt-tools — mqtt-tools requires `publishAck` and `connect({ clean: true })`. Then publish mqtt-tools. See [`docs/VERSIONING.md`](../../docs/VERSIONING.md).

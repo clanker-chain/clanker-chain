@@ -4,6 +4,7 @@ import {
   MAX_BOT_ID_LENGTH,
   MAX_MESSAGE_TEXT_BYTES,
   MAX_REPLY_TO_LENGTH,
+  resolveGatewayConfigFromToolContext,
   resolveMqttToolsConfig,
   resolveToolAccountId,
   validateMessageFields,
@@ -115,6 +116,26 @@ test('resolveMqttToolsConfig "default" is unconfigured when only accounts.* exis
 
   expect(resolveMqttToolsConfig(cfg, "default").configured).toBe(false);
   expect(resolveMqttToolsConfig(cfg, "france").configured).toBe(true);
+});
+
+test("resolveGatewayConfigFromToolContext reads api.config", () => {
+  const gateway = {
+    channels: {
+      mqtt: {
+        enabled: true,
+        botId: "openclaw.france.prod-1",
+        operatorId: "org.openclaw.pat",
+        brokerUrl: "mqtt://192.168.1.197:1883",
+        identityServiceUrl: "http://192.168.1.197:8080",
+      },
+    },
+  };
+  expect(resolveGatewayConfigFromToolContext({})).toEqual({});
+  expect(resolveGatewayConfigFromToolContext({ api: { config: gateway } })).toEqual(gateway);
+  expect(
+    resolveMqttToolsConfig(resolveGatewayConfigFromToolContext({ api: { config: gateway } }))
+      .configured,
+  ).toBe(true);
 });
 
 test("resolveToolAccountId prefers toolContext.accountId", () => {

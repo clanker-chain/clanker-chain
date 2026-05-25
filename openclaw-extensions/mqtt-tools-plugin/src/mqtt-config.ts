@@ -101,10 +101,25 @@ export function resolveMqttToolsConfig(
   };
 }
 
+/**
+ * Gateway config for tool execute. OpenClaw passes full config on `context.api.config`,
+ * not on `openclawConfig` / `config` (plugin entry config is the second execute arg).
+ */
+export function resolveGatewayConfigFromToolContext(context: ToolExecuteContext): OpenClawConfig {
+  const api = context.api;
+  return (api?.config ?? context.openclawConfig ?? context.config ?? {}) as OpenClawConfig;
+}
+
 /** Resolve MQTT account id from tool runtime context (matches channel per-account wiring). */
 export function resolveToolAccountId(context: ToolExecuteContext): string {
   const toolContext = context.toolContext as Record<string, unknown> | undefined;
-  const candidates = [toolContext?.accountId, toolContext?.channelAccountId, context.accountId];
+  const candidates = [
+    toolContext?.accountId,
+    toolContext?.channelAccountId,
+    context.api?.accountId,
+    context.api?.channelAccountId,
+    context.accountId,
+  ];
   for (const value of candidates) {
     if (typeof value === "string" && value.trim()) {
       return value.trim();
