@@ -159,6 +159,13 @@ main() {
   (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun x tsc -p tsconfig.json)
   (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun test test/wire-format.test.ts)
 
+  log "TS check/build for mqtt-tools-plugin (OpenClaw tool plugin)"
+  mkdir -p "${ROOT_DIR}/openclaw-extensions/mqtt-tools-plugin/node_modules/@clanker-chain"
+  ln -sf "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-tools-plugin/node_modules/@clanker-chain/identity-node-client"
+  ln -sf "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-tools-plugin/node_modules/@clanker-chain/mqtt-node-client"
+  (cd "${ROOT_DIR}/openclaw-extensions/mqtt-tools-plugin" && bun x tsc -p tsconfig.json)
+  (cd "${ROOT_DIR}/openclaw-extensions/mqtt-tools-plugin" && bun test test/)
+
   # mqtt-client-plugin depends on @clanker-chain/mqtt-node-client and
   # @clanker-chain/identity-node-client which are local packages (not yet on npm
   # at dev time). Symlink them instead of running npm ci.

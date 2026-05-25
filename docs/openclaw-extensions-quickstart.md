@@ -13,9 +13,11 @@ End-to-end steps to install the clanker-chain identity and MQTT plugins into Ope
 From any directory where OpenClaw is available:
 
 ```bash
-openclaw plugins install @clanker-chain/identity-plugin
-openclaw plugins install @clanker-chain/mqtt-plugin
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.23
+openclaw plugins install @clanker-chain/mqtt-tools@2026.5.24
 ```
+
+Legacy packages `@clanker-chain/identity-plugin` and `@clanker-chain/mqtt-plugin` are deprecated; use the channel + tools pair above for current CalVer stacks.
 
 Restart the Gateway after installing. Then ensure your config enables the plugins (see step 2).
 
@@ -28,7 +30,7 @@ Ensure `plugins.enabled` in your OpenClaw config (e.g. `~/.openclaw/openclaw.jso
 ```json
 {
   "plugins": {
-    "enabled": ["clanker-chain-identity", "clanker-chain-mqtt"]
+    "enabled": ["mqtt", "mqtt-tools"]
   }
 }
 ```
@@ -47,11 +49,14 @@ Add the `mqtt` channel with your broker and identity service URLs. Example snipp
       "botId": "openclaw.test.local",
       "operatorId": "org.openclaw.operator",
       "brokerUrl": "mqtt://localhost:1883",
-      "identityServiceUrl": "http://localhost:8080"
+      "identityServiceUrl": "http://localhost:8080",
+      "mqttAuthServiceUrl": "http://localhost:9090"
     }
   }
 }
 ```
+
+Agents on `tools.profile: "coding"` use **`mqtt_send`** from mqtt-tools to initiate signed DMs; see [`openclaw-extensions/mqtt-tools-plugin/README.md`](../openclaw-extensions/mqtt-tools-plugin/README.md).
 
 **2c. Docker build (when baking extensions into the image)**
 

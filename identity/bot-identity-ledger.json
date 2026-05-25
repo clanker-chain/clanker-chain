@@ -1,35 +1,20 @@
 {
   "$schema": "https://example.com/schemas/bot-identity-ledger.schema.json",
   "version": 1,
-  "created": "2026-05-18T15:19:48.892Z",
-  "updated": "2026-05-18T15:19:48.892Z",
+  "created": "2026-05-25T18:18:37.517Z",
+  "updated": "2026-05-25T18:18:37.517Z",
   "operators": {
     "org.openclaw.pat": {
       "operator_id": "org.openclaw.pat",
       "status": "active",
-      "created": "2026-05-03T21:18:07.000Z",
-      "updated": "2026-05-03T21:18:07.000Z",
+      "created": "2026-05-24T18:26:48.000Z",
+      "updated": "2026-05-24T18:26:48.000Z",
       "public_keys": [
         {
-          "key_id": "org.openclaw.pat-1777843087",
+          "key_id": "org.openclaw.pat-1779647208",
           "algorithm": "secp256k1-eth",
           "public_key": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-          "created": "2026-05-03T21:18:07.000Z",
-          "status": "active"
-        }
-      ]
-    },
-    "org.openclaw.alice": {
-      "operator_id": "org.openclaw.alice",
-      "status": "active",
-      "created": "2026-05-03T21:26:10.000Z",
-      "updated": "2026-05-03T21:26:10.000Z",
-      "public_keys": [
-        {
-          "key_id": "org.openclaw.alice-1777843570",
-          "algorithm": "secp256k1-eth",
-          "public_key": "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
-          "created": "2026-05-03T21:26:10.000Z",
+          "created": "2026-05-24T18:26:48.000Z",
           "status": "active"
         }
       ]
@@ -40,30 +25,30 @@
       "bot_id": "openclaw.france.prod-1",
       "operator_id": "org.openclaw.pat",
       "status": "active",
-      "created": "2026-05-03T21:23:15.000Z",
-      "updated": "2026-05-03T21:23:15.000Z",
+      "created": "2026-05-24T18:26:58.000Z",
+      "updated": "2026-05-24T18:26:58.000Z",
       "public_keys": [
         {
-          "key_id": "openclaw.france.prod-1-1777843395",
+          "key_id": "openclaw.france.prod-1-1779647218",
           "algorithm": "secp256k1-eth",
-          "public_key": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-          "created": "2026-05-03T21:23:15.000Z",
+          "public_key": "0x375e6849eB0128e2E44D8763F6eB60a711Bf6559",
+          "created": "2026-05-24T18:26:58.000Z",
           "status": "active"
         }
       ]
     },
     "openclaw.tooter.prod-1": {
       "bot_id": "openclaw.tooter.prod-1",
-      "operator_id": "org.openclaw.alice",
+      "operator_id": "org.openclaw.pat",
       "status": "active",
-      "created": "2026-05-03T21:26:38.000Z",
-      "updated": "2026-05-03T21:26:38.000Z",
+      "created": "2026-05-24T18:27:04.000Z",
+      "updated": "2026-05-24T18:27:04.000Z",
       "public_keys": [
         {
-          "key_id": "openclaw.tooter.prod-1-1777843598",
+          "key_id": "openclaw.tooter.prod-1-1779647224",
           "algorithm": "secp256k1-eth",
-          "public_key": "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
-          "created": "2026-05-03T21:26:38.000Z",
+          "public_key": "0x53bA9f66F3f6500C1030cfc18686e9E2785754Ac",
+          "created": "2026-05-24T18:27:04.000Z",
           "status": "active"
         }
       ]
@@ -71,8 +56,8 @@
   },
   "operations": [],
   "meta": {
-    "lastIndexedBlock": "5",
+    "lastIndexedBlock": "9",
     "chainId": 31337,
-    "registryAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+    "registryAddress": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9"
   }
 }
