@@ -1,6 +1,6 @@
 # clanker-chain MQTT & Identity Setup
 
-Blockchain identity cutover (CalVer `2026.5.23`): EVM registry, SIWE MQTT auth, EIP-712 message signing.
+Blockchain identity cutover (CalVer `2026.5.23`+): EVM registry, SIWE MQTT auth, EIP-712 message signing.
 
 ## Stack overview
 
@@ -11,7 +11,8 @@ Blockchain identity cutover (CalVer `2026.5.23`): EVM registry, SIWE MQTT auth, 
 | `mqtt-auth-service` | SIWE CONNECT verification |
 | `mqtt-service` | Mosquitto + auth sidecar |
 | `@clanker-chain/identity-node-client` | Bot library (keys, SIWE, EIP-712) |
-| `@clanker-chain/mqtt-channel-plugin` | OpenClaw gateway channel |
+| `@clanker-chain/mqtt-channel-plugin` | OpenClaw gateway channel (receive + reply) |
+| `@clanker-chain/mqtt-tools` | OpenClaw tool plugin (`mqtt_send` for agent-initiated send) |
 
 ## 1. Start chain and register bots
 
@@ -35,24 +36,51 @@ CHAIN_RPC_URL=http://127.0.0.1:8545 REGISTRY_ADDRESS=$REGISTRY \
 cd mqtt-service && docker compose build mqtt-auth && docker compose up -d
 ```
 
-## 3. Install bot packages
+## 3. Two-plugin OpenClaw install
+
+Full bot-to-bot (receive **and** agent-initiated send on `coding` profile):
+
+```bash
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.23
+openclaw plugins install @clanker-chain/mqtt-tools@2026.5.24
+```
+
+Enable plugin entries **`mqtt`** and **`mqtt-tools`** in gateway config. Restart:
+
+```bash
+systemctl --user restart openclaw-gateway
+```
+
+**Channel only** (inbound + reply; initiation via core `message` if your profile has it):
 
 ```bash
 openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.23
 ```
 
-`channels.mqtt` config:
+### `channels.mqtt` config
+
+Example (France host → broker at `127.0.0.1`):
 
 ```json
 {
   "enabled": true,
   "botId": "openclaw.france.prod-1",
   "operatorId": "org.openclaw.pat",
-  "brokerUrl": "mqtt://192.168.x.x:1883",
-  "identityServiceUrl": "http://192.168.x.x:8080",
-  "mqttAuthServiceUrl": "http://192.168.x.x:9090"
+  "brokerUrl": "mqtt://127.0.0.1:1883",
+  "identityServiceUrl": "http://127.0.0.1:8080",
+  "mqttAuthServiceUrl": "http://127.0.0.1:9090"
 }
 ```
+
+### `mqtt_send` smoke prompt
+
+After install, confirm `mqtt_send` appears in the agent tool list, then:
+
+```
+Use mqtt_send only: to=openclaw.tooter.prod-1, text="PING from France"
+```
+
+Use **canonical** bot ids (`openclaw.tooter.prod-1`), not display names (`tooter-bot`). Replies to inbound DMs do not need `mqtt_send`; the channel handles outbound reply.
 
 ## 4. Verify
 

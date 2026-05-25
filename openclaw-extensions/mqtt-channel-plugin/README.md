@@ -19,6 +19,18 @@ Or from a release tarball / local path per your OpenClaw docs.
 
 OpenClaw validates plugins by **manifest id**, not the npm package name. In `plugins.allow`, `plugins.entries`, or similar allowlists, use the string **`mqtt`**. Do not use `mqtt-channel` (that was the pre-0.0.2 manifest id). The npm package remains `@clanker-chain/mqtt-channel-plugin`.
 
+## Companion: MQTT tools
+
+Agents on `tools.profile: "coding"` do not get the core **`message`** tool. To **initiate** signed outbound DMs (not only reply to inbound sessions), install the companion tool plugin:
+
+```bash
+openclaw plugins install @clanker-chain/mqtt-tools@2026.5.24
+```
+
+Enable plugin id **`mqtt-tools`** alongside **`mqtt`**. Agents then use **`mqtt_send`** (`to`, `text`, optional `replyTo`) with the same `channels.mqtt` config. See [`mqtt-tools-plugin/README.md`](../mqtt-tools-plugin/README.md).
+
+If your agent profile includes the core `message` tool, you can send to the `mqtt` channel via `message` instead of installing mqtt-tools.
+
 ## Configuration
 
 Control UI and `openclaw config schema` aggregate MQTT settings from the plugin manifest (`channelConfigs.mqtt.schema`). Requires OpenClaw **>= 2026.4.15**.

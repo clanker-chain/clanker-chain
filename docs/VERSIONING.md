@@ -14,6 +14,7 @@ Git tags must match `package.json` exactly:
 | `@clanker-chain/identity-node-client` | `identity-node-client-v2026.5.23` |
 | `@clanker-chain/mqtt-node-client` | `mqtt-node-client-v2026.5.23` |
 | `@clanker-chain/mqtt-channel-plugin` | `mqtt-channel-plugin-v2026.5.23` |
+| `@clanker-chain/mqtt-tools` | `mqtt-tools-plugin-v2026.5.24` |
 | `@clanker-chain/mqtt-plugin` | `mqtt-plugin-v2026.5.23` |
 | `@clanker-chain/identity-plugin` | `identity-plugin-v2026.5.23` |
 
@@ -30,8 +31,9 @@ Pin **exact** CalVer (no `^` or `~`):
 1. `@clanker-chain/identity-node-client`
 2. `@clanker-chain/mqtt-node-client`
 3. `@clanker-chain/mqtt-channel-plugin`
-4. `@clanker-chain/mqtt-plugin`
-5. `@clanker-chain/identity-plugin` (deprecated; superseded by identity-node-client)
+4. `@clanker-chain/mqtt-tools` (requires channel plugin + `channels.mqtt`; install after node clients)
+5. `@clanker-chain/mqtt-plugin`
+6. `@clanker-chain/identity-plugin` (deprecated; superseded by identity-node-client)
 
 Wait for npm registry propagation between steps when installing published deps in CI.
 

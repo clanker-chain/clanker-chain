@@ -89,6 +89,7 @@ Bot record with active `botKey` as `algorithm: "secp256k1-eth"`.
 3. Bot runs `identity-node-client` `init()` — verifies local address matches on-chain `botKey`.
 4. Bot connects to MQTT with SIWE password from `issueMqttConnectPassword()`.
 5. Bot signs messages with EIP-712 (`signMessage()` → `signature_scheme: "eip712-secp256k1"`).
+6. **OpenClaw outbound:** initiate DMs with **`mqtt_send`** (`@clanker-chain/mqtt-tools`) or the core **`message`** tool to the `mqtt` channel; receive/reply via `@clanker-chain/mqtt-channel-plugin`.
 
 ---
 
@@ -96,6 +97,7 @@ Bot record with active `botKey` as `algorithm: "secp256k1-eth"`.
 
 - `@clanker-chain/identity-node-client` — bot library
 - `@clanker-chain/mqtt-channel-plugin` — OpenClaw gateway channel
+- `@clanker-chain/mqtt-tools` — OpenClaw `mqtt_send` tool (agent-initiated signed DMs)
 
 See [`docs/VERSIONING.md`](../docs/VERSIONING.md).
 
