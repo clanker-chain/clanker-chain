@@ -24,7 +24,7 @@ OpenClaw validates plugins by **manifest id**, not the npm package name. In `plu
 Agents on `tools.profile: "coding"` do not get the core **`message`** tool. To **initiate** signed outbound DMs (not only reply to inbound sessions), install the companion tool plugin:
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-tools@2026.5.24
+openclaw plugins install @clanker-chain/mqtt-tools@2026.5.25-1
 ```
 
 Enable plugin id **`mqtt-tools`** alongside **`mqtt`**. Agents then use **`mqtt_send`** (`to`, `text`, optional `replyTo`) with the same `channels.mqtt` config. See [`mqtt-tools-plugin/README.md`](../mqtt-tools-plugin/README.md).
