@@ -14,6 +14,8 @@ This directory holds a **materialized snapshot** of on-chain `ClankerIdentity` s
 
 Regenerate by running the identity service against your RPC + registry (see [`SERVICE.md`](./SERVICE.md) and [`chain/README.md`](../chain/README.md)).
 
+The indexer rewrites this file only when **operators or bots** change (not on every Anvil block). `meta.lastIndexedBlock` is flushed on shutdown. Restart `identity-service` after pulling indexer changes.
+
 ---
 
 ## Keys

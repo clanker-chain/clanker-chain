@@ -79,6 +79,11 @@ export class EvmBackend implements IdentityBackend {
   private readonly labelByOpId = new Map<Hex, string>();
   private readonly labelByBotId = new Map<Hex, string>();
 
+  /** Preserved from disk on hydrate; set on first persist if missing. */
+  private snapshotCreatedAt: string | undefined;
+  /** Digest of operators+bots only (excludes meta.lastIndexedBlock). */
+  private lastPersistedBodyDigest: string | undefined;
+
   constructor(options: EvmBackendOptions) {
     this.rpcUrl = options.rpcUrl;
     this.registry = options.registry;
@@ -116,6 +121,7 @@ export class EvmBackend implements IdentityBackend {
       if (snap.meta.chainId !== undefined) {
         this.chainId = snap.meta.chainId;
       }
+      this.primePersistStateFromSnapshot(snap);
     }
     try {
       this.chainId = await this.client.getChainId();
@@ -146,7 +152,7 @@ export class EvmBackend implements IdentityBackend {
       console.warn("[EvmBackend] final index on stop failed", e);
     }
     try {
-      await this.persistSnapshot();
+      await this.persistSnapshot(true);
     } catch (e) {
       console.warn("[EvmBackend] failed to flush snapshot on stop", e);
     }
@@ -481,7 +487,11 @@ export class EvmBackend implements IdentityBackend {
     return this.materializeOperator(operatorId);
   }
 
-  async getLedgerSnapshot(): Promise<IdentityLedger> {
+  private buildSnapshotBody(): {
+    operators: Record<string, OperatorRecord>;
+    bots: Record<string, BotRecord>;
+    meta: IdentityLedgerMeta;
+  } {
     const operators: Record<string, OperatorRecord> = {};
     for (const st of this.operatorById.values()) {
       const rec = this.materializeOperator(st.label);
@@ -492,16 +502,36 @@ export class EvmBackend implements IdentityBackend {
       const rec = this.materializeBot(st.label);
       if (rec) bots[rec.bot_id] = rec;
     }
-    const now = new Date().toISOString();
     const meta: IdentityLedgerMeta = {
       lastIndexedBlock: this.lastIndexedBlock >= 0n ? this.lastIndexedBlock.toString() : "0",
       chainId: this.chainId,
       registryAddress: this.registry,
     };
+    return { operators, bots, meta };
+  }
+
+  /** Identity records only — excludes meta so Anvil block ticks do not force rewrites. */
+  private stableBodyDigest(
+    operators: Record<string, OperatorRecord>,
+    bots: Record<string, BotRecord>,
+  ): string {
+    return JSON.stringify({ version: 1, operators, bots, operations: [] });
+  }
+
+  private primePersistStateFromSnapshot(snap: IdentityLedger): void {
+    if (snap.created) {
+      this.snapshotCreatedAt = snap.created;
+    }
+    this.lastPersistedBodyDigest = this.stableBodyDigest(snap.operators, snap.bots);
+  }
+
+  async getLedgerSnapshot(): Promise<IdentityLedger> {
+    const { operators, bots, meta } = this.buildSnapshotBody();
+    const now = new Date().toISOString();
     return {
       $schema: "https://example.com/schemas/bot-identity-ledger.schema.json",
       version: 1,
-      created: now,
+      created: this.snapshotCreatedAt ?? now,
       updated: now,
       operators,
       bots,
@@ -510,11 +540,37 @@ export class EvmBackend implements IdentityBackend {
     };
   }
 
-  private async persistSnapshot(): Promise<void> {
-    const ledger = await this.getLedgerSnapshot();
+  /**
+   * Write materialized snapshot to disk.
+   * @param force When true (shutdown), always write including latest meta.lastIndexedBlock.
+   */
+  private async persistSnapshot(force = false): Promise<void> {
+    const { operators, bots, meta } = this.buildSnapshotBody();
+    const bodyDigest = this.stableBodyDigest(operators, bots);
+    if (!force && bodyDigest === this.lastPersistedBodyDigest) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    if (!this.snapshotCreatedAt) {
+      this.snapshotCreatedAt = now;
+    }
+
+    const ledger: IdentityLedger = {
+      $schema: "https://example.com/schemas/bot-identity-ledger.schema.json",
+      version: 1,
+      created: this.snapshotCreatedAt,
+      updated: now,
+      operators,
+      bots,
+      operations: [],
+      meta,
+    };
+
     const tmpPath = `${this.snapshotPath}.tmp`;
     await fs.writeFile(tmpPath, JSON.stringify(ledger, null, 2), "utf8");
     await fs.rename(tmpPath, this.snapshotPath);
+    this.lastPersistedBodyDigest = bodyDigest;
   }
 
 }
