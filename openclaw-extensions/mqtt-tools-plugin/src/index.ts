@@ -1,7 +1,12 @@
 import { Type } from "typebox";
 import { defineToolPlugin } from "openclaw/plugin-sdk/tool-plugin";
 import type { OpenClawConfig, ToolExecuteContext } from "openclaw/plugin-sdk/plugin-entry";
-import { assertCanonicalBotId, resolveMqttToolsConfig } from "./mqtt-config.js";
+import {
+  resolveMqttToolsConfig,
+  resolveToolAccountId,
+  validateMessageFields,
+  validateRecipientBotId,
+} from "./mqtt-config.js";
 import { sendSignedDm } from "./send-signed-dm.js";
 
 function resolveGatewayConfig(context: ToolExecuteContext): OpenClawConfig {
@@ -24,7 +29,7 @@ export default defineToolPlugin({
       parameters: Type.Object({
         to: Type.String({
           description:
-            "Recipient canonical bot id (must contain a dot, e.g. openclaw.tooter.prod-1).",
+            "Recipient canonical bot id (lowercase, dots/hyphens; e.g. openclaw.tooter.prod-1).",
         }),
         text: Type.String({ description: "Message body text." }),
         replyTo: Type.Optional(
@@ -43,14 +48,20 @@ export default defineToolPlugin({
           throw new Error('mqtt_send: "to" and "text" are required.');
         }
 
-        assertCanonicalBotId(recipient);
+        validateRecipientBotId(recipient);
+        validateMessageFields(body, correlation);
 
-        const mqtt = resolveMqttToolsConfig(resolveGatewayConfig(context));
-        return sendSignedDm(mqtt, {
-          to: recipient,
-          text: body,
-          replyTo: correlation || undefined,
-        });
+        const accountId = resolveToolAccountId(context);
+        const mqtt = resolveMqttToolsConfig(resolveGatewayConfig(context), accountId);
+        return sendSignedDm(
+          mqtt,
+          {
+            to: recipient,
+            text: body,
+            replyTo: correlation || undefined,
+          },
+          { signal: context.signal },
+        );
       },
     }),
   ],

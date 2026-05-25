@@ -1,5 +1,6 @@
 import { CLANKER_MESSAGE_SIGNATURE_SCHEME } from "@clanker-chain/identity-node-client";
 import type { IdentityMessageEnvelope } from "@clanker-chain/identity-node-client";
+import { validateRecipientBotId } from "./mqtt-config.js";
 
 export type MessagePayload = Record<string, unknown>;
 
@@ -12,13 +13,13 @@ export function buildCoordinationEnvelope(input: {
   timestamp?: string;
   messageId?: string;
 }): IdentityMessageEnvelope {
-  const isCanonicalBotId = input.to.includes(".");
+  validateRecipientBotId(input.to);
   return {
     from: input.botId,
     from_id: input.botId,
     operator_id: input.operatorId,
     to: input.to,
-    to_id: isCanonicalBotId ? input.to : "",
+    to_id: input.to,
     type: "coordination",
     timestamp: input.timestamp ?? new Date().toISOString(),
     message_id: input.messageId ?? crypto.randomUUID(),

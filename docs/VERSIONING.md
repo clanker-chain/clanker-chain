@@ -12,7 +12,7 @@ Git tags must match `package.json` exactly:
 | Package | Tag example |
 |---------|-------------|
 | `@clanker-chain/identity-node-client` | `identity-node-client-v2026.5.23` |
-| `@clanker-chain/mqtt-node-client` | `mqtt-node-client-v2026.5.23` |
+| `@clanker-chain/mqtt-node-client` | `mqtt-node-client-v2026.5.23` (or `v2026.5.25` for `publishAck` / `clean`) |
 | `@clanker-chain/mqtt-channel-plugin` | `mqtt-channel-plugin-v2026.5.23` |
 | `@clanker-chain/mqtt-tools` | `mqtt-tools-plugin-v2026.5.24` |
 | `@clanker-chain/mqtt-plugin` | `mqtt-plugin-v2026.5.23` |
@@ -29,9 +29,9 @@ Pin **exact** CalVer (no `^` or `~`):
 ## Publish order
 
 1. `@clanker-chain/identity-node-client`
-2. `@clanker-chain/mqtt-node-client`
+2. `@clanker-chain/mqtt-node-client` — **`2026.5.25+`** required before mqtt-tools (adds `publishAck`, `MqttConnectOptions.clean`)
 3. `@clanker-chain/mqtt-channel-plugin`
-4. `@clanker-chain/mqtt-tools` (requires channel plugin + `channels.mqtt`; install after node clients)
+4. `@clanker-chain/mqtt-tools` (pins `@clanker-chain/mqtt-node-client@2026.5.25`; requires channel plugin + `channels.mqtt`)
 5. `@clanker-chain/mqtt-plugin`
 6. `@clanker-chain/identity-plugin` (deprecated; superseded by identity-node-client)
 
