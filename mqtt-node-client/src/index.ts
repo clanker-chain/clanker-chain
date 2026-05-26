@@ -68,6 +68,7 @@ export class MqttClient {
       });
       c.once("connect", () => {
         this.client = c;
+        this.received = [];
         resolve();
       });
       c.once("error", (err) => {
@@ -213,6 +214,7 @@ export class MqttClient {
     return new Promise((resolve) => {
       this.client!.end(false, {}, () => {
         this.client = null;
+        this.received = [];
         resolve();
       });
     });

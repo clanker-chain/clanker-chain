@@ -41,7 +41,7 @@ cd mqtt-service && docker compose build mqtt-auth && docker compose up -d
 Full bot-to-bot (receive **and** agent-initiated send on `coding` profile):
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.23
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.24
 openclaw plugins install @clanker-chain/mqtt-tools@2026.5.25-1
 ```
 
@@ -54,7 +54,7 @@ systemctl --user restart openclaw-gateway
 **Channel only** (inbound + reply; initiation via core `message` if your profile has it):
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.23
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.24
 ```
 
 ### `channels.mqtt` config
