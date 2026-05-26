@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@clanker-chain/identity-node-client": "2026.5.23",
-    "@clanker-chain/mqtt-node-client": "2026.5.25",
+    "@clanker-chain/mqtt-node-client": "2026.5.25-2",
     "typebox": "^1.1.38"
   },
   "devDependencies": {
