@@ -31,6 +31,15 @@ test("blank lines before NO_REPLY suppress", () => {
   expect(decision).toEqual({ publish: false, reason: "no_reply_marker" });
 });
 
+test("NO_REPLY on second line publishes full body", () => {
+  const decision = resolveDeliverDecision({ text: "summary for audit\nNO_REPLY" });
+  expect(decision).toEqual({
+    publish: true,
+    text: "summary for audit\nNO_REPLY",
+    replyToId: undefined,
+  });
+});
+
 test("NO_REPLY with trailing text on same line publishes", () => {
   const decision = resolveDeliverDecision({ text: "NO_REPLY trailing text" });
   expect(decision).toEqual({
@@ -45,6 +54,19 @@ test("NO_REPLY marker in text suppresses even when media present", () => {
     text: "NO_REPLY",
     mediaUrls: ["https://example.com/a.png"],
   });
+  expect(decision).toEqual({ publish: false, reason: "no_reply_marker" });
+});
+
+test("flag isNoReply suppresses media-only deliver", () => {
+  const decision = resolveDeliverDecision({
+    mediaUrls: ["url-1"],
+    isNoReply: true,
+  });
+  expect(decision).toEqual({ publish: false, reason: "flag" });
+});
+
+test("NO_REPLY with legacy CR line ending suppresses", () => {
+  const decision = resolveDeliverDecision({ text: "NO_REPLY\rsummary" });
   expect(decision).toEqual({ publish: false, reason: "no_reply_marker" });
 });
 

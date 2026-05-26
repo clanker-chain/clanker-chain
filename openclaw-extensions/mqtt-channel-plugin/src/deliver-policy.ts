@@ -13,7 +13,7 @@ export type DeliverDecision =
 const NO_REPLY_LINE = /^\s*no_reply\s*$/i;
 
 function isNoReplyTextMarker(text: string): boolean {
-  for (const line of text.split(/\r?\n/)) {
+  for (const line of text.split(/\r\n|\r|\n/)) {
     if (line.trim() === '') continue;
     return NO_REPLY_LINE.test(line);
   }

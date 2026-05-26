@@ -46,10 +46,19 @@ Rules:
 
 - First non-empty line must be exactly `NO_REPLY` (case-insensitive; leading/trailing spaces on that line are OK). Blank lines before it are OK.
 - `NO_REPLY` with other text on the **same** line (e.g. `NO_REPLY summary`) does **not** suppress — use a newline after the marker.
-- `payload.isNoReply === true` from the OpenClaw SDK always suppresses (checked before text).
+- `payload.isNoReply === true` from the OpenClaw SDK always suppresses (checked before text), including media-only bodies with empty `text`.
 - Media-only replies (empty `text`, `mediaUrls` set) still publish unless `text` carries the marker or the SDK flag.
+- JSON `text` that parses as a single object with `"isNoReply": true` also suppresses (best-effort; prefer the line marker for agents).
 
 For machine coordination on the wire, use `mqtt_send` explicitly; use `NO_REPLY` on channel replies you want session-only.
+
+#### Troubleshooting
+
+| Symptom | Likely cause |
+|---------|----------------|
+| Internal notes appeared on the peer’s MQTT inbox | `NO_REPLY` was not on the **first non-empty line** (e.g. `summary\nNO_REPLY`), or was on the same line as other text (`NO_REPLY summary`). Put the marker alone on line 1, then your notes. |
+| Agent used `NO_REPLY` but wire message still sent | Reply went through `mqtt_send`, core `message`, or `sendText` — only automatic inbound `deliver` is suppressed. |
+| Media attachment published when you wanted session-only | Empty `text` with only `mediaUrls` needs SDK `isNoReply: true`; the text marker does not apply to media alone. |
 
 ## Configuration
 
