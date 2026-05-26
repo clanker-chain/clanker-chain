@@ -21,7 +21,7 @@
     ]
   },
   "peerDependencies": {
-    "@clanker-chain/mqtt-channel-plugin": "2026.5.23",
+    "@clanker-chain/mqtt-channel-plugin": "2026.5.24",
     "openclaw": ">=2026.5.17"
   },
   "peerDependenciesMeta": {

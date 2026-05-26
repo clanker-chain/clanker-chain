@@ -10,7 +10,7 @@ OpenClaw **channel** plugin: MQTT pub/sub for bot-to-bot messaging (Clanker Chai
 ## Install
 
 ```bash
-docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@2026.5.23
+docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@2026.5.24
 ```
 
 Or from a release tarball / local path per your OpenClaw docs.
@@ -68,6 +68,7 @@ Override with `topics.inbox`, `topics.announce`, `topics.status`.
 
 ## Changelog
 
+- **2026.5.24** — Pins `@clanker-chain/mqtt-node-client@2026.5.25-2` (`poll()` inbound fix). Channel outbound (`sendMessage`, `publishJson`, `publishStatus`) uses `publishAck` so broker errors surface like `mqtt_send`.
 - **2026.5.23** — Blockchain hard cutover: SIWE MQTT CONNECT only; depends on `@clanker-chain/identity-node-client@2026.5.23` (EIP-712 message signing, secp256k1 keys). Adds `mqttAuthServiceUrl` to channel schema.
 - **0.0.4** — Fix restart loop in the gateway. `startAccount` now blocks on a new `MqttChannelProvider.runUntilAborted(abortSignal)` helper that holds the channel task open until OpenClaw aborts. Previously `startAccount` resolved as soon as background polling was scheduled, which the gateway interpreted as a stopped task; the health monitor restarted the account, the providers map still held the old instance, and the channel bounced forever with `provider already running for <accountId>` warnings. On a failed `start()`, the plugin calls `provider.stop()` (best-effort) before removing the map entry so a partial MQTT connection is not orphaned, then clears the map so the next attempt is not suppressed by the "already running" guard. Normal shutdown remains `stopAccount` (`stop()` + map delete).
 - **0.0.3** — Manifest now contributes the MQTT JSON Schema via `channelConfigs.mqtt.schema` so the OpenClaw aggregated config schema includes `channels.properties.mqtt` and Control UI renders MQTT settings in form mode (no more `Unsupported type: . Use Raw mode.`). Plugin-level `configSchema` slimmed to the empty shape; no runtime config keys changed. Requires OpenClaw >= 2026.4.15.
