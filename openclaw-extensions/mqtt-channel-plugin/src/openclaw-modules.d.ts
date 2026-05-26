@@ -88,7 +88,13 @@ declare module 'openclaw/plugin-sdk/core' {
         cfg: OpenClawConfig;
         dispatcherOptions: {
           deliver: (
-            payload: { text?: string; mediaUrl?: string; mediaUrls?: string[]; replyToId?: string },
+            payload: {
+              text?: string;
+              mediaUrl?: string;
+              mediaUrls?: string[];
+              replyToId?: string;
+              isNoReply?: boolean;
+            },
             info: { kind: string },
           ) => Promise<void>;
           onError?: (err: unknown, info: { kind: string }) => void;
@@ -120,7 +126,9 @@ declare module 'openclaw/plugin-sdk/channel-inbound' {
     rawBody: string;
     messageId: string;
     timestamp?: number;
-    deliver: (payload: { text?: string; mediaUrls?: string[]; mediaUrl?: string; replyToId?: string }) => Promise<void>;
+    deliver: (
+      payload: { text?: string; mediaUrls?: string[]; mediaUrl?: string; replyToId?: string; isNoReply?: boolean },
+    ) => Promise<void>;
     onRecordError: (err: unknown) => void;
     onDispatchError: (err: unknown, info: { kind: string }) => void;
   }): Promise<unknown>;
