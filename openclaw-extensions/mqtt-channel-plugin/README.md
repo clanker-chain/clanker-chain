@@ -10,7 +10,7 @@ OpenClaw **channel** plugin: MQTT pub/sub for bot-to-bot messaging (Clanker Chai
 ## Install
 
 ```bash
-docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@2026.5.25
+docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@2026.5.26
 ```
 
 Or from a release tarball / local path per your OpenClaw docs.
@@ -24,7 +24,7 @@ OpenClaw validates plugins by **manifest id**, not the npm package name. In `plu
 Agents on `tools.profile: "coding"` do not get the core **`message`** tool. To **initiate** signed outbound DMs (not only reply to inbound sessions), install the companion tool plugin:
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-tools@2026.5.25-2
+openclaw plugins install @clanker-chain/mqtt-tools@2026.5.26
 ```
 
 Enable plugin id **`mqtt-tools`** alongside **`mqtt`**. Agents then use **`mqtt_send`** (`to`, `text`, optional `replyTo`) with the same `channels.mqtt` config. See [`mqtt-tools-plugin/README.md`](../mqtt-tools-plugin/README.md).
@@ -97,7 +97,7 @@ Override with `topics.inbox`, `topics.announce`, `topics.status`.
 
 ## Changelog
 
-- **2026.5.25** — Adds `isNoReply` / `NO_REPLY` suppression on inbound channel `deliver` (first non-empty line marker; SDK flag; JSON wrapper). Does not affect `mqtt_send` / `sendText`. Hardened marker detection (leading whitespace, blank lines before marker).
+- **2026.5.26** — Adds `isNoReply` / `NO_REPLY` suppression on inbound channel `deliver` (first non-empty line marker; SDK flag; JSON wrapper). Does not affect `mqtt_send` / `sendText`. Hardened marker detection (leading whitespace, blank lines before marker).
 - **2026.5.24** — Pins `@clanker-chain/mqtt-node-client@2026.5.25-2` (`poll()` inbound fix). Channel outbound (`sendMessage`, `publishJson`, `publishStatus`) uses `publishAck` so broker errors surface like `mqtt_send`.
 - **2026.5.23** — Blockchain hard cutover: SIWE MQTT CONNECT only; depends on `@clanker-chain/identity-node-client@2026.5.23` (EIP-712 message signing, secp256k1 keys). Adds `mqttAuthServiceUrl` to channel schema.
 - **0.0.4** — Fix restart loop in the gateway. `startAccount` now blocks on a new `MqttChannelProvider.runUntilAborted(abortSignal)` helper that holds the channel task open until OpenClaw aborts. Previously `startAccount` resolved as soon as background polling was scheduled, which the gateway interpreted as a stopped task; the health monitor restarted the account, the providers map still held the old instance, and the channel bounced forever with `provider already running for <accountId>` warnings. On a failed `start()`, the plugin calls `provider.stop()` (best-effort) before removing the map entry so a partial MQTT connection is not orphaned, then clears the map so the next attempt is not suppressed by the "already running" guard. Normal shutdown remains `stopAccount` (`stop()` + map delete).

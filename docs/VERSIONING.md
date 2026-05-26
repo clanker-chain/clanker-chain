@@ -34,8 +34,8 @@ Git tags must match `package.json` exactly:
 |---------|-------------|
 | `@clanker-chain/identity-node-client` | `identity-node-client-v2026.5.23` |
 | `@clanker-chain/mqtt-node-client` | `mqtt-node-client-v2026.5.25-2` |
-| `@clanker-chain/mqtt-channel-plugin` | `mqtt-channel-plugin-v2026.5.24` |
-| `@clanker-chain/mqtt-tools` | `mqtt-tools-plugin-v2026.5.25-2` (pins `mqtt-node-client@2026.5.25-2`) |
+| `@clanker-chain/mqtt-channel-plugin` | `mqtt-channel-plugin-v2026.5.26` |
+| `@clanker-chain/mqtt-tools` | `mqtt-tools-plugin-v2026.5.26` (pins `mqtt-node-client@2026.5.25-2`) |
 | `@clanker-chain/mqtt-plugin` | `mqtt-plugin-v2026.5.23` |
 | `@clanker-chain/identity-plugin` | `identity-plugin-v2026.5.23` |
 
@@ -46,16 +46,16 @@ Pin **exact** CalVer (including micro when used):
 ```json
 "@clanker-chain/identity-node-client": "2026.5.23",
 "@clanker-chain/mqtt-node-client": "2026.5.25-2",
-"@clanker-chain/mqtt-channel-plugin": "2026.5.24",
-"@clanker-chain/mqtt-tools": "2026.5.25-1"
+"@clanker-chain/mqtt-channel-plugin": "2026.5.26",
+"@clanker-chain/mqtt-tools": "2026.5.26"
 ```
 
 ## Publish order
 
 1. `@clanker-chain/identity-node-client`
 2. `@clanker-chain/mqtt-node-client` — **`2026.5.25-2`** (`poll()` listener-leak fix; `publishAck`, `clean`)
-3. `@clanker-chain/mqtt-channel-plugin` — **`2026.5.24`** (pins `mqtt-node-client@2026.5.25-2`; channel outbound uses `publishAck`)
-4. `@clanker-chain/mqtt-tools` — **`2026.5.25-2`** (pins `mqtt-node-client@2026.5.25-2`; requires channel + `channels.mqtt`)
+3. `@clanker-chain/mqtt-channel-plugin` — **`2026.5.26`** (pins `mqtt-node-client@2026.5.25-2`; channel outbound uses `publishAck`)
+4. `@clanker-chain/mqtt-tools` — **`2026.5.26`** (pins `mqtt-node-client@2026.5.25-2`; requires channel + `channels.mqtt`)
 5. `@clanker-chain/mqtt-plugin`
 6. `@clanker-chain/identity-plugin` (deprecated; superseded by identity-node-client)
 
