@@ -13,6 +13,7 @@ import {
   type ResolvedMqttAccount,
 } from './accounts.js';
 import { MqttChannelProvider } from './MqttChannelProvider.js';
+import { resolveDeliverDecision } from './deliver-policy.js';
 import type { InboundMessage } from './types.js';
 
 const providers = new Map<string, MqttChannelProvider>();
@@ -51,14 +52,17 @@ async function dispatchDirectInbound(params: {
     rawBody: inbound.text,
     messageId: inbound.id,
     deliver: async (payload) => {
-      const text = payload.text ?? '';
-      if (!text.trim()) {
+      const decision = resolveDeliverDecision(payload);
+      if (!decision.publish) {
+        ctx.log?.info?.(
+          `[mqtt-channel] deliver suppressed (${decision.reason}) peer=${inbound.from}`,
+        );
         return;
       }
       await provider.sendMessage({
         to: inbound.from,
-        text,
-        replyTo: payload.replyToId,
+        text: decision.text,
+        replyTo: decision.replyToId,
       });
     },
     onRecordError: (err) => ctx.log?.error?.(`[mqtt-channel] record error: ${String(err)}`),
@@ -110,14 +114,17 @@ async function dispatchGroupInbound(params: {
     dispatcherOptions: {
       deliver: async (payload, info) => {
         void info;
-        const text = [payload.text, ...(payload.mediaUrls ?? [])].filter(Boolean).join('\n');
-        if (!text.trim()) {
+        const decision = resolveDeliverDecision(payload);
+        if (!decision.publish) {
+          params.ctx.log?.info?.(
+            `[mqtt-channel] deliver suppressed (${decision.reason}) peer=${params.inbound.from}`,
+          );
           return;
         }
         await params.provider.publishJson(params.provider.getAnnounceTopic(), {
           from: params.ctx.account.botId,
           timestamp: new Date().toISOString(),
-          body: text,
+          body: decision.text,
           replyTo: params.inbound.id,
           kind: 'announce-reply',
         });

@@ -13,7 +13,7 @@ OpenClaw **tool** plugin for agent-initiated signed bot-to-bot MQTT direct messa
 ## Install
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.24
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.25
 openclaw plugins install @clanker-chain/mqtt-tools@2026.5.25-2
 ```
 
@@ -74,6 +74,8 @@ Do not explore plugin source, sessions_send, or unsigned mqtt_publish.
 
 Replies to inbound DMs do **not** need `mqtt_send`; the channel plugin handles outbound reply via `sendText`.
 
+If you need the agent turn recorded in OpenClaw but not on the broker wire, use `NO_REPLY` on the first non-empty line of the **inbound channel reply** (automatic `deliver` only). `mqtt_send` and other explicit outbound paths are never suppressed by `NO_REPLY`.
+
 ### Alternative: core `message` tool
 
 On profiles that include the core `message` tool, you can send via `message` to the `mqtt` channel instead of installing this plugin.
@@ -83,7 +85,7 @@ On profiles that include the core `message` tool, you can send via `message` to 
 | Symptom | Check |
 |---------|--------|
 | `publishAck is not a function` | Publish **`@clanker-chain/mqtt-node-client@2026.5.25-2`** first, then reinstall mqtt-tools/channel. |
-| Inbound DMs vanish / `MaxListenersExceededWarning` | Upgrade channel + mqtt-node-client to **`2026.5.24` / `2026.5.25-2`** (`poll()` timeout listener leak fixed). |
+| Inbound DMs vanish / `MaxListenersExceededWarning` | Upgrade channel + mqtt-node-client to **`2026.5.25` / `2026.5.25-2`** (`poll()` timeout listener leak fixed). |
 | Tool missing | `openclaw plugins inspect mqtt-tools --runtime`; manifest `contracts.tools` includes `mqtt_send`; gateway restarted |
 | Config OK but "not configured for default" | Upgrade to **2026.5.25-2** — reads `channels.mqtt` from `context.api.config` (not plugin config arg) |
 | `channels.mqtt is not configured` | `botId`, `operatorId`, `brokerUrl`, `identityServiceUrl` set under `channels.mqtt` |
