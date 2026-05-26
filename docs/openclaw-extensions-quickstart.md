@@ -14,7 +14,7 @@ From any directory where OpenClaw is available:
 
 ```bash
 openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.24
-openclaw plugins install @clanker-chain/mqtt-tools@2026.5.25-1
+openclaw plugins install @clanker-chain/mqtt-tools@2026.5.25-2
 ```
 
 Legacy packages `@clanker-chain/identity-plugin` and `@clanker-chain/mqtt-plugin` are deprecated; use the channel + tools pair above for current CalVer stacks.

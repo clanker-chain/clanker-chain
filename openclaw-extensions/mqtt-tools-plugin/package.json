@@ -1,6 +1,6 @@
 {
   "name": "@clanker-chain/mqtt-tools",
-  "version": "2026.5.25-1",
+  "version": "2026.5.25-2",
   "description": "OpenClaw tool plugin: mqtt_send for signed bot-to-bot MQTT DMs (Clanker Chain)",
   "type": "module",
   "main": "dist/index.js",

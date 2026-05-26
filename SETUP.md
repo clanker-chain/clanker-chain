@@ -42,7 +42,7 @@ Full bot-to-bot (receive **and** agent-initiated send on `coding` profile):
 
 ```bash
 openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.24
-openclaw plugins install @clanker-chain/mqtt-tools@2026.5.25-1
+openclaw plugins install @clanker-chain/mqtt-tools@2026.5.25-2
 ```
 
 Enable plugin entries **`mqtt`** and **`mqtt-tools`** in gateway config. Restart:
