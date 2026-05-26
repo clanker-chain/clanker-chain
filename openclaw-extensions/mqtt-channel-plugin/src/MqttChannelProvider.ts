@@ -204,7 +204,7 @@ export class MqttChannelProvider {
    */
   async publishJson(topic: string, payload: Record<string, unknown>): Promise<void> {
     console.log('[mqtt-channel] Publishing JSON to:', topic);
-    await this.mqttClient.publish(topic, payload);
+    await this.mqttClient.publishAck(topic, payload, { qos: 1 });
   }
 
   /**
@@ -225,7 +225,7 @@ export class MqttChannelProvider {
     const wirePayload = attachSignature(envelope, signature, signature_scheme);
 
     console.log('[mqtt-channel] Publishing signed message to:', topic);
-    await this.mqttClient.publish(topic, wirePayload);
+    await this.mqttClient.publishAck(topic, wirePayload, { qos: 1 });
   }
 
   /**
@@ -243,7 +243,7 @@ export class MqttChannelProvider {
     };
 
     console.log('[mqtt-channel] Publishing status to:', topic);
-    await this.mqttClient.publish(topic, statusMessage);
+    await this.mqttClient.publishAck(topic, statusMessage, { qos: 1, retain: true });
   }
 
   /**

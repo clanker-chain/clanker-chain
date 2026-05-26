@@ -68,6 +68,7 @@ export class MqttClient {
       });
       c.once("connect", () => {
         this.client = c;
+        this.received = [];
         resolve();
       });
       c.once("error", (err) => {
@@ -172,6 +173,10 @@ export class MqttClient {
   /**
    * Return messages received since last poll and clear the buffer.
    * Waits up to timeoutMs for at least one message if the buffer is empty.
+   *
+   * The wait listener must be removed on timeout. Leaving it registered (old
+   * behavior) leaks listeners and can drain inbound messages in a stale handler
+   * while the active poll returns empty — breaking long-lived channel consumers.
    */
   poll(timeoutMs: number = 100): Promise<ReceivedMessage[]> {
     if (!this.client?.connected) {
@@ -183,15 +188,21 @@ export class MqttClient {
       return Promise.resolve(out);
     }
     return new Promise((resolve) => {
-      const t = setTimeout(() => resolve([]), timeoutMs);
-      const handler = () => {
-        clearTimeout(t);
-        this.client!.removeListener("message", handler);
+      let settled = false;
+      const finish = (messages: ReceivedMessage[]) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        this.client!.removeListener("message", onMessage);
+        resolve(messages);
+      };
+      const onMessage = () => {
         const out = this.received;
         this.received = [];
-        resolve(out);
+        finish(out);
       };
-      this.client!.once("message", handler);
+      const timer = setTimeout(() => finish([]), timeoutMs);
+      this.client!.on("message", onMessage);
     });
   }
 
@@ -203,6 +214,7 @@ export class MqttClient {
     return new Promise((resolve) => {
       this.client!.end(false, {}, () => {
         this.client = null;
+        this.received = [];
         resolve();
       });
     });

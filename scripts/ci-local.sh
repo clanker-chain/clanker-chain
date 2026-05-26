@@ -131,6 +131,9 @@ run_npm_package() {
         log "Skipping npm run build in ${dir} (no tsconfig.json; build script likely not applicable)."
       fi
     fi
+    if node -e "const p=require('${dir}/package.json'); process.exit(p.scripts && p.scripts.test ? 0 : 1);" ; then
+      (cd "$dir" && npm run test)
+    fi
   fi
 }
 
@@ -145,9 +148,6 @@ main() {
   run_npm_package "${ROOT_DIR}/identity-client-plugin"
   run_npm_package "${ROOT_DIR}/mqtt-node-client"
   run_npm_package "${ROOT_DIR}/identity-node-client"
-  if [ -f "${ROOT_DIR}/identity-node-client/package.json" ]; then
-    (cd "${ROOT_DIR}/identity-node-client" && npm run test)
-  fi
 
   # mqtt-channel-plugin uses workspace:* dependencies and doesn't ship a lockfile,
   # so we avoid npm install here. Instead, we symlink the local node clients and
@@ -157,7 +157,7 @@ main() {
   ln -sf "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/identity-node-client"
   ln -sf "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/mqtt-node-client"
   (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun x tsc -p tsconfig.json)
-  (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun test test/wire-format.test.ts)
+  (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun test test/)
 
   log "TS check/build for mqtt-tools-plugin (OpenClaw tool plugin)"
   MQTT_TOOLS_DIR="${ROOT_DIR}/openclaw-extensions/mqtt-tools-plugin"
