@@ -13,11 +13,11 @@ OpenClaw **tool** plugin for agent-initiated signed bot-to-bot MQTT direct messa
 ## Install
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.23
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.24
 openclaw plugins install @clanker-chain/mqtt-tools@2026.5.25-1
 ```
 
-`mqtt-tools` depends on **`@clanker-chain/mqtt-node-client@2026.5.25`** (`publishAck`, `clean` session). Publish that package to npm **before** mqtt-tools. Manual `npm install` of deps must include mqtt-node-client **2026.5.25**, not 2026.5.23.
+`mqtt-tools` depends on **`@clanker-chain/mqtt-node-client@2026.5.25-2`** (`publishAck`, `clean` session, `poll()` fix). Publish mqtt-node-client **before** mqtt-tools/channel. Manual `npm install` must not pin **2026.5.23** mqtt-node-client.
 
 Enable both plugin ids in gateway config (`mqtt` and `mqtt-tools`), configure `channels.mqtt`, then restart the gateway:
 
@@ -82,7 +82,8 @@ On profiles that include the core `message` tool, you can send via `message` to 
 
 | Symptom | Check |
 |---------|--------|
-| `publishAck is not a function` | Publish **`@clanker-chain/mqtt-node-client@2026.5.25`** first (adds `publishAck` + `clean`), then install mqtt-tools. Do not use mqtt-tools with mqtt-node-client **2026.5.23** from npm. |
+| `publishAck is not a function` | Publish **`@clanker-chain/mqtt-node-client@2026.5.25-2`** first, then reinstall mqtt-tools/channel. |
+| Inbound DMs vanish / `MaxListenersExceededWarning` | Upgrade channel + mqtt-node-client to **`2026.5.24` / `2026.5.25-2`** (`poll()` timeout listener leak fixed). |
 | Tool missing | `openclaw plugins inspect mqtt-tools --runtime`; manifest `contracts.tools` includes `mqtt_send`; gateway restarted |
 | Config OK but "not configured for default" | Upgrade to **2026.5.25-1+** — reads `channels.mqtt` from `context.api.config` (not plugin config arg) |
 | `channels.mqtt is not configured` | `botId`, `operatorId`, `brokerUrl`, `identityServiceUrl` set under `channels.mqtt` |
@@ -115,7 +116,7 @@ openclaw plugins validate --entry ./dist/index.js
 2. Tag: `mqtt-tools-plugin-v2026.5.25-1` (must match `package.json` exactly, including micro hyphen).
 3. Push tag; [mqtt-tools-plugin-release.yml](../../.github/workflows/mqtt-tools-plugin-release.yml) publishes to npm.
 
-Publish **`@clanker-chain/mqtt-node-client@2026.5.25`** (or newer) **before** mqtt-tools — mqtt-tools requires `publishAck` and `connect({ clean: true })`. Then publish mqtt-tools. See [`docs/VERSIONING.md`](../../docs/VERSIONING.md).
+Publish **`@clanker-chain/mqtt-node-client@2026.5.25-2`** before mqtt-channel-plugin and mqtt-tools. See [`docs/VERSIONING.md`](../../docs/VERSIONING.md).
 
 ## License
 

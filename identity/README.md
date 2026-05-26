@@ -9,6 +9,7 @@ This directory holds a **materialized snapshot** of on-chain `ClankerIdentity` s
 - **`bot-identity-ledger.json`**
   - Read-only cache of indexed chain events (operators, bots, active `secp256k1-eth` keys).
   - **Not** an append-only JSON ledger and **not** edited by hand.
+  - Committed copy may contain **local Anvil dev addresses** (well-known test keys). Do not treat it as production registry state; regenerate from your chain via `identity-service`.
   - Includes `meta` (`lastIndexedBlock`, `chainId`, `registryAddress`) from the indexer.
   - The empty `operations` array is a legacy schema field; writes happen on-chain only.
 

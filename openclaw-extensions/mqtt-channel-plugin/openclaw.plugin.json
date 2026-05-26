@@ -1,7 +1,7 @@
 {
   "id": "mqtt",
   "name": "MQTT Channel",
-  "version": "2026.5.23",
+  "version": "2026.5.24",
   "description": "OpenClaw MQTT channel for bot-to-bot messaging (Clanker Chain)",
   "kind": "channel",
   "openclaw": ">=2026.4.15",
