@@ -64,19 +64,25 @@ async function walletFromKey(rpc, key) {
 
 export async function chainMintOperator(label, argv) {
   const { registry, rpc, key } = resolveRegistry(argv);
-  const { wallet } = await walletFromKey(rpc, key);
+  const { public: pub, wallet } = await walletFromKey(rpc, key);
+  const operatorFee = await pub.readContract({
+    address: registry,
+    abi: clankerIdentityAbi,
+    functionName: "operatorFee",
+  });
   const hash = await wallet.writeContract({
     address: registry,
     abi: clankerIdentityAbi,
     functionName: "registerOperator",
     args: [label],
+    value: operatorFee,
   });
   console.log(JSON.stringify({ ok: true, label, operator_id: labelToId(label), tx: hash }));
 }
 
 export async function chainMintBot(botLabel, operatorLabel, argv) {
   const { registry, rpc, key } = resolveRegistry(argv);
-  const { wallet } = await walletFromKey(rpc, key);
+  const { public: pub, wallet } = await walletFromKey(rpc, key);
   let botPrivateKey;
   const positional = [];
   for (let i = 0; i < argv.length; i += 1) {
@@ -94,11 +100,17 @@ export async function chainMintBot(botLabel, operatorLabel, argv) {
   }
   const botAccount = privateKeyToAccount(botPrivateKey);
   const operatorIdBytes = labelToId(operatorLabel);
+  const botFee = await pub.readContract({
+    address: registry,
+    abi: clankerIdentityAbi,
+    functionName: "botFee",
+  });
   const hash = await wallet.writeContract({
     address: registry,
     abi: clankerIdentityAbi,
     functionName: "registerBot",
     args: [operatorIdBytes, botLabel, botAccount.address],
+    value: botFee,
   });
 
   const keyDir = join(homedir(), ".openclaw", "keys");

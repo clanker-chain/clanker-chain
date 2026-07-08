@@ -6,14 +6,14 @@ export const clankerIdentityAbi = [
   {
     type: "function",
     name: "registerOperator",
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     inputs: [{ name: "label", type: "string", internalType: "string" }],
     outputs: [{ name: "id", type: "bytes32", internalType: "bytes32" }],
   },
   {
     type: "function",
     name: "registerBot",
-    stateMutability: "nonpayable",
+    stateMutability: "payable",
     inputs: [
       { name: "operatorId", type: "bytes32", internalType: "bytes32" },
       { name: "label", type: "string", internalType: "string" },
