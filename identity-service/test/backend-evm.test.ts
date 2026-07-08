@@ -71,6 +71,7 @@ beforeAll(async () => {
     await new Promise((r) => setTimeout(r, 100));
   }
 
+  const account0 = privateKeyToAccount(ANVIL_DEFAULT_KEY);
   const deploy = Bun.spawn(
     [
       "forge",
@@ -81,6 +82,10 @@ beforeAll(async () => {
       "--private-key",
       ANVIL_DEFAULT_KEY,
       "--broadcast",
+      "--constructor-args",
+      "0",
+      "0",
+      account0.address,
     ],
     { cwd: chainRoot, stdout: "pipe", stderr: "pipe" },
   );
@@ -115,7 +120,6 @@ beforeAll(async () => {
     }),
   );
 
-  const account0 = privateKeyToAccount(ANVIL_DEFAULT_KEY);
   const wallet = createWalletClient({
     account: account0,
     chain: foundry,
