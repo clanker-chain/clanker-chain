@@ -41,6 +41,16 @@ Set before `forge script script/Deploy.s.sol:Deploy`:
 | `BOT_FEE_WEI` | Wei per `registerBot` |
 | `FEE_RECIPIENT` | Recipient of forwarded fees (typically a Safe; must be non-zero) |
 
+### Deploy invariant: `feeRecipient` must accept ETH
+
+`feeRecipient` is **immutable**. On each successful register, the contract forwards `msg.value` with a bare ETH transfer (`feeRecipient.call{value: msg.value}("")`). If the recipient **reverts** on plain ETH (e.g. a contract without a `payable` `receive`/fallback, or certain Safe guard configurations), **every** `registerOperator` / `registerBot` reverts `FeeTransferFailed` and registration is permanently bricked until you **redeploy** a new registry and re-point all verifiers.
+
+**Before mainnet deploy:**
+
+- Use an **EOA** or a contract known to accept plain ETH transfers.
+- Smoke-test: send a tiny `registerOperator` on the target network and confirm `feeRecipient` balance increases.
+- If you need a recipient that cannot accept direct ETH, consider a future **pull-payment** design (`withdraw()` accumulator) — not implemented in v1.
+
 Read deployed values:
 
 ```bash
@@ -62,12 +72,10 @@ Convert USD targets to wei at deploy time using spot ETH/USD. Mainnet deploy is 
 
 - **Namespace policy:** FCFS with fees vs reserving `org.openclaw.*` at genesis vs ENS-gated operators.
 - **Mainnet fee amounts:** set from observed Sepolia behavior and abuse tolerance.
-- **`feeRecipient`:** Safe multisig recommended from day one on mainnet.
+- **`feeRecipient`:** Safe multisig recommended from day one on mainnet; must accept plain ETH (see deploy invariant above).
 
-## Phase 4+ (not yet implemented)
+## CLI
 
-- CLI `mint-operator` / `mint-bot` must send `msg.value` (read fees from chain or pass `--value`).
-- ABIs in `clanker-cli/lib/clanker-identity-abi.mjs` and `identity-service/src/abi/clanker-identity.ts` must mark `registerOperator` / `registerBot` as `payable`.
-- `identity-service` indexing is **unchanged** (same events); only register transactions carry value.
+`clanker chain mint-operator` and `clanker chain mint-bot` read `operatorFee` / `botFee` from the deployed registry and send the exact `msg.value` required. Works with zero-fee and nonzero-fee deploys.
 
 See also: [`chain/README.md`](../chain/README.md), [`blockchain-identity-plan.md`](blockchain-identity-plan.md).

@@ -105,6 +105,29 @@ contract ClankerIdentityTest is Test {
         paidReg.registerOperator{value: OPERATOR_FEE}("org.openclaw.alice");
     }
 
+    function testFeeTransferFailedRevertsOnBot() public {
+        RevertingReceiver reverting = new RevertingReceiver();
+        ClankerIdentity paidReg = new ClankerIdentity(0, BOT_FEE, address(reverting));
+
+        vm.prank(alice);
+        bytes32 opId = paidReg.registerOperator{value: 0}("org.openclaw.alice");
+        vm.prank(alice);
+        vm.expectRevert(ClankerIdentity.FeeTransferFailed.selector);
+        paidReg.registerBot{value: BOT_FEE}(opId, "openclaw.france.prod-1", address(0xB01));
+    }
+
+    function testZeroFeeRegistrationSucceeds() public {
+        ClankerIdentity freeReg = new ClankerIdentity(0, 0, feeRecipient);
+        vm.prank(alice);
+        bytes32 opId = freeReg.registerOperator{value: 0}("org.openclaw.alice");
+        vm.prank(alice);
+        bytes32 botId = freeReg.registerBot{value: 0}(opId, "openclaw.france.prod-1", address(0xB01));
+        (address owner,,) = freeReg.operators(opId);
+        assertEq(owner, alice);
+        (bytes32 oid,,,) = freeReg.bots(botId);
+        assertEq(oid, opId);
+    }
+
     function testRegisterOperatorHappy() public {
         bytes32 id = _registerOperator(alice, "org.openclaw.alice");
         assertEq(id, _opId("org.openclaw.alice"));

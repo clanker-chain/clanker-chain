@@ -124,9 +124,7 @@ node clanker-cli/bin/clanker.mjs chain mint-operator org.openclaw.pat --registry
 node clanker-cli/bin/clanker.mjs chain mint-bot openclaw.france.prod-1 org.openclaw.pat --registry "$REGISTRY"
 ```
 
-**Note:** `registerOperator` / `registerBot` require `msg.value` matching on-chain fees. CLI `--value` wiring is Phase 4; until then use `cast send --value` (see below) or read fees from the contract and pass them in the CLI once updated.
-
-Legacy **`cast send`** examples below remain valid when `--value` is set to the deployed registry fees.
+**Note:** `registerOperator` / `registerBot` require `msg.value` matching on-chain fees. The CLI reads fees from the contract automatically; for manual `cast send`, use `--value` as shown below.
 
 ### Operator id vs private key
 
