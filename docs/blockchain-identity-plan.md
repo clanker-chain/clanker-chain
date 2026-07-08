@@ -137,27 +137,30 @@ Test/staging deploy: **Base Sepolia** (free, same code).
 
 **Source of truth in repo:** [`chain/src/ClankerIdentity.sol`](../chain/src/ClankerIdentity.sol). The contract is intentionally minimal (notary only): **no** metadata URI, **no** status enum on-chain — “active” means `revokedAt == 0`; revoked records keep `registeredAt` and set `revokedAt`.
 
+**Registration fees (v2):** `registerOperator` and `registerBot` are **payable** with **immutable** `operatorFee` and `botFee` set at deploy. `msg.value` must match exactly or the tx reverts `WrongFee`. Fees are **forwarded to an immutable `feeRecipient`** on each register — enforcement is **on-chain**, not in `identity-service` or CLI config. See [`docs/registration-economics.md`](registration-economics.md). `rotateBotKey`, revoke, and transfer are not charged. This shape is intended for Base Sepolia (near-zero fees) and Base mainnet (production sunk-cost targets).
+
 **Ids:** `bytes32 operatorId = keccak256(bytes(operatorLabel))` and `bytes32 botId = keccak256(bytes(botLabel))` (e.g. labels `org.openclaw.pat`, `openclaw.france.prod-1`). **`msg.sender` must be the operator owner** to register or manage bots under that operator.
 
 **Storage**
 
 | Field | Purpose |
 | --- | --- |
+| `operatorFee`, `botFee`, `feeRecipient` | Immutable fee config (constructor) |
 | `operators(bytes32)` | `owner`, `registeredAt`, `revokedAt` |
 | `bots(bytes32)` | `operatorId`, `botKey` (20-byte signing address), `registeredAt`, `revokedAt` |
 | `pendingOperatorOwner(bytes32)` | Two-step operator transfer |
 | `botKeyToId(address)` | At most one active bot per `botKey` |
 
-**Functions:** `registerOperator`, `proposeOperatorTransfer`, `acceptOperatorTransfer`, `revokeOperator`, `registerBot`, `rotateBotKey`, `revokeBot`. Custom errors (no revert strings) for gas and clarity.
+**Functions:** `registerOperator` (payable), `proposeOperatorTransfer`, `acceptOperatorTransfer`, `revokeOperator`, `registerBot` (payable), `rotateBotKey`, `revokeBot`. Custom errors include `WrongFee`, `FeeTransferFailed`, plus existing notary errors.
 
-**Events:** `OperatorRegistered`, `OperatorTransferProposed`, `OperatorTransferred`, `OperatorRevoked`, `BotRegistered`, `BotKeyRotated`, `BotRevoked`. Indexers replay these to build off-chain views and (future) the `IdentityLedger` cache.
+**Events:** `OperatorRegistered`, `OperatorTransferProposed`, `OperatorTransferred`, `OperatorRevoked`, `BotRegistered`, `BotKeyRotated`, `BotRevoked`. Indexers replay these to build off-chain views and (future) the `IdentityLedger` cache. Event shapes are unchanged; only register txs now carry value.
 
 ### Design notes
 
-- **Operator id = hash of chosen label, not the owner address.** Readable labels off-chain; on-chain id is fixed bytes32. First-come-first-served on local dev. For prod, gate registration (ENS, fee, etc.) — see §10.
+- **Operator id = hash of chosen label, not the owner address.** Readable labels off-chain; on-chain id is fixed bytes32. First-come-first-served on local dev. For prod, fees + namespace policy gate registration — see [`registration-economics.md`](registration-economics.md) and §10.
 - **`botKey` is an EVM `address`.** Aligns with secp256k1 + `ecrecover` on the wire (§3). `mqtt-auth-service` can verify CONNECT via that address (SIWE-style, §3) while legacy bots still use Ed25519 JWTs from the JSON ledger.
 - **`registeredAt` / `revokedAt` + block timestamps on events** — age and history for reputation indexers without extra on-chain fields.
-- **No admin token.** Only `msg.sender` checks against `operators[id].owner` (and two-step accept for transfers).
+- **No admin token.** Only `msg.sender` checks against `operators[id].owner` (and two-step accept for transfers). No `setFee`, no free-mint bypass.
 
 ---
 

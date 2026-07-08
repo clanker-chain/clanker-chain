@@ -18,6 +18,10 @@ contract ClankerIdentity {
         uint64 revokedAt;
     }
 
+    uint256 public immutable operatorFee;
+    uint256 public immutable botFee;
+    address public immutable feeRecipient;
+
     mapping(bytes32 => Operator) public operators;
     mapping(bytes32 => Bot) public bots;
     mapping(bytes32 => address) public pendingOperatorOwner;
@@ -41,12 +45,23 @@ contract ClankerIdentity {
     error OperatorNotActive();
     error BotMissing();
     error BotNotActive();
+    error WrongFee();
+    error FeeTransferFailed();
 
-    function registerOperator(string calldata label) external returns (bytes32 id) {
+    constructor(uint256 _operatorFee, uint256 _botFee, address _feeRecipient) {
+        if (_feeRecipient == address(0)) revert ZeroAddress();
+        operatorFee = _operatorFee;
+        botFee = _botFee;
+        feeRecipient = _feeRecipient;
+    }
+
+    function registerOperator(string calldata label) external payable returns (bytes32 id) {
+        if (msg.value != operatorFee) revert WrongFee();
         id = keccak256(bytes(label));
         if (operators[id].registeredAt != 0) revert OperatorTaken();
         operators[id] = Operator({owner: msg.sender, registeredAt: uint64(block.timestamp), revokedAt: 0});
         emit OperatorRegistered(id, msg.sender, label);
+        _forwardFee();
     }
 
     function proposeOperatorTransfer(bytes32 id, address newOwner) external {
@@ -82,8 +97,10 @@ contract ClankerIdentity {
 
     function registerBot(bytes32 operatorId, string calldata label, address botKey)
         external
+        payable
         returns (bytes32 id)
     {
+        if (msg.value != botFee) revert WrongFee();
         if (botKey == address(0)) revert ZeroAddress();
         Operator storage op = operators[operatorId];
         if (op.registeredAt == 0) revert OperatorMissing();
@@ -103,6 +120,7 @@ contract ClankerIdentity {
         });
         botKeyToId[botKey] = id;
         emit BotRegistered(id, operatorId, botKey, label);
+        _forwardFee();
     }
 
     function rotateBotKey(bytes32 botId, address newKey) external {
@@ -144,5 +162,11 @@ contract ClankerIdentity {
         }
         b.revokedAt = uint64(block.timestamp);
         emit BotRevoked(botId);
+    }
+
+    function _forwardFee() private {
+        if (msg.value == 0) return;
+        (bool ok,) = feeRecipient.call{value: msg.value}("");
+        if (!ok) revert FeeTransferFailed();
     }
 }
