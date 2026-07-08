@@ -15,18 +15,13 @@ import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { EvmBackend } from "../src/backend-evm";
 import { clankerIdentityAbi } from "../src/abi/clanker-identity";
-
-const ANVIL_DEFAULT_KEY =
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as const;
-const ANVIL_KEY_1 =
-  "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d" as const;
-const ANVIL_KEY_2 =
-  "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a" as const;
-
-function foundryOnPath(): boolean {
-  const r = Bun.spawnSync(["bash", "-lc", "command -v anvil >/dev/null && command -v forge >/dev/null"]);
-  return r.exitCode === 0;
-}
+import {
+  ANVIL_DEFAULT_KEY,
+  ANVIL_KEY_1,
+  ANVIL_KEY_2,
+  deployTestRegistry,
+  foundryOnPath,
+} from "../../test-utils/deploy-registry";
 
 function skipReason(): string | null {
   if (process.env.EVM_TESTS_SKIP === "1" || process.env.EVM_TESTS_SKIP === "true") {
@@ -71,40 +66,10 @@ beforeAll(async () => {
     await new Promise((r) => setTimeout(r, 100));
   }
 
-  const account0 = privateKeyToAccount(ANVIL_DEFAULT_KEY);
-  const deploy = Bun.spawn(
-    [
-      "forge",
-      "create",
-      "src/ClankerIdentity.sol:ClankerIdentity",
-      "--rpc-url",
-      rpcUrl,
-      "--private-key",
-      ANVIL_DEFAULT_KEY,
-      "--broadcast",
-      "--constructor-args",
-      "0",
-      "0",
-      account0.address,
-    ],
-    { cwd: chainRoot, stdout: "pipe", stderr: "pipe" },
-  );
-  const exit = await deploy.exited;
-  const out = await new Response(deploy.stdout).text();
-  const err = await new Response(deploy.stderr).text();
-  const combined = out + err;
-  expect(exit).toBe(0);
-  const m = combined.match(/Deployed to:\s*(0x[a-fA-F0-9]{40})/);
-  const txm = combined.match(/Transaction hash:\s*(0x[a-fA-F0-9]{64})/);
-  if (!m?.[1] || !txm?.[1]) {
-    throw new Error(`forge create parse failed:\n${combined}`);
-  }
-  registry = m[1] as Hex;
-  const receipt = Bun.spawnSync(["cast", "receipt", txm[1], "blockNumber", "--rpc-url", rpcUrl], {
-    stdout: "pipe",
-  });
-  const bn = receipt.stdout.toString().trim();
-  deploymentBlock = BigInt(bn.startsWith("0x") ? Number.parseInt(bn, 16) : bn);
+  ({ registry, deploymentBlock } = await deployTestRegistry({
+    rpcUrl,
+    chainDir: chainRoot,
+  }));
 
   const dir = mkdtempSync(join(tmpdir(), "evm-backend-test-"));
   snapshotPath = join(dir, "ledger.json");
@@ -120,6 +85,7 @@ beforeAll(async () => {
     }),
   );
 
+  const account0 = privateKeyToAccount(ANVIL_DEFAULT_KEY);
   const wallet = createWalletClient({
     account: account0,
     chain: foundry,

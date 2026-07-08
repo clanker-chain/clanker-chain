@@ -2,7 +2,7 @@
   "$schema": "https://example.com/schemas/bot-identity-ledger.schema.json",
   "version": 1,
   "created": "2026-05-25T19:10:06.484Z",
-  "updated": "2026-05-25T19:10:06.484Z",
+  "updated": "2026-07-07T21:20:19.744Z",
   "operators": {
     "org.openclaw.pat": {
       "operator_id": "org.openclaw.pat",
