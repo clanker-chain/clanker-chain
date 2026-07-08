@@ -48,6 +48,22 @@ To use the bare `clanker` command, either install the package globally from this
 
 ## Deploy registry (Anvil default account)
 
+The constructor requires immutable fee parameters: `(operatorFee, botFee, feeRecipient)`. Set these env vars before deploy:
+
+| Variable | Description |
+|----------|-------------|
+| `OPERATOR_FEE_WEI` | Wei sent with each `registerOperator` (exact match required) |
+| `BOT_FEE_WEI` | Wei sent with each `registerBot` |
+| `FEE_RECIPIENT` | Address that receives fees on each registration (non-zero) |
+
+**Local dev example** (tiny nonzero fees):
+
+```bash
+export OPERATOR_FEE_WEI=1000000000000000    # 0.001 ETH
+export BOT_FEE_WEI=100000000000000          # 0.0001 ETH
+export FEE_RECIPIENT=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266  # Anvil account #0
+```
+
 Anvil’s first test account (well-known private key — **dev only**, never on mainnet):
 
 ```bash
@@ -59,13 +75,30 @@ forge script script/Deploy.s.sol:Deploy \
   -vvv
 ```
 
-From repo root via CLI:
+From repo root via CLI (export the three fee env vars first):
 
 ```bash
 node clanker-cli/bin/clanker.mjs chain deploy --rpc http://127.0.0.1:8545
 ```
 
-The script logs: `ClankerIdentity deployed at: 0x…`
+The script logs: `ClankerIdentity deployed at: 0x…`, plus `operatorFee`, `botFee`, and `feeRecipient`.
+
+### Registration fees
+
+- Fees are **immutable** (constructor args). There is no `setFee` or owner.
+- `registerOperator` and `registerBot` are **payable**; `msg.value` must equal `operatorFee` / `botFee` exactly or the tx reverts `WrongFee`.
+- Fees are **forwarded to `feeRecipient`** on each successful register. Revoke does not refund.
+- `rotateBotKey`, `revokeBot`, and operator transfer/revoke are **not** charged.
+
+Read on-chain fee config:
+
+```bash
+cast call $REGISTRY "operatorFee()(uint256)" --rpc-url $CHAIN_RPC_URL
+cast call $REGISTRY "botFee()(uint256)" --rpc-url $CHAIN_RPC_URL
+cast call $REGISTRY "feeRecipient()(address)" --rpc-url $CHAIN_RPC_URL
+```
+
+See [`docs/registration-economics.md`](../docs/registration-economics.md) for rationale and mainnet targets.
 
 ## Read contract state with `cast`
 
@@ -91,7 +124,9 @@ node clanker-cli/bin/clanker.mjs chain mint-operator org.openclaw.pat --registry
 node clanker-cli/bin/clanker.mjs chain mint-bot openclaw.france.prod-1 org.openclaw.pat --registry "$REGISTRY"
 ```
 
-Legacy **`cast send`** examples below remain valid.
+**Note:** `registerOperator` / `registerBot` require `msg.value` matching on-chain fees. CLI `--value` wiring is Phase 4; until then use `cast send --value` (see below) or read fees from the contract and pass them in the CLI once updated.
+
+Legacy **`cast send`** examples below remain valid when `--value` is set to the deployed registry fees.
 
 ### Operator id vs private key
 
@@ -107,6 +142,7 @@ export REGISTRY=0x5FbDB2315678afecb367f032d93F642f64180aa3   # your deployed add
 
 cast send --rpc-url http://127.0.0.1:8545 \
   --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+  --value "$(cast call "$REGISTRY" "operatorFee()(uint256)" --rpc-url http://127.0.0.1:8545)" \
   "$REGISTRY" \
   "registerOperator(string)" \
   "org.openclaw.pat"
@@ -119,6 +155,7 @@ export OP_ID=$(cast keccak $(cast from-utf8 "org.openclaw.pat"))
 
 cast send --rpc-url http://127.0.0.1:8545 \
   --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+  --value "$(cast call "$REGISTRY" "botFee()(uint256)" --rpc-url http://127.0.0.1:8545)" \
   "$REGISTRY" \
   "registerBot(bytes32,string,address)" \
   "$OP_ID" \
