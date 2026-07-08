@@ -3,7 +3,7 @@
  * On-chain identity commands (ClankerIdentity contract).
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import {
@@ -100,6 +100,21 @@ export async function chainMintBot(botLabel, operatorLabel, argv) {
   }
   const botAccount = privateKeyToAccount(botPrivateKey);
   const operatorIdBytes = labelToId(operatorLabel);
+
+  // Persist the key BEFORE broadcasting: registration now costs ETH, so a
+  // crash between tx-send and key-write would strand a paid, orphaned bot
+  // whose key exists only in memory (recoverable only via rotateBotKey).
+  const keyDir = join(homedir(), ".openclaw", "keys");
+  mkdirSync(keyDir, { recursive: true });
+  const keyPath = join(keyDir, `${botLabel}.key`);
+  if (existsSync(keyPath)) {
+    throw new Error(
+      `Key file already exists at ${keyPath}; refusing to overwrite. ` +
+        `Remove it or choose a different bot label.`,
+    );
+  }
+  writeFileSync(keyPath, `${botPrivateKey}\n`, { flag: "wx", mode: 0o600 });
+
   const botFee = await pub.readContract({
     address: registry,
     abi: clankerIdentityAbi,
@@ -112,11 +127,6 @@ export async function chainMintBot(botLabel, operatorLabel, argv) {
     args: [operatorIdBytes, botLabel, botAccount.address],
     value: botFee,
   });
-
-  const keyDir = join(homedir(), ".openclaw", "keys");
-  mkdirSync(keyDir, { recursive: true });
-  const keyPath = join(keyDir, `${botLabel}.key`);
-  writeFileSync(keyPath, `${botPrivateKey}\n`, { mode: 0o600 });
 
   console.log(
     JSON.stringify({
