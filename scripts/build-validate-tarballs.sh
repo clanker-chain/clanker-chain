@@ -111,8 +111,8 @@ build_mqtt_client_plugin() {
   local plugin_dir="${ROOT_DIR}/mqtt-client-plugin"
   # Symlink scoped node-client packages so npm install resolves them locally.
   mkdir -p "${plugin_dir}/node_modules/@clanker-chain"
-  ln -sf "${ROOT_DIR}/identity-node-client" "${plugin_dir}/node_modules/@clanker-chain/identity-node-client"
-  ln -sf "${ROOT_DIR}/mqtt-node-client" "${plugin_dir}/node_modules/@clanker-chain/mqtt-node-client"
+  ln -sfn "${ROOT_DIR}/identity-node-client" "${plugin_dir}/node_modules/@clanker-chain/identity-node-client"
+  ln -sfn "${ROOT_DIR}/mqtt-node-client" "${plugin_dir}/node_modules/@clanker-chain/mqtt-node-client"
 
   local bundle_dir="${WORK_DIR}/bundle/mqtt-client-plugin"
   rm -rf "$bundle_dir"
@@ -142,8 +142,8 @@ build_mqtt_channel_plugin() {
 
   local plugin_dir="${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin"
   mkdir -p "${plugin_dir}/node_modules/@clanker-chain"
-  ln -sf "${ROOT_DIR}/identity-node-client" "${plugin_dir}/node_modules/@clanker-chain/identity-node-client"
-  ln -sf "${ROOT_DIR}/mqtt-node-client" "${plugin_dir}/node_modules/@clanker-chain/mqtt-node-client"
+  ln -sfn "${ROOT_DIR}/identity-node-client" "${plugin_dir}/node_modules/@clanker-chain/identity-node-client"
+  ln -sfn "${ROOT_DIR}/mqtt-node-client" "${plugin_dir}/node_modules/@clanker-chain/mqtt-node-client"
   (cd "$plugin_dir" && npm install 1>&2 && npm run build 1>&2)
 
   local bundle_dir="${WORK_DIR}/bundle/mqtt-channel-plugin"

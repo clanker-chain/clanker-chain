@@ -12,23 +12,18 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
 import { clankerIdentityAbi } from "../../identity-service/src/abi/clanker-identity";
-
-const ANVIL_DEFAULT_KEY =
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as const;
-const ANVIL_KEY_1 =
-  "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d" as const;
-const ANVIL_KEY_2 =
-  "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a" as const;
+import {
+  ANVIL_DEFAULT_KEY,
+  ANVIL_KEY_1,
+  ANVIL_KEY_2,
+  deployTestRegistry,
+  foundryOnPath,
+} from "../../test-utils/deploy-registry";
 
 const repoRoot = join(import.meta.dir, "../..");
 const chainDir = join(repoRoot, "chain");
 const identityServiceDir = join(repoRoot, "identity-service");
 const mqttAuthServiceDir = join(repoRoot, "mqtt-auth-service");
-
-function foundryOnPath(): boolean {
-  const r = Bun.spawnSync(["bash", "-lc", "command -v anvil >/dev/null && command -v forge >/dev/null"]);
-  return r.exitCode === 0;
-}
 
 function skipSiwe(): string | null {
   if (process.env.MQTT_EVM_TESTS_SKIP === "1" || process.env.MQTT_EVM_TESTS_SKIP === "true") {
@@ -77,31 +72,10 @@ async function startSiweHarness(): Promise<SiweHarness> {
     await new Promise((r) => setTimeout(r, 100));
   }
 
-  const deploy = Bun.spawn(
-    [
-      "forge",
-      "create",
-      "src/ClankerIdentity.sol:ClankerIdentity",
-      "--rpc-url",
-      rpcUrl,
-      "--private-key",
-      ANVIL_DEFAULT_KEY,
-      "--broadcast",
-    ],
-    { cwd: chainDir, stdout: "pipe", stderr: "pipe" },
-  );
-  await deploy.exited;
-  const combined =
-    (await new Response(deploy.stdout).text()) + (await new Response(deploy.stderr).text());
-  const m = combined.match(/Deployed to:\s*(0x[a-fA-F0-9]{40})/);
-  const txm = combined.match(/Transaction hash:\s*(0x[a-fA-F0-9]{64})/);
-  if (!m?.[1] || !txm?.[1]) throw new Error(`forge create failed: ${combined}`);
-  const registry = m[1] as Hex;
-  const receipt = Bun.spawnSync(["cast", "receipt", txm[1], "blockNumber", "--rpc-url", rpcUrl], {
-    stdout: "pipe",
+  const { registry, deploymentBlock } = await deployTestRegistry({
+    rpcUrl,
+    chainDir,
   });
-  const bn = receipt.stdout.toString().trim();
-  const deploymentBlock = BigInt(bn.startsWith("0x") ? Number.parseInt(bn, 16) : bn);
 
   const dir = mkdtempSync(join(tmpdir(), "mqtt-auth-evm-"));
   const snapshotPath = join(dir, "ledger.json");
