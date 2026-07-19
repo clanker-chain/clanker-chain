@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "bun run src/server.ts",
     "start": "bun run src/server.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "test:unit": "EVM_TESTS_SKIP=1 bun test",
+    "test:integration": "bun test"
   },
   "dependencies": {
     "viem": "^2.21.0"

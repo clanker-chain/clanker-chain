@@ -64,8 +64,12 @@ run_bun_package() {
   fi
 
   if [ -f "${dir}/package.json" ]; then
-    # Run tests only if a test script exists.
-    if node -e "const p=require('${dir}/package.json'); process.exit(p.scripts && p.scripts.test ? 0 : 1);" ; then
+    # Fast, hermetic unit lane: prefer `test:unit` (chain-backed suites skipped
+    # via EVM_TESTS_SKIP) so a contract change can't red-fail unit tests. The
+    # anvil-backed integration lane runs later (see run_bun_integration).
+    if node -e "const p=require('${dir}/package.json'); process.exit(p.scripts && p.scripts['test:unit'] ? 0 : 1);" ; then
+      (cd "$dir" && bun run test:unit)
+    elif node -e "const p=require('${dir}/package.json'); process.exit(p.scripts && p.scripts.test ? 0 : 1);" ; then
       (cd "$dir" && bun run test)
     else
       log "No bun test script in ${dir} (skipping tests)."
@@ -77,6 +81,16 @@ run_bun_package() {
     (cd "$dir" && bun x tsc -p tsconfig.json)
   else
     log "No tsconfig.json in ${dir} (skipping typecheck)."
+  fi
+}
+
+run_bun_integration() {
+  # Args: $1 dir. Runs the anvil-backed integration suite (requires Foundry).
+  local dir="$1"
+  [ -f "${dir}/package.json" ] || return 0
+  if node -e "const p=require('${dir}/package.json'); process.exit(p.scripts && p.scripts['test:integration'] ? 0 : 1);" ; then
+    log "Integration tests (anvil-backed): ${dir}"
+    (cd "$dir" && bun run test:integration)
   fi
 }
 
@@ -154,16 +168,16 @@ main() {
   # run TypeScript against that compile graph.
   log "TS check/build for mqtt-channel-plugin (OpenClaw channel SDK plugin)"
   mkdir -p "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain"
-  ln -sf "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/identity-node-client"
-  ln -sf "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/mqtt-node-client"
+  ln -sfn "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/identity-node-client"
+  ln -sfn "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/mqtt-node-client"
   (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun x tsc -p tsconfig.json)
   (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun test test/)
 
   log "TS check/build for mqtt-tools-plugin (OpenClaw tool plugin)"
   MQTT_TOOLS_DIR="${ROOT_DIR}/openclaw-extensions/mqtt-tools-plugin"
   mkdir -p "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain"
-  ln -sf "${ROOT_DIR}/identity-node-client" "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain/identity-node-client"
-  ln -sf "${ROOT_DIR}/mqtt-node-client" "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain/mqtt-node-client"
+  ln -sfn "${ROOT_DIR}/identity-node-client" "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain/identity-node-client"
+  ln -sfn "${ROOT_DIR}/mqtt-node-client" "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain/mqtt-node-client"
   # typebox is a runtime dep; do not run `npm install` in this package — it would fetch
   # @clanker-chain/mqtt-node-client@2026.5.25 from npm before that CalVer is published.
   if [ ! -d "${MQTT_TOOLS_DIR}/node_modules/typebox" ]; then
@@ -180,8 +194,8 @@ main() {
   # at dev time). Symlink them instead of running npm ci.
   log "Linking mqtt-client-plugin deps from local sources"
   mkdir -p "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain"
-  ln -sf "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/identity-node-client"
-  ln -sf "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/mqtt-node-client"
+  ln -sfn "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/identity-node-client"
+  ln -sfn "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/mqtt-node-client"
 
   if [ -f "${ROOT_DIR}/mqtt-client-plugin/tsconfig.json" ]; then
     (cd "${ROOT_DIR}/mqtt-client-plugin" && bun x tsc -p tsconfig.json)
@@ -190,6 +204,30 @@ main() {
   fi
 
   run_foundry_chain
+
+  # ABI drift guard: the committed TS/JS ABIs must match the compiled contract.
+  # run_foundry_chain builds artifacts (and guarantees forge in --ci mode).
+  if have_cmd forge; then
+    log "ABI drift check (generated vs committed)"
+    node "${ROOT_DIR}/scripts/gen-abi.mjs" --check
+  elif [ "$CI_MODE" = "1" ]; then
+    echo "ERROR: --ci requires forge for the ABI drift check." >&2
+    exit 1
+  else
+    log "forge not on PATH — skipping ABI drift check."
+  fi
+
+  # Anvil-backed integration lane (separate from the fast unit lane above).
+  if have_cmd forge && have_cmd anvil; then
+    log "Running anvil-backed integration suites"
+    run_bun_integration "${ROOT_DIR}/identity-service"
+    run_bun_integration "${ROOT_DIR}/mqtt-auth-service"
+  elif [ "$CI_MODE" = "1" ]; then
+    echo "ERROR: --ci requires Foundry (anvil + forge) for integration tests." >&2
+    exit 1
+  else
+    log "Foundry not on PATH — skipping anvil-backed integration suites."
+  fi
 
   if [ "$SKIP_TARBALL_VALIDATION" = "1" ]; then
     log "Skipping tarball validation as requested."
