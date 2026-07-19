@@ -4,24 +4,132 @@ pragma solidity ^0.8.24;
 import {Test} from "forge-std/Test.sol";
 import {ClankerIdentity} from "../src/ClankerIdentity.sol";
 
+contract RevertingReceiver {
+    receive() external payable {
+        revert();
+    }
+}
+
 contract ClankerIdentityTest is Test {
+    uint256 internal constant OPERATOR_FEE = 0.01 ether;
+    uint256 internal constant BOT_FEE = 0.001 ether;
+
     ClankerIdentity internal reg;
+    address internal feeRecipient = address(0xFEE);
 
     address internal alice = address(0xA11CE);
     address internal bob = address(0xB0B);
     address internal carol = address(0xCA801);
 
     function setUp() public {
-        reg = new ClankerIdentity();
+        reg = new ClankerIdentity(OPERATOR_FEE, BOT_FEE, feeRecipient);
+        vm.deal(alice, 100 ether);
+        vm.deal(bob, 100 ether);
+        vm.deal(carol, 100 ether);
     }
 
     function _opId(string memory label) internal pure returns (bytes32) {
         return keccak256(bytes(label));
     }
 
-    function testRegisterOperatorHappy() public {
+    function _registerOperator(address actor, string memory label) internal returns (bytes32 id) {
+        vm.prank(actor);
+        return reg.registerOperator{value: OPERATOR_FEE}(label);
+    }
+
+    function _registerBot(address actor, bytes32 opId, string memory label, address botKey)
+        internal
+        returns (bytes32 id)
+    {
+        vm.prank(actor);
+        return reg.registerBot{value: BOT_FEE}(opId, label, botKey);
+    }
+
+    function testConstructorZeroRecipientReverts() public {
+        vm.expectRevert(ClankerIdentity.ZeroAddress.selector);
+        new ClankerIdentity(OPERATOR_FEE, BOT_FEE, address(0));
+    }
+
+    function testRegisterOperatorWrongFeeReverts() public {
         vm.prank(alice);
-        bytes32 id = reg.registerOperator("org.openclaw.alice");
+        vm.expectRevert(ClankerIdentity.WrongFee.selector);
+        reg.registerOperator{value: 0}("org.openclaw.alice");
+
+        vm.prank(alice);
+        vm.expectRevert(ClankerIdentity.WrongFee.selector);
+        reg.registerOperator{value: OPERATOR_FEE + 1}("org.openclaw.alice");
+    }
+
+    function testRegisterBotWrongFeeReverts() public {
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
+
+        vm.prank(alice);
+        vm.expectRevert(ClankerIdentity.WrongFee.selector);
+        reg.registerBot{value: 0}(opId, "openclaw.france.prod-1", address(0xB07));
+
+        vm.prank(alice);
+        vm.expectRevert(ClankerIdentity.WrongFee.selector);
+        reg.registerBot{value: BOT_FEE + 1}(opId, "openclaw.france.prod-1", address(0xB07));
+    }
+
+    function testRegisterOperatorForwardsFee() public {
+        uint256 beforeBal = feeRecipient.balance;
+        _registerOperator(alice, "org.openclaw.alice");
+        assertEq(feeRecipient.balance, beforeBal + OPERATOR_FEE);
+    }
+
+    function testRegisterBotForwardsFee() public {
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
+        uint256 beforeBal = feeRecipient.balance;
+        _registerBot(alice, opId, "openclaw.france.prod-1", address(0xB07));
+        assertEq(feeRecipient.balance, beforeBal + BOT_FEE);
+    }
+
+    function testRevokeDoesNotRefundFee() public {
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
+        bytes32 botId = _registerBot(alice, opId, "openclaw.france.prod-1", address(0xB01));
+        uint256 afterRegister = feeRecipient.balance;
+
+        vm.prank(alice);
+        reg.revokeBot(botId);
+
+        assertEq(feeRecipient.balance, afterRegister);
+    }
+
+    function testFeeTransferFailedReverts() public {
+        RevertingReceiver reverting = new RevertingReceiver();
+        ClankerIdentity paidReg = new ClankerIdentity(OPERATOR_FEE, BOT_FEE, address(reverting));
+
+        vm.prank(alice);
+        vm.expectRevert(ClankerIdentity.FeeTransferFailed.selector);
+        paidReg.registerOperator{value: OPERATOR_FEE}("org.openclaw.alice");
+    }
+
+    function testFeeTransferFailedRevertsOnBot() public {
+        RevertingReceiver reverting = new RevertingReceiver();
+        ClankerIdentity paidReg = new ClankerIdentity(0, BOT_FEE, address(reverting));
+
+        vm.prank(alice);
+        bytes32 opId = paidReg.registerOperator{value: 0}("org.openclaw.alice");
+        vm.prank(alice);
+        vm.expectRevert(ClankerIdentity.FeeTransferFailed.selector);
+        paidReg.registerBot{value: BOT_FEE}(opId, "openclaw.france.prod-1", address(0xB01));
+    }
+
+    function testZeroFeeRegistrationSucceeds() public {
+        ClankerIdentity freeReg = new ClankerIdentity(0, 0, feeRecipient);
+        vm.prank(alice);
+        bytes32 opId = freeReg.registerOperator{value: 0}("org.openclaw.alice");
+        vm.prank(alice);
+        bytes32 botId = freeReg.registerBot{value: 0}(opId, "openclaw.france.prod-1", address(0xB01));
+        (address owner,,) = freeReg.operators(opId);
+        assertEq(owner, alice);
+        (bytes32 oid,,,) = freeReg.bots(botId);
+        assertEq(oid, opId);
+    }
+
+    function testRegisterOperatorHappy() public {
+        bytes32 id = _registerOperator(alice, "org.openclaw.alice");
         assertEq(id, _opId("org.openclaw.alice"));
         (address owner, uint64 ra, uint64 rv) = reg.operators(id);
         assertEq(owner, alice);
@@ -30,16 +138,14 @@ contract ClankerIdentityTest is Test {
     }
 
     function testRegisterOperatorDuplicateReverts() public {
-        vm.prank(alice);
-        reg.registerOperator("org.openclaw.alice");
+        _registerOperator(alice, "org.openclaw.alice");
         vm.prank(bob);
         vm.expectRevert(ClankerIdentity.OperatorTaken.selector);
-        reg.registerOperator("org.openclaw.alice");
+        reg.registerOperator{value: OPERATOR_FEE}("org.openclaw.alice");
     }
 
     function testProposeAndAcceptTransferHappy() public {
-        vm.prank(alice);
-        bytes32 id = reg.registerOperator("org.openclaw.alice");
+        bytes32 id = _registerOperator(alice, "org.openclaw.alice");
         vm.prank(alice);
         reg.proposeOperatorTransfer(id, bob);
         vm.prank(bob);
@@ -50,8 +156,7 @@ contract ClankerIdentityTest is Test {
     }
 
     function testAcceptTransferWrongAddressReverts() public {
-        vm.prank(alice);
-        bytes32 id = reg.registerOperator("org.openclaw.alice");
+        bytes32 id = _registerOperator(alice, "org.openclaw.alice");
         vm.prank(alice);
         reg.proposeOperatorTransfer(id, bob);
         vm.prank(carol);
@@ -60,8 +165,7 @@ contract ClankerIdentityTest is Test {
     }
 
     function testRevokeOperatorHappy() public {
-        vm.prank(alice);
-        bytes32 id = reg.registerOperator("org.openclaw.alice");
+        bytes32 id = _registerOperator(alice, "org.openclaw.alice");
         vm.prank(alice);
         reg.revokeOperator(id);
         (,, uint64 rv) = reg.operators(id);
@@ -69,8 +173,7 @@ contract ClankerIdentityTest is Test {
     }
 
     function testRevokeOperatorNonOwnerReverts() public {
-        vm.prank(alice);
-        bytes32 id = reg.registerOperator("org.openclaw.alice");
+        bytes32 id = _registerOperator(alice, "org.openclaw.alice");
         vm.prank(bob);
         vm.expectRevert(ClankerIdentity.NotOperatorOwner.selector);
         reg.revokeOperator(id);
@@ -78,18 +181,15 @@ contract ClankerIdentityTest is Test {
 
     function testRegisteredAtUsesBlockTimestamp() public {
         vm.warp(1_700_000_000);
-        vm.prank(alice);
-        bytes32 id = reg.registerOperator("org.openclaw.alice");
+        bytes32 id = _registerOperator(alice, "org.openclaw.alice");
         (, uint64 ra,) = reg.operators(id);
         assertEq(ra, uint64(1_700_000_000));
     }
 
     function testRegisterBotHappy() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
         address botKey = address(0xB07);
-        vm.prank(alice);
-        bytes32 botId = reg.registerBot(opId, "openclaw.france.prod-1", botKey);
+        bytes32 botId = _registerBot(alice, opId, "openclaw.france.prod-1", botKey);
         assertEq(botId, keccak256(bytes("openclaw.france.prod-1")));
         (bytes32 oid, address bk, uint64 bra, uint64 brv) = reg.bots(botId);
         assertEq(oid, opId);
@@ -100,37 +200,30 @@ contract ClankerIdentityTest is Test {
     }
 
     function testRegisterBotDuplicateIdReverts() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
         address k1 = address(0xB01);
         address k2 = address(0xB02);
-        vm.prank(alice);
-        reg.registerBot(opId, "openclaw.france.prod-1", k1);
+        _registerBot(alice, opId, "openclaw.france.prod-1", k1);
         vm.prank(alice);
         vm.expectRevert(ClankerIdentity.BotTaken.selector);
-        reg.registerBot(opId, "openclaw.france.prod-1", k2);
+        reg.registerBot{value: BOT_FEE}(opId, "openclaw.france.prod-1", k2);
     }
 
     function testRegisterBotDuplicateKeyAcrossOperatorsReverts() public {
-        vm.prank(alice);
-        bytes32 opA = reg.registerOperator("org.openclaw.alice");
-        vm.prank(bob);
-        bytes32 opB = reg.registerOperator("org.openclaw.bob");
+        bytes32 opA = _registerOperator(alice, "org.openclaw.alice");
+        bytes32 opB = _registerOperator(bob, "org.openclaw.bob");
         address shared = address(0x5EEDED);
-        vm.prank(alice);
-        reg.registerBot(opA, "openclaw.france.prod-1", shared);
+        _registerBot(alice, opA, "openclaw.france.prod-1", shared);
         vm.prank(bob);
         vm.expectRevert(ClankerIdentity.BotKeyInUse.selector);
-        reg.registerBot(opB, "openclaw.tooter.prod-1", shared);
+        reg.registerBot{value: BOT_FEE}(opB, "openclaw.tooter.prod-1", shared);
     }
 
     function testRotateBotKeyUpdatesReverseMap() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
         address k1 = address(0xB01);
         address k2 = address(0xB02);
-        vm.prank(alice);
-        bytes32 botId = reg.registerBot(opId, "openclaw.france.prod-1", k1);
+        bytes32 botId = _registerBot(alice, opId, "openclaw.france.prod-1", k1);
         assertEq(reg.botKeyToId(k1), botId);
         vm.prank(alice);
         reg.rotateBotKey(botId, k2);
@@ -141,24 +234,19 @@ contract ClankerIdentityTest is Test {
     }
 
     function testRotateBotKeyNonOwnerReverts() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
-        vm.prank(alice);
-        bytes32 botId = reg.registerBot(opId, "openclaw.france.prod-1", address(0xB01));
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
+        bytes32 botId = _registerBot(alice, opId, "openclaw.france.prod-1", address(0xB01));
         vm.prank(bob);
         vm.expectRevert(ClankerIdentity.NotOperatorOwner.selector);
         reg.rotateBotKey(botId, address(0xB02));
     }
 
     function testRotateToAlreadyUsedKeyReverts() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
         address k1 = address(0xB01);
         address k2 = address(0xB02);
-        vm.prank(alice);
-        bytes32 botA = reg.registerBot(opId, "openclaw.france.prod-1", k1);
-        vm.prank(alice);
-        bytes32 botB = reg.registerBot(opId, "openclaw.tooter.prod-1", k2);
+        bytes32 botA = _registerBot(alice, opId, "openclaw.france.prod-1", k1);
+        bytes32 botB = _registerBot(alice, opId, "openclaw.tooter.prod-1", k2);
         vm.prank(alice);
         vm.expectRevert(ClankerIdentity.BotKeyInUse.selector);
         reg.rotateBotKey(botA, k2);
@@ -166,21 +254,17 @@ contract ClankerIdentityTest is Test {
     }
 
     function testRevokeBotNonOwnerReverts() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
-        vm.prank(alice);
-        bytes32 botId = reg.registerBot(opId, "openclaw.france.prod-1", address(0xB01));
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
+        bytes32 botId = _registerBot(alice, opId, "openclaw.france.prod-1", address(0xB01));
         vm.prank(bob);
         vm.expectRevert(ClankerIdentity.NotOperatorOwner.selector);
         reg.revokeBot(botId);
     }
 
     function testRevokeBotClearsBotKeyToId() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
         address k = address(0xB01);
-        vm.prank(alice);
-        bytes32 botId = reg.registerBot(opId, "openclaw.france.prod-1", k);
+        bytes32 botId = _registerBot(alice, opId, "openclaw.france.prod-1", k);
         vm.prank(alice);
         reg.revokeBot(botId);
         assertEq(reg.botKeyToId(k), bytes32(0));
@@ -191,24 +275,21 @@ contract ClankerIdentityTest is Test {
     function testRegisterBotNonExistentOperatorReverts() public {
         vm.prank(alice);
         vm.expectRevert(ClankerIdentity.OperatorMissing.selector);
-        reg.registerBot(bytes32(uint256(1)), "openclaw.france.prod-1", address(0xB01));
+        reg.registerBot{value: BOT_FEE}(bytes32(uint256(1)), "openclaw.france.prod-1", address(0xB01));
     }
 
     function testRegisterBotUnderRevokedOperatorReverts() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
         vm.prank(alice);
         reg.revokeOperator(opId);
         vm.prank(alice);
         vm.expectRevert(ClankerIdentity.OperatorNotActive.selector);
-        reg.registerBot(opId, "openclaw.france.prod-1", address(0xB01));
+        reg.registerBot{value: BOT_FEE}(opId, "openclaw.france.prod-1", address(0xB01));
     }
 
     function testRotateBotAfterBotRevokedReverts() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
-        vm.prank(alice);
-        bytes32 botId = reg.registerBot(opId, "openclaw.france.prod-1", address(0xB01));
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
+        bytes32 botId = _registerBot(alice, opId, "openclaw.france.prod-1", address(0xB01));
         vm.prank(alice);
         reg.revokeBot(botId);
         vm.prank(alice);
@@ -217,8 +298,7 @@ contract ClankerIdentityTest is Test {
     }
 
     function testProposeTransferAfterRevokeReverts() public {
-        vm.prank(alice);
-        bytes32 id = reg.registerOperator("org.openclaw.alice");
+        bytes32 id = _registerOperator(alice, "org.openclaw.alice");
         vm.prank(alice);
         reg.revokeOperator(id);
         vm.prank(alice);
@@ -227,10 +307,8 @@ contract ClankerIdentityTest is Test {
     }
 
     function testOperatorRevoked_BotRotateReverts() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
-        vm.prank(alice);
-        bytes32 botId = reg.registerBot(opId, "openclaw.france.prod-1", address(0xB01));
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
+        bytes32 botId = _registerBot(alice, opId, "openclaw.france.prod-1", address(0xB01));
         vm.prank(alice);
         reg.revokeOperator(opId);
         vm.prank(alice);
@@ -239,30 +317,24 @@ contract ClankerIdentityTest is Test {
     }
 
     function testRegisterBotZeroKeyReverts() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
         vm.prank(alice);
         vm.expectRevert(ClankerIdentity.ZeroAddress.selector);
-        reg.registerBot(opId, "openclaw.france.prod-1", address(0));
+        reg.registerBot{value: BOT_FEE}(opId, "openclaw.france.prod-1", address(0));
     }
 
     function testRotateBotKeyZeroKeyReverts() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
-        vm.prank(alice);
-        bytes32 botId = reg.registerBot(opId, "openclaw.france.prod-1", address(0xB01));
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
+        bytes32 botId = _registerBot(alice, opId, "openclaw.france.prod-1", address(0xB01));
         vm.prank(alice);
         vm.expectRevert(ClankerIdentity.ZeroAddress.selector);
         reg.rotateBotKey(botId, address(0));
     }
 
     function testTwoBotsSameOperator() public {
-        vm.prank(alice);
-        bytes32 opId = reg.registerOperator("org.openclaw.alice");
-        vm.prank(alice);
-        bytes32 b1 = reg.registerBot(opId, "openclaw.france.prod-1", address(0xB01));
-        vm.prank(alice);
-        bytes32 b2 = reg.registerBot(opId, "openclaw.tooter.prod-1", address(0xB02));
+        bytes32 opId = _registerOperator(alice, "org.openclaw.alice");
+        bytes32 b1 = _registerBot(alice, opId, "openclaw.france.prod-1", address(0xB01));
+        bytes32 b2 = _registerBot(alice, opId, "openclaw.tooter.prod-1", address(0xB02));
         assertTrue(b1 != b2);
         (bytes32 oid1,,,) = reg.bots(b1);
         (bytes32 oid2,,,) = reg.bots(b2);

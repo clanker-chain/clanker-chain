@@ -29,3 +29,9 @@ chain/cache/
 chain/out/
 chain/broadcast/
 chain/.anvil-state.json
+
+# Stray self-referential symlinks (accidentally created by local ci-local runs)
+/identity-node-client/identity-node-client
+/mqtt-node-client/mqtt-node-client
+
+identity/bot-identity-ledger.json

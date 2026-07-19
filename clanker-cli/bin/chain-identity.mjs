@@ -3,7 +3,7 @@
  * On-chain identity commands (ClankerIdentity contract).
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import {
@@ -64,19 +64,25 @@ async function walletFromKey(rpc, key) {
 
 export async function chainMintOperator(label, argv) {
   const { registry, rpc, key } = resolveRegistry(argv);
-  const { wallet } = await walletFromKey(rpc, key);
+  const { public: pub, wallet } = await walletFromKey(rpc, key);
+  const operatorFee = await pub.readContract({
+    address: registry,
+    abi: clankerIdentityAbi,
+    functionName: "operatorFee",
+  });
   const hash = await wallet.writeContract({
     address: registry,
     abi: clankerIdentityAbi,
     functionName: "registerOperator",
     args: [label],
+    value: operatorFee,
   });
   console.log(JSON.stringify({ ok: true, label, operator_id: labelToId(label), tx: hash }));
 }
 
 export async function chainMintBot(botLabel, operatorLabel, argv) {
   const { registry, rpc, key } = resolveRegistry(argv);
-  const { wallet } = await walletFromKey(rpc, key);
+  const { public: pub, wallet } = await walletFromKey(rpc, key);
   let botPrivateKey;
   const positional = [];
   for (let i = 0; i < argv.length; i += 1) {
@@ -94,17 +100,33 @@ export async function chainMintBot(botLabel, operatorLabel, argv) {
   }
   const botAccount = privateKeyToAccount(botPrivateKey);
   const operatorIdBytes = labelToId(operatorLabel);
+
+  // Persist the key BEFORE broadcasting: registration now costs ETH, so a
+  // crash between tx-send and key-write would strand a paid, orphaned bot
+  // whose key exists only in memory (recoverable only via rotateBotKey).
+  const keyDir = join(homedir(), ".openclaw", "keys");
+  mkdirSync(keyDir, { recursive: true });
+  const keyPath = join(keyDir, `${botLabel}.key`);
+  if (existsSync(keyPath)) {
+    throw new Error(
+      `Key file already exists at ${keyPath}; refusing to overwrite. ` +
+        `Remove it or choose a different bot label.`,
+    );
+  }
+  writeFileSync(keyPath, `${botPrivateKey}\n`, { flag: "wx", mode: 0o600 });
+
+  const botFee = await pub.readContract({
+    address: registry,
+    abi: clankerIdentityAbi,
+    functionName: "botFee",
+  });
   const hash = await wallet.writeContract({
     address: registry,
     abi: clankerIdentityAbi,
     functionName: "registerBot",
     args: [operatorIdBytes, botLabel, botAccount.address],
+    value: botFee,
   });
-
-  const keyDir = join(homedir(), ".openclaw", "keys");
-  mkdirSync(keyDir, { recursive: true });
-  const keyPath = join(keyDir, `${botLabel}.key`);
-  writeFileSync(keyPath, `${botPrivateKey}\n`, { mode: 0o600 });
 
   console.log(
     JSON.stringify({
