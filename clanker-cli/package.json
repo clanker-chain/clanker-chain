@@ -7,7 +7,11 @@
     "clanker": "./bin/clanker.mjs"
   },
   "scripts": {
-    "lint": "node ./bin/clanker.mjs --help"
+    "lint": "node ./bin/clanker.mjs --help",
+    "mint-operator": "node ./bin/clanker.mjs chain mint-operator",
+    "mint-bot": "node ./bin/clanker.mjs chain mint-bot",
+    "mint-operator:sepolia": "bash ./scripts/with-sepolia-env.sh mint-operator",
+    "mint-bot:sepolia": "bash ./scripts/with-sepolia-env.sh mint-bot"
   },
   "dependencies": {
     "viem": "^2.21.0"

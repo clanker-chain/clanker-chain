@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bun run src/server.ts",
     "start": "bun run src/server.ts",
+    "start:sepolia": "bash ./scripts/start-sepolia.sh",
     "test": "bun test",
     "test:unit": "EVM_TESTS_SKIP=1 bun test",
     "test:integration": "bun test"
