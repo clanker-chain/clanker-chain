@@ -1,7 +1,7 @@
 {
   "id": "mqtt-tools",
   "name": "Clanker MQTT Tools",
-  "version": "2026.5.26",
+  "version": "2026.7.29",
   "description": "Agent tools for initiating signed bot-to-bot MQTT messages (companion to @clanker-chain/mqtt-channel-plugin).",
   "kind": "tool",
   "openclaw": ">=2026.5.17",

@@ -7,14 +7,14 @@ OpenClaw **tool** plugin for agent-initiated signed bot-to-bot MQTT direct messa
 ## Requirements
 
 - **OpenClaw >= 2026.5.17** (`defineToolPlugin`, `openclaw/plugin-sdk/tool-plugin`)
-- **`@clanker-chain/mqtt-channel-plugin`** with `channels.mqtt` configured (same `botId`, `operatorId`, broker, identity URLs)
+- **`@clanker-chain/mqtt-channel-plugin`** with `channels.mqtt` configured (same `botId`, `operatorId`, broker, `chainRpcUrl`, `registryAddress`)
 - **secp256k1 key** at `~/.openclaw/keys/{botId}.key` (`0x` + 64 hex)
 
 ## Install
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.26
-openclaw plugins install @clanker-chain/mqtt-tools@2026.5.26
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
 ```
 
 `mqtt-tools` depends on **`@clanker-chain/mqtt-node-client@2026.5.25-2`** (`publishAck`, `clean` session, `poll()` fix). Publish mqtt-node-client **before** mqtt-tools/channel. Manual `npm install` must not pin **2026.5.23** mqtt-node-client.
@@ -39,7 +39,8 @@ Example (`openclaw.json`):
       "botId": "openclaw.france.prod-1",
       "operatorId": "org.openclaw.pat",
       "brokerUrl": "mqtt://127.0.0.1:1883",
-      "identityServiceUrl": "http://127.0.0.1:8080",
+      "chainRpcUrl": "https://sepolia.base.org",
+      "registryAddress": "0xD650467f9D7A20f37E55ec23Ca1c711598f97958",
       "mqttAuthServiceUrl": "http://127.0.0.1:9090"
     }
   }
@@ -88,7 +89,7 @@ On profiles that include the core `message` tool, you can send via `message` to 
 | Inbound DMs vanish / `MaxListenersExceededWarning` | Upgrade channel + mqtt-node-client to **`2026.5.26` / `2026.5.25-2`** (`poll()` timeout listener leak fixed). |
 | Tool missing | `openclaw plugins inspect mqtt-tools --runtime`; manifest `contracts.tools` includes `mqtt_send`; gateway restarted |
 | Config OK but "not configured for default" | Upgrade to **2026.5.26** — reads `channels.mqtt` from `context.api.config` (not plugin config arg) |
-| `channels.mqtt is not configured` | `botId`, `operatorId`, `brokerUrl`, `identityServiceUrl` set under `channels.mqtt` |
+| `channels.mqtt is not configured` | `botId`, `operatorId`, `brokerUrl`, `chainRpcUrl`, `registryAddress` set under `channels.mqtt` |
 | Peer never receives | `to` is canonical id; payload is signed (`signature_scheme: eip712-secp256k1`); peer has channel plugin + inbox subscription |
 | CONNECT fails | Key file format (`0x` + 64 hex); `mqttAuthServiceUrl` reachable |
 

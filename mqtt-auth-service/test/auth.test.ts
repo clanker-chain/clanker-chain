@@ -1,8 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "fs";
-import { tmpdir } from "os";
 import { join } from "path";
 import {
+  createPublicClient,
   createWalletClient,
   http,
   keccak256,
@@ -11,7 +10,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
-import { clankerIdentityAbi } from "../../identity-service/src/abi/clanker-identity";
+import { clankerIdentityAbi } from "../../identity-node-client/src/abi/clanker-identity";
 import {
   ANVIL_DEFAULT_KEY,
   ANVIL_KEY_1,
@@ -22,7 +21,6 @@ import {
 
 const repoRoot = join(import.meta.dir, "../..");
 const chainDir = join(repoRoot, "chain");
-const identityServiceDir = join(repoRoot, "identity-service");
 const mqttAuthServiceDir = join(repoRoot, "mqtt-auth-service");
 
 function skipSiwe(): string | null {
@@ -51,7 +49,6 @@ interface SiweHarness {
   botId: string;
   secondBotId: string;
   mqttUrl: string;
-  identityUrl: string;
   registry: Hex;
   rpcUrl: string;
   operatorLabel: string;
@@ -67,29 +64,18 @@ async function startSiweHarness(): Promise<SiweHarness> {
     stderr: "ignore",
   });
   for (let i = 0; i < 50; i++) {
-    const ping = Bun.spawnSync(["cast", "chain-id", "--rpc-url", rpcUrl], { stdout: "ignore", stderr: "ignore" });
+    const ping = Bun.spawnSync(["cast", "chain-id", "--rpc-url", rpcUrl], {
+      stdout: "ignore",
+      stderr: "ignore",
+    });
     if (ping.exitCode === 0) break;
     await new Promise((r) => setTimeout(r, 100));
   }
 
-  const { registry, deploymentBlock } = await deployTestRegistry({
+  const { registry } = await deployTestRegistry({
     rpcUrl,
     chainDir,
   });
-
-  const dir = mkdtempSync(join(tmpdir(), "mqtt-auth-evm-"));
-  const snapshotPath = join(dir, "ledger.json");
-  writeFileSync(
-    snapshotPath,
-    JSON.stringify({
-      version: 1,
-      created: new Date().toISOString(),
-      updated: new Date().toISOString(),
-      operators: {},
-      bots: {},
-      operations: [],
-    }),
-  );
 
   const operatorLabel = "org.openclaw.mqtt-evm-test";
   const botId = "openclaw.mqtt.siwe.test";
@@ -122,35 +108,18 @@ async function startSiweHarness(): Promise<SiweHarness> {
     args: [operatorIdBytes as Hex, secondBotId, secondBotKeyAddr],
   });
 
-  const idPort = 22000 + Math.floor(Math.random() * 3000);
-  const identityUrl = `http://127.0.0.1:${idPort}`;
-  const identityProc = Bun.spawn(["bun", "run", "src/server.ts"], {
-    cwd: identityServiceDir,
-    stdout: "ignore",
-    stderr: "ignore",
-    env: {
-      ...process.env,
-      IDENTITY_SERVICE_PORT: String(idPort),
-      CHAIN_RPC_URL: rpcUrl,
-      REGISTRY_ADDRESS: registry,
-      DEPLOYMENT_BLOCK: deploymentBlock.toString(),
-      IDENTITY_LEDGER_PATH: snapshotPath,
-      EVM_POLL_MS: "200",
-    },
-  });
-
-  await waitHttpOk(`${identityUrl}/health`);
-
   const mqttPort = 23000 + Math.floor(Math.random() * 3000);
   const mqttUrl = `http://127.0.0.1:${mqttPort}`;
   const mqttProc = Bun.spawn(["bun", "run", "src/server.ts"], {
     cwd: mqttAuthServiceDir,
     stdout: "ignore",
-    stderr: "ignore",
+    stderr: "pipe",
     env: {
       ...process.env,
       MQTT_AUTH_PORT: String(mqttPort),
-      IDENTITY_SERVICE_URL: identityUrl,
+      CHAIN_RPC_URL: rpcUrl,
+      REGISTRY_ADDRESS: registry,
+      REGISTRY_CACHE_TTL_MS: "0",
     },
   });
 
@@ -160,7 +129,6 @@ async function startSiweHarness(): Promise<SiweHarness> {
     botId,
     secondBotId,
     mqttUrl,
-    identityUrl,
     registry,
     rpcUrl,
     operatorLabel,
@@ -168,9 +136,8 @@ async function startSiweHarness(): Promise<SiweHarness> {
     secondBotSigner: privateKeyToAccount(ANVIL_KEY_2),
     cleanup: async () => {
       mqttProc.kill();
-      identityProc.kill();
       anvil.kill();
-      await Promise.all([mqttProc.exited, identityProc.exited, anvil.exited]);
+      await Promise.all([mqttProc.exited, anvil.exited]);
     },
   };
 }
@@ -229,6 +196,7 @@ test("SIWE auth: replay nonce rejected", async () => {
 
 test("SIWE auth: expired nonce", async () => {
   if (siweSkip || !siweHarness) return;
+  const { rpcUrl, registry } = siweHarness;
   const port = 24000 + Math.floor(Math.random() * 500);
   const mqttUrl = `http://127.0.0.1:${port}`;
   const mqttProc = Bun.spawn(["bun", "run", "src/server.ts"], {
@@ -238,7 +206,9 @@ test("SIWE auth: expired nonce", async () => {
     env: {
       ...process.env,
       MQTT_AUTH_PORT: String(port),
-      IDENTITY_SERVICE_URL: "http://127.0.0.1:1",
+      CHAIN_RPC_URL: rpcUrl,
+      REGISTRY_ADDRESS: registry,
+      REGISTRY_CACHE_TTL_MS: "0",
       MQTT_NONCE_TTL_MS: "1",
     },
   });
@@ -285,28 +255,22 @@ test("JWT password is rejected", async () => {
 
 test("SIWE auth rejected when bot is revoked", async () => {
   if (siweSkip || !siweHarness) return;
-  const { mqttUrl, secondBotId, secondBotSigner, registry, rpcUrl, identityUrl } = siweHarness;
+  const { mqttUrl, secondBotId, secondBotSigner, registry, rpcUrl } = siweHarness;
   const account0 = privateKeyToAccount(ANVIL_DEFAULT_KEY);
   const wallet = createWalletClient({
     account: account0,
     chain: foundry,
     transport: http(rpcUrl),
   });
+  const pc = createPublicClient({ chain: foundry, transport: http(rpcUrl) });
   const botIdBytes = keccak256(toBytes(secondBotId));
-  await wallet.writeContract({
+  const hash = await wallet.writeContract({
     address: registry,
     abi: clankerIdentityAbi,
     functionName: "revokeBot",
     args: [botIdBytes as Hex],
   });
-  for (let i = 0; i < 30; i++) {
-    const botRes = await fetch(`${identityUrl}/v1/bots/${encodeURIComponent(secondBotId)}`);
-    if (botRes.ok) {
-      const bot = (await botRes.json()) as { status?: string };
-      if (bot.status === "retired") break;
-    }
-    await new Promise((r) => setTimeout(r, 100));
-  }
+  await pc.waitForTransactionReceipt({ hash });
 
   const nRes = await fetch(`${mqttUrl}/nonce?bot_id=${encodeURIComponent(secondBotId)}`);
   const { nonce, message } = (await nRes.json()) as { nonce: string; message: string };
@@ -329,23 +293,15 @@ test("SIWE auth rejected when operator is revoked", async () => {
     chain: foundry,
     transport: http(rpcUrl),
   });
+  const pc = createPublicClient({ chain: foundry, transport: http(rpcUrl) });
   const operatorIdBytes = keccak256(toBytes(operatorLabel));
-  await wallet.writeContract({
+  const hash = await wallet.writeContract({
     address: registry,
     abi: clankerIdentityAbi,
     functionName: "revokeOperator",
     args: [operatorIdBytes as Hex],
   });
-  for (let i = 0; i < 30; i++) {
-    const opRes = await fetch(
-      `${siweHarness!.identityUrl}/v1/operators/${encodeURIComponent(operatorLabel)}`,
-    );
-    if (opRes.ok) {
-      const op = (await opRes.json()) as { status?: string };
-      if (op.status === "retired") break;
-    }
-    await new Promise((r) => setTimeout(r, 100));
-  }
+  await pc.waitForTransactionReceipt({ hash });
 
   const nRes = await fetch(`${mqttUrl}/nonce?bot_id=${encodeURIComponent(botId)}`);
   const { nonce, message } = (await nRes.json()) as { nonce: string; message: string };

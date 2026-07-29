@@ -1,10 +1,10 @@
 # MQTT Auth Service
 
-HTTP backend for the Mosquitto auth plugin. Validates MQTT CONNECT with **SIWE-style EIP-191** signatures only (CalVer `2026.5.23` cutover — no JWT / Ed25519).
+HTTP backend for the Mosquitto auth plugin. Validates MQTT CONNECT with **SIWE-style EIP-191** signatures only.
 
 - **Username** must be `bot_id`.
 - **Password** is `<nonce>.<signatureHex>` where the bot signs the ASCII message from `GET /nonce?bot_id=…` with its secp256k1 key (`0x` + 64 hex at `~/.openclaw/keys/{bot_id}.key`).
-- The recovered address must match the active `secp256k1-eth` key from `GET /v1/bots/:id` on the identity service, and both the bot and its operator must have `status: "active"`.
+- The recovered address must match the on-chain `botKey` from `ClankerIdentity`, and both the bot and its operator must be active (`revokedAt == 0`).
 
 ## Endpoints
 
@@ -16,7 +16,9 @@ HTTP backend for the Mosquitto auth plugin. Validates MQTT CONNECT with **SIWE-s
 
 ## Environment
 
-- **IDENTITY_SERVICE_URL** (default `http://localhost:8080`) — Base URL of the identity indexer (EVM mode).
+- **CHAIN_RPC_URL** (required) — EVM JSON-RPC endpoint (Anvil, Base Sepolia, etc.).
+- **REGISTRY_ADDRESS** (required) — `ClankerIdentity` contract address (`0x…`).
+- **REGISTRY_CACHE_TTL_MS** (default `10000`) — Short TTL cache for bot/operator reads. Set `0` to disable (tests).
 - **MQTT_AUTH_PORT** (default `9090`) — Port to listen on.
 - **MQTT_NONCE_RATE_MAX** (default `30`) — Max nonce requests per bot per minute.
 
@@ -24,10 +26,10 @@ HTTP backend for the Mosquitto auth plugin. Validates MQTT CONNECT with **SIWE-s
 
 ```bash
 bun install
-bun run start
+CHAIN_RPC_URL=http://127.0.0.1:8545 REGISTRY_ADDRESS=0x… bun run start
 ```
 
-Ensure the identity service is running (`CHAIN_RPC_URL`, `REGISTRY_ADDRESS`) so auth can fetch bot and operator records.
+Reads go through `@clanker-chain/identity-node-client` `RegistryClient` (no identity-service HTTP).
 
 ## Multi-instance / production scaling
 

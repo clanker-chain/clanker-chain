@@ -2,12 +2,17 @@
  * MQTT auth service: HTTP backend for Mosquitto auth plugin.
  * CONNECT validates SIWE-style EIP-191 `personal_sign` over
  * `clanker-mqtt:auth:<bot_id>:<nonce>` (password = `<nonce>.<sigHex>`).
+ * Bot/operator status is read from ClankerIdentity via RPC.
  */
 
-import { recoverMessageAddress } from "viem";
+import { recoverMessageAddress, type Address } from "viem";
+import { RegistryClient } from "@clanker-chain/identity-node-client";
 
-const IDENTITY_SERVICE_URL =
-  process.env.IDENTITY_SERVICE_URL ?? Bun.env.IDENTITY_SERVICE_URL ?? "http://localhost:8080";
+const CHAIN_RPC_URL =
+  process.env.CHAIN_RPC_URL ?? Bun.env.CHAIN_RPC_URL ?? "";
+const REGISTRY_ADDRESS = (process.env.REGISTRY_ADDRESS ??
+  Bun.env.REGISTRY_ADDRESS ??
+  "") as Address;
 const PORT = process.env.MQTT_AUTH_PORT ? Number(process.env.MQTT_AUTH_PORT) : 9090;
 const NONCE_TTL_MS =
   Number(process.env.MQTT_NONCE_TTL_MS ?? Bun.env.MQTT_NONCE_TTL_MS ?? 300_000) || 300_000;
@@ -15,22 +20,25 @@ const REAPER_MS = 60_000;
 const NONCE_RATE_WINDOW_MS = 60_000;
 const NONCE_RATE_MAX =
   Number(process.env.MQTT_NONCE_RATE_MAX ?? Bun.env.MQTT_NONCE_RATE_MAX ?? 30) || 30;
+const registryCacheTtlRaw =
+  process.env.REGISTRY_CACHE_TTL_MS ?? Bun.env.REGISTRY_CACHE_TTL_MS;
+const REGISTRY_CACHE_TTL_MS =
+  registryCacheTtlRaw === undefined || registryCacheTtlRaw === ""
+    ? 10_000
+    : Number(registryCacheTtlRaw);
 
-interface BotRecord {
-  bot_id: string;
-  operator_id?: string;
-  public_keys?: Array<{
-    algorithm: string;
-    public_key: string;
-    status: string;
-  }>;
-  status?: string;
+if (!CHAIN_RPC_URL || !REGISTRY_ADDRESS?.startsWith("0x")) {
+  console.error(
+    "mqtt-auth-service requires CHAIN_RPC_URL and REGISTRY_ADDRESS (ClankerIdentity).",
+  );
+  process.exit(1);
 }
 
-interface OperatorRecord {
-  operator_id: string;
-  status?: string;
-}
+const registry = new RegistryClient({
+  rpcUrl: CHAIN_RPC_URL,
+  registryAddress: REGISTRY_ADDRESS,
+  cacheTtlMs: REGISTRY_CACHE_TTL_MS,
+});
 
 interface NonceEntry {
   botId: string;
@@ -75,20 +83,6 @@ setInterval(() => {
   pruneExpiredNonces();
 }, REAPER_MS);
 
-async function fetchBot(botId: string): Promise<BotRecord | null> {
-  const url = `${IDENTITY_SERVICE_URL}/v1/bots/${encodeURIComponent(botId)}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  return (await res.json()) as BotRecord;
-}
-
-async function fetchOperator(operatorId: string): Promise<OperatorRecord | null> {
-  const url = `${IDENTITY_SERVICE_URL}/v1/operators/${encodeURIComponent(operatorId)}`;
-  const res = await fetch(url);
-  if (!res.ok) return null;
-  return (await res.json()) as OperatorRecord;
-}
-
 /** SIWE-style password: exactly one `.`, tail is 65-byte ECDSA sig (0x + 130 hex). */
 function looksLikeSiwePassword(password: string): boolean {
   const first = password.indexOf(".");
@@ -118,23 +112,33 @@ async function verifyMqttSiwe(
   } catch {
     return { ok: false, error: "invalid_signature" };
   }
-  const bot = await fetchBot(botId);
+
+  let bot;
+  try {
+    bot = await registry.getBotByLabel(botId);
+  } catch (e) {
+    console.warn("[mqtt-auth] registry getBotByLabel failed", e);
+    return { ok: false, error: "registry_unavailable" };
+  }
   if (!bot || bot.status !== "active") {
     return { ok: false, error: "bot_not_active" };
   }
-  if (bot.operator_id) {
-    const operator = await fetchOperator(bot.operator_id);
-    if (!operator || operator.status !== "active") {
-      return { ok: false, error: "operator_not_active" };
-    }
+
+  let operator;
+  try {
+    operator = await registry.getOperatorById(bot.operatorId);
+  } catch (e) {
+    console.warn("[mqtt-auth] registry getOperatorById failed", e);
+    return { ok: false, error: "registry_unavailable" };
   }
-  const onchainKey = bot.public_keys?.find(
-    (k) => k.algorithm === "secp256k1-eth" && k.status === "active",
-  )?.public_key;
-  if (!onchainKey?.startsWith("0x")) {
+  if (!operator || operator.status !== "active") {
+    return { ok: false, error: "operator_not_active" };
+  }
+
+  if (!bot.botKey || bot.botKey === "0x0000000000000000000000000000000000000000") {
     return { ok: false, error: "no_onchain_key" };
   }
-  if (recovered.toLowerCase() !== onchainKey.toLowerCase()) {
+  if (recovered.toLowerCase() !== bot.botKey.toLowerCase()) {
     return { ok: false, error: "address_mismatch" };
   }
   entry.used = true;
@@ -213,14 +217,11 @@ async function handleNonce(request: Request): Promise<Response> {
   const expiresAt = Date.now() + NONCE_TTL_MS;
   nonces.set(nonce, { botId, expiresAt, used: false });
   const message = buildAuthMessage(botId, nonce);
-  return json(
-    200,
-    {
-      nonce,
-      expires_at: new Date(expiresAt).toISOString(),
-      message,
-    },
-  );
+  return json(200, {
+    nonce,
+    expires_at: new Date(expiresAt).toISOString(),
+    message,
+  });
 }
 
 function json(status: number, body: unknown): Response {
@@ -273,4 +274,5 @@ const server = Bun.serve({
 });
 
 console.log(`MQTT auth service listening on port ${server.port}`);
-console.log(`IDENTITY_SERVICE_URL=${IDENTITY_SERVICE_URL}`);
+console.log(`CHAIN_RPC_URL=${CHAIN_RPC_URL}`);
+console.log(`REGISTRY_ADDRESS=${REGISTRY_ADDRESS}`);

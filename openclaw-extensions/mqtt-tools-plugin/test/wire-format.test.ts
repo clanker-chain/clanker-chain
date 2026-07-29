@@ -39,6 +39,8 @@ test("sign → attachSignature produces wire payload", async () => {
     operatorId,
     ethPrivateKey: TEST_KEY,
     eip712Domain: { chainId: 31337, registryAddress: REGISTRY },
+    chainRpcUrl: "http://127.0.0.1:1",
+    registryAddress: REGISTRY,
   });
 
   const { signature, signature_scheme } = await client.signMessage(envelope);

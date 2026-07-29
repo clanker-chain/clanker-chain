@@ -3,14 +3,16 @@ import type { MqttChannelConfig } from './types.js';
 
 export type ResolvedMqttAccount = {
   accountId: string;
-  /** True when required MQTT + identity fields are present */
+  /** True when required MQTT + chain identity fields are present */
   configured: boolean;
   /** `channels.mqtt` / per-account `enabled` flags (default true when omitted) */
   userEnabled: boolean;
   botId: string;
   operatorId: string;
   brokerUrl: string;
-  identityServiceUrl: string;
+  chainRpcUrl: string;
+  registryAddress: string;
+  mqttAuthServiceUrl?: string;
   dmPolicy?: string | null;
   allowFrom?: Array<string | number> | null;
   topics?: MqttChannelConfig['topics'];
@@ -89,7 +91,8 @@ export function resolveMqttAccount(cfg: OpenClawConfig, accountId?: string | nul
       botId: '',
       operatorId: '',
       brokerUrl: '',
-      identityServiceUrl: '',
+      chainRpcUrl: '',
+      registryAddress: '',
     };
   }
 
@@ -100,7 +103,13 @@ export function resolveMqttAccount(cfg: OpenClawConfig, accountId?: string | nul
   const botId = readString(slice, 'botId');
   const operatorId = readString(slice, 'operatorId');
   const brokerUrl = readString(slice, 'brokerUrl');
-  const identityServiceUrl = readString(slice, 'identityServiceUrl');
+  const chainRpcUrl =
+    readString(slice, 'chainRpcUrl') || readString(section, 'chainRpcUrl');
+  const registryAddress =
+    readString(slice, 'registryAddress') || readString(section, 'registryAddress');
+  const mqttAuthServiceUrl =
+    readOptionalString(slice, 'mqttAuthServiceUrl') ??
+    readOptionalString(section, 'mqttAuthServiceUrl');
   const dmPolicy = readOptionalString(slice, 'dmPolicy') ?? readOptionalString(section, 'dmPolicy');
   const allowFrom = readAllowFrom(slice) ?? readAllowFrom(section);
 
@@ -118,7 +127,9 @@ export function resolveMqttAccount(cfg: OpenClawConfig, accountId?: string | nul
   const pollRaw = slice?.pollIntervalMs;
   const pollIntervalMs = typeof pollRaw === 'number' && Number.isFinite(pollRaw) ? pollRaw : undefined;
 
-  const configured = Boolean(botId && operatorId && brokerUrl && identityServiceUrl);
+  const configured = Boolean(
+    botId && operatorId && brokerUrl && chainRpcUrl && registryAddress,
+  );
   const userEnabled = topEnabled && sliceEnabled;
 
   return {
@@ -128,7 +139,9 @@ export function resolveMqttAccount(cfg: OpenClawConfig, accountId?: string | nul
     botId,
     operatorId,
     brokerUrl,
-    identityServiceUrl,
+    chainRpcUrl,
+    registryAddress,
+    mqttAuthServiceUrl,
     dmPolicy: dmPolicy ?? null,
     allowFrom: allowFrom ?? null,
     topics,
@@ -137,7 +150,13 @@ export function resolveMqttAccount(cfg: OpenClawConfig, accountId?: string | nul
 }
 
 export function isMqttAccountConfigured(account: ResolvedMqttAccount): boolean {
-  return Boolean(account.botId && account.operatorId && account.brokerUrl && account.identityServiceUrl);
+  return Boolean(
+    account.botId &&
+      account.operatorId &&
+      account.brokerUrl &&
+      account.chainRpcUrl &&
+      account.registryAddress,
+  );
 }
 
 export function mqttAccountToChannelConfig(account: ResolvedMqttAccount): MqttChannelConfig {
@@ -145,7 +164,9 @@ export function mqttAccountToChannelConfig(account: ResolvedMqttAccount): MqttCh
     botId: account.botId,
     operatorId: account.operatorId,
     brokerUrl: account.brokerUrl,
-    identityServiceUrl: account.identityServiceUrl,
+    chainRpcUrl: account.chainRpcUrl,
+    registryAddress: account.registryAddress,
+    mqttAuthServiceUrl: account.mqttAuthServiceUrl,
     topics: account.topics,
     pollIntervalMs: account.pollIntervalMs,
   };

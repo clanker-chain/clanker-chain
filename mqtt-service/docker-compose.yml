@@ -1,15 +1,14 @@
 services:
   mqtt-auth:
     build:
-      context: ../mqtt-auth-service
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: mqtt-auth-service/Dockerfile
     ports:
       - "9090:9090"
     environment:
-      IDENTITY_SERVICE_URL: ${IDENTITY_SERVICE_URL:-http://host.docker.internal:8080}
+      CHAIN_RPC_URL: ${CHAIN_RPC_URL:-https://sepolia.base.org}
+      REGISTRY_ADDRESS: ${REGISTRY_ADDRESS:?Set REGISTRY_ADDRESS}
       MQTT_AUTH_PORT: "9090"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "bun", "-e", "fetch('http://localhost:9090/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 5s

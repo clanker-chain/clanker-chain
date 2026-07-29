@@ -1,6 +1,6 @@
 {
   "plugins": {
-    "enabled": ["clanker-chain-identity", "clanker-chain-mqtt"]
+    "enabled": ["mqtt", "mqtt-tools"]
   },
   "channels": {
     "mqtt": {
@@ -8,8 +8,9 @@
       "botId": "openclaw.test.local",
       "operatorId": "org.openclaw.operator",
       "brokerUrl": "mqtt://mqtt-broker:1883",
-      "identityServiceUrl": "http://identity-service:8080"
+      "chainRpcUrl": "https://sepolia.base.org",
+      "registryAddress": "0xD650467f9D7A20f37E55ec23Ca1c711598f97958",
+      "mqttAuthServiceUrl": "http://mqtt-auth:9090"
     }
   }
 }
-

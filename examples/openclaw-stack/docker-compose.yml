@@ -4,20 +4,12 @@ services:
   openclaw-gateway:
     image: openclaw/gateway:latest
     environment:
-      - OPENCLAW_EXTENSIONS=clanker-chain-identity clanker-chain-mqtt
+      - OPENCLAW_EXTENSIONS=clanker-chain-mqtt
     volumes:
       - ./openclaw.json:/root/.openclaw/openclaw.json:ro
     depends_on:
-      - identity-service
       - mqtt-broker
-
-  identity-service:
-    build:
-      context: ../../identity-service
-    environment:
-      - IDENTITY_SERVICE_PORT=8080
-    ports:
-      - "8080:8080"
+      - mqtt-auth-service
 
   mqtt-broker:
     image: eclipse-mosquitto:2
@@ -26,11 +18,13 @@ services:
 
   mqtt-auth-service:
     build:
-      context: ../../mqtt-auth-service
+      context: ../..
+      dockerfile: mqtt-auth-service/Dockerfile
     environment:
-      - IDENTITY_SERVICE_URL=http://identity-service:8080
-      - MQTT_BROKER_URL=mqtt://mqtt-broker:1883
+      - CHAIN_RPC_URL=${CHAIN_RPC_URL:-https://sepolia.base.org}
+      - REGISTRY_ADDRESS=${REGISTRY_ADDRESS:?Set REGISTRY_ADDRESS}
+      - MQTT_AUTH_PORT=9090
+    ports:
+      - "9090:9090"
     depends_on:
-      - identity-service
       - mqtt-broker
-
