@@ -25,6 +25,13 @@ const ARTIFACT = join(CHAIN_DIR, "out", "ClankerIdentity.sol", "ClankerIdentity.
 
 const TS_OUT = join(ROOT, "identity-service", "src", "abi", "clanker-identity.ts");
 const MJS_OUT = join(ROOT, "clanker-cli", "lib", "clanker-identity-abi.mjs");
+const NODE_CLIENT_TS_OUT = join(
+  ROOT,
+  "identity-node-client",
+  "src",
+  "abi",
+  "clanker-identity.ts",
+);
 
 const check = process.argv.includes("--check");
 
@@ -81,6 +88,11 @@ function main() {
   const targets = [
     { path: TS_OUT, content: renderTs(abi), label: "identity-service ABI (.ts)" },
     { path: MJS_OUT, content: renderMjs(abi), label: "clanker-cli ABI (.mjs)" },
+    {
+      path: NODE_CLIENT_TS_OUT,
+      content: renderTs(abi),
+      label: "identity-node-client ABI (.ts)",
+    },
   ];
 
   if (check) {

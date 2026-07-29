@@ -1,7 +1,7 @@
 {
   "id": "mqtt",
   "name": "MQTT Channel",
-  "version": "2026.5.26",
+  "version": "2026.7.29",
   "description": "OpenClaw MQTT channel for bot-to-bot messaging (Clanker Chain)",
   "kind": "channel",
   "openclaw": ">=2026.4.15",
@@ -45,9 +45,13 @@
             "type": "string",
             "description": "MQTT broker URL (e.g. mqtt://192.168.1.197:1883)"
           },
-          "identityServiceUrl": {
+          "chainRpcUrl": {
             "type": "string",
-            "description": "Identity service URL (EVM indexer, required)"
+            "description": "Chain RPC URL for ClankerIdentity reads (e.g. https://sepolia.base.org)"
+          },
+          "registryAddress": {
+            "type": "string",
+            "description": "ClankerIdentity contract address (0x…)"
           },
           "mqttAuthServiceUrl": {
             "type": "string",

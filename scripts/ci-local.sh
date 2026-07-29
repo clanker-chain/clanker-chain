@@ -154,8 +154,11 @@ run_npm_package() {
 main() {
   log "Running local CI checks"
 
-  # Bun packages (identity service + mqtt auth service)
+  # Deprecated indexer (optional package): unit lane only — not part of hub runtime.
+  log "identity-service (deprecated; unit tests only)"
   run_bun_package "${ROOT_DIR}/identity-service"
+
+  # Hub auth (chain-direct RegistryClient)
   run_bun_package "${ROOT_DIR}/mqtt-auth-service"
 
   # NPM/TS packages
@@ -217,10 +220,9 @@ main() {
     log "forge not on PATH — skipping ABI drift check."
   fi
 
-  # Anvil-backed integration lane (separate from the fast unit lane above).
+  # Anvil-backed integration lane (mqtt-auth SIWE against chain; no identity-service).
   if have_cmd forge && have_cmd anvil; then
     log "Running anvil-backed integration suites"
-    run_bun_integration "${ROOT_DIR}/identity-service"
     run_bun_integration "${ROOT_DIR}/mqtt-auth-service"
   elif [ "$CI_MODE" = "1" ]; then
     echo "ERROR: --ci requires Foundry (anvil + forge) for integration tests." >&2

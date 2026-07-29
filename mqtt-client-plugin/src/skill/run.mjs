@@ -2,7 +2,7 @@
 /**
  * Runner for the MQTT skill. Invoke from OpenClaw via exec.
  *
- * Auth: SIWE via identity-node-client (requires IDENTITY_SERVICE_URL, secp256k1 key).
+ * Auth: SIWE via identity-node-client (requires CHAIN_RPC_URL + REGISTRY_ADDRESS, secp256k1 key).
  * Dev-only: MQTT_STATIC_PASSWORD for Mosquitto without identity.
  */
 
@@ -14,7 +14,8 @@ const brokerUrl = process.env.MQTT_BROKER_URL;
 const clientId = process.env.MQTT_CLIENT_ID;
 const displayName = process.env.MQTT_BOT_DISPLAY_NAME || clientId;
 const mqttStaticPassword = process.env.MQTT_STATIC_PASSWORD;
-const identityServiceUrl = process.env.IDENTITY_SERVICE_URL;
+const chainRpcUrl = process.env.CHAIN_RPC_URL;
+const registryAddress = process.env.REGISTRY_ADDRESS;
 
 function usage() {
   console.error(`Usage:
@@ -24,18 +25,19 @@ function usage() {
   node run.mjs poll <bot_id> <operator_id> [timeout_ms] [topic1] [topic2 ...]
 Env:
   - MQTT_BROKER_URL, MQTT_CLIENT_ID (required)
-  - IDENTITY_SERVICE_URL, MQTT_AUTH_SERVICE_URL (production SIWE auth)
+  - CHAIN_RPC_URL, REGISTRY_ADDRESS, MQTT_AUTH_SERVICE_URL (production SIWE auth)
   - MQTT_STATIC_PASSWORD (dev-only, no identity)
 `);
 }
 
 async function createAuth(botId, operatorId) {
-  if (identityServiceUrl) {
+  if (chainRpcUrl && registryAddress) {
     const { IdentityClient } = await import("@clanker-chain/identity-node-client");
     const identity = new IdentityClient({
       botId,
       operatorId,
-      identityServiceUrl,
+      chainRpcUrl,
+      registryAddress,
     });
     await identity.init();
     return {
@@ -54,7 +56,7 @@ async function createAuth(botId, operatorId) {
   }
 
   throw new Error(
-    "No MQTT auth configured. Set IDENTITY_SERVICE_URL (SIWE) or MQTT_STATIC_PASSWORD (dev only).",
+    "No MQTT auth configured. Set CHAIN_RPC_URL + REGISTRY_ADDRESS (SIWE) or MQTT_STATIC_PASSWORD (dev only).",
   );
 }
 

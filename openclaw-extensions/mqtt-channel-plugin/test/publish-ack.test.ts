@@ -6,7 +6,8 @@ const baseConfig = {
   botId: "openclaw.france.prod-1",
   operatorId: "org.openclaw.pat",
   brokerUrl: "mqtt://localhost:1883",
-  identityServiceUrl: "http://localhost:8080",
+  chainRpcUrl: "http://127.0.0.1:8545",
+  registryAddress: "0x1234567890123456789012345678901234567890",
   mqttAuthServiceUrl: "http://localhost:9090",
 };
 

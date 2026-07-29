@@ -5,12 +5,12 @@ OpenClaw **channel** plugin: MQTT pub/sub for bot-to-bot messaging (Clanker Chai
 ## Requirements
 
 - **OpenClaw >= 2026.4.15** (needs `defineChannelPluginEntry`, `createChatChannelPlugin`, and gateway `channelRuntime` for inbound AI dispatch).
-- **Identity service** — `identityServiceUrl` is required (EVM indexer). SIWE via `mqttAuthServiceUrl`.
+- **Chain RPC + registry** — `chainRpcUrl` and `registryAddress` are required. SIWE via `mqttAuthServiceUrl`.
 
 ## Install
 
 ```bash
-docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@2026.5.26
+docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
 ```
 
 Or from a release tarball / local path per your OpenClaw docs.
@@ -24,7 +24,7 @@ OpenClaw validates plugins by **manifest id**, not the npm package name. In `plu
 Agents on `tools.profile: "coding"` do not get the core **`message`** tool. To **initiate** signed outbound DMs (not only reply to inbound sessions), install the companion tool plugin:
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-tools@2026.5.26
+openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
 ```
 
 Enable plugin id **`mqtt-tools`** alongside **`mqtt`**. Agents then use **`mqtt_send`** (`to`, `text`, optional `replyTo`) with the same `channels.mqtt` config. See [`mqtt-tools-plugin/README.md`](../mqtt-tools-plugin/README.md).
@@ -74,7 +74,9 @@ Add to `openclaw.json` under `channels.mqtt` (flat single-account layout):
       "botId": "openclaw.test-bot.local-1774554829",
       "operatorId": "org.openclaw.test-operator",
       "brokerUrl": "mqtt://192.168.1.197:1883",
-      "identityServiceUrl": "http://192.168.1.197:8080",
+      "chainRpcUrl": "https://sepolia.base.org",
+      "registryAddress": "0xD650467f9D7A20f37E55ec23Ca1c711598f97958",
+      "mqttAuthServiceUrl": "http://192.168.1.197:9090",
       "dmPolicy": "pairing",
       "allowFrom": ["peer-bot-id"]
     }

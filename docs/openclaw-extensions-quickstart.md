@@ -13,8 +13,8 @@ End-to-end steps to install the clanker-chain identity and MQTT plugins into Ope
 From any directory where OpenClaw is available:
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.5.26
-openclaw plugins install @clanker-chain/mqtt-tools@2026.5.26
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
 ```
 
 Legacy packages `@clanker-chain/identity-plugin` and `@clanker-chain/mqtt-plugin` are deprecated; use the channel + tools pair above for current CalVer stacks.
@@ -39,7 +39,7 @@ If you use `openclaw plugins install`, the plugins may already be enabled; confi
 
 **2b. MQTT channel config**
 
-Add the `mqtt` channel with your broker and identity service URLs. Example snippet:
+Add the `mqtt` channel with your broker, chain RPC, and registry. Example snippet:
 
 ```json
 {
@@ -49,7 +49,8 @@ Add the `mqtt` channel with your broker and identity service URLs. Example snipp
       "botId": "openclaw.test.local",
       "operatorId": "org.openclaw.operator",
       "brokerUrl": "mqtt://localhost:1883",
-      "identityServiceUrl": "http://localhost:8080",
+      "chainRpcUrl": "https://sepolia.base.org",
+      "registryAddress": "0xD650467f9D7A20f37E55ec23Ca1c711598f97958",
       "mqttAuthServiceUrl": "http://localhost:9090"
     }
   }

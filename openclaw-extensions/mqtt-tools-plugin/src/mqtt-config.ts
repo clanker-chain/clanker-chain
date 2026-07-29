@@ -8,7 +8,8 @@ export type ResolvedMqttToolsConfig = {
   botId: string;
   operatorId: string;
   brokerUrl: string;
-  identityServiceUrl: string;
+  chainRpcUrl: string;
+  registryAddress: string;
   mqttAuthServiceUrl: string;
 };
 
@@ -68,7 +69,8 @@ export function resolveMqttToolsConfig(
       botId: "",
       operatorId: "",
       brokerUrl: "",
-      identityServiceUrl: "",
+      chainRpcUrl: "",
+      registryAddress: "",
       mqttAuthServiceUrl: "http://localhost:9090",
     };
   }
@@ -80,13 +82,18 @@ export function resolveMqttToolsConfig(
   const botId = readString(slice, "botId");
   const operatorId = readString(slice, "operatorId");
   const brokerUrl = readString(slice, "brokerUrl");
-  const identityServiceUrl = readString(slice, "identityServiceUrl");
+  const chainRpcUrl =
+    readString(slice, "chainRpcUrl") || readString(section, "chainRpcUrl");
+  const registryAddress =
+    readString(slice, "registryAddress") || readString(section, "registryAddress");
   const mqttAuthServiceUrl =
     readString(slice, "mqttAuthServiceUrl") ||
     readString(section, "mqttAuthServiceUrl") ||
     "http://localhost:9090";
 
-  const configured = Boolean(botId && operatorId && brokerUrl && identityServiceUrl);
+  const configured = Boolean(
+    botId && operatorId && brokerUrl && chainRpcUrl && registryAddress,
+  );
   const userEnabled = topEnabled && sliceEnabled;
 
   return {
@@ -96,7 +103,8 @@ export function resolveMqttToolsConfig(
     botId,
     operatorId,
     brokerUrl,
-    identityServiceUrl,
+    chainRpcUrl,
+    registryAddress,
     mqttAuthServiceUrl,
   };
 }
