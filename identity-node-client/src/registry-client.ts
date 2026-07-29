@@ -19,7 +19,7 @@ export interface RegistryClientOptions {
   registryAddress: Address;
   /** Optional pinned chain id; must match eth_chainId when set. */
   chainId?: number;
-  /** Cache TTL for label/id lookups (default 10s). */
+  /** Cache TTL for label/id lookups (default 10s). Use 0 to disable (auth gates). */
   cacheTtlMs?: number;
   /** Test injection. */
   publicClient?: PublicClient;

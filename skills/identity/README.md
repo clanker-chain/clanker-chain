@@ -18,9 +18,10 @@ This folder is an **OpenClaw skill template** for the clanker-chain identity ser
    cd /path/to/clanker-chain/identity-node-client
    npm install && npm run build
    ```
-3. In OpenClaw config, ensure the identity service URL (and optional admin token) are set for the agent, e.g. in `skills.entries.identity.env` or in the environment:
-   - `IDENTITY_SERVICE_URL` (e.g. `http://localhost:8080`)
-   - `IDENTITY_ADMIN_TOKEN` (if your identity service requires it)
+3. In OpenClaw config, set chain env for the agent, e.g. in `skills.entries.identity.env` or in the environment:
+   - `CHAIN_RPC_URL` (e.g. `https://sepolia.base.org`)
+   - `REGISTRY_ADDRESS` (ClankerIdentity `0x…`)
+   - `MQTT_AUTH_SERVICE_URL` (for SIWE password issuance)
 
 ### Option B — Copy skill + client into your workspace
 
@@ -39,7 +40,7 @@ This folder is an **OpenClaw skill template** for the clanker-chain identity ser
    cd ~/your-workspace/identity-node-client && npm install && npm run build
    cd ~/your-workspace/skills/identity && npm install
    ```
-4. Set `IDENTITY_SERVICE_URL` (and `IDENTITY_ADMIN_TOKEN` if needed) for the agent.
+4. Set `CHAIN_RPC_URL` and `REGISTRY_ADDRESS` for the agent.
 
 ### Option C — Publish the client and depend on it by version
 

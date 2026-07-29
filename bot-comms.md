@@ -352,7 +352,7 @@ Example for `france-bot`:
 
 #### MQTT CONNECT: SIWE-style broker auth (`mqtt-auth-service`)
 
-When the bot’s identity record includes an on-chain **`secp256k1-eth`** key (EVM `botKey` / address from `identity-service`), CONNECT should use:
+When the bot has an on-chain **`secp256k1-eth`** `botKey` in `ClankerIdentity`, CONNECT should use:
 
 1. **`GET`** `https://<mqtt-auth-host>/nonce?bot_id=<bot_id>` (or **`POST /nonce`** with JSON `{ "bot_id": "<bot_id>" }`). Response JSON includes:
    - `nonce` — opaque string (store until CONNECT).
@@ -363,7 +363,7 @@ When the bot’s identity record includes an on-chain **`secp256k1-eth`** key (E
    `password = <nonce> + "." + <signatureHex>`  
    where `signatureHex` is `0x` + 130 hex chars (65-byte ECDSA signature).
 
-The auth plugin calls `mqtt-auth-service` **`/auth`**; the service recovers the signer address and checks it against the active `secp256k1-eth` public key from **`GET /v1/bots/:id`** on `identity-service`. **JWT / Ed25519 CONNECT is not supported** (CalVer `2026.5.23` cutover).
+The auth plugin calls `mqtt-auth-service` **`/auth`**; the service recovers the signer address and checks it against the on-chain `botKey` (and active operator) via RPC (`RegistryClient`). **JWT / Ed25519 CONNECT is not supported.** Hub runtime is Mosquitto + mqtt-auth only — identity-service is not in the CONNECT path.
 - **Phase 3+ (higher security)**:
   - Migrate broker authentication to be fully **on-chain identity aware**:
     - Use **mutual TLS** where each bot presents a client cert whose public key is registered on-chain, or

@@ -174,19 +174,20 @@ export BOT_ID=$(cast keccak $(cast from-utf8 "openclaw.france.prod-1"))
 cast call "$REGISTRY" "bots(bytes32)(bytes32,address,uint64,uint64)" "$BOT_ID" --rpc-url http://127.0.0.1:8545
 ```
 
-### Wired to identity-service and MQTT
+### Wired to MQTT auth (chain-direct)
 
-On-chain events are indexed by **identity-service** (`EvmBackend`) into a materialized snapshot at `identity/bot-identity-ledger.json`. **mqtt-auth-service** verifies SIWE CONNECT passwords against `secp256k1-eth` / `botKey` from `GET /v1/bots/:id`.
-
-Run identity-service with:
+**mqtt-auth-service** and OpenClaw bots read `ClankerIdentity` over RPC (`CHAIN_RPC_URL` + `REGISTRY_ADDRESS`) via `@clanker-chain/identity-node-client` `RegistryClient`. No identity-service HTTP hop.
 
 ```bash
-CHAIN_RPC_URL=http://127.0.0.1:8545 \
-REGISTRY_ADDRESS=$REGISTRY \
-bun run identity-service/src/server.ts
+cd mqtt-service
+export CHAIN_RPC_URL=http://127.0.0.1:8545
+export REGISTRY_ADDRESS=$REGISTRY
+docker compose build mqtt-auth && docker compose up -d
 ```
 
-See [`identity/SERVICE.md`](../identity/SERVICE.md) and [`docs/blockchain-identity-plan.md`](../docs/blockchain-identity-plan.md).
+The in-repo `identity-service` indexer is **deprecated** (optional local explorer). See [`SETUP.md`](../SETUP.md) and [`identity-service/DEPRECATED.md`](../identity-service/DEPRECATED.md).
+
+See [`docs/blockchain-identity-plan.md`](../docs/blockchain-identity-plan.md) for historical migration notes.
 
 ## Repo integration
 

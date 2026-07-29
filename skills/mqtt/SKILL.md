@@ -99,4 +99,5 @@ Sign coordination/request/response messages with the identity skill (`identity_s
 
 - **MQTT_BROKER_URL** (required): Broker URL.
 - **MQTT_CLIENT_ID** (required): Client id (usually bot_id).
-- **IDENTITY_SERVICE_URL**: For token issuance (same as identity skill).
+- **CHAIN_RPC_URL** / **REGISTRY_ADDRESS**: SIWE auth against ClankerIdentity (same as identity skill).
+- **MQTT_AUTH_SERVICE_URL**: Nonce service for SIWE (default `http://localhost:9090`).

@@ -8,7 +8,7 @@
  *   node run.mjs subscribe <bot_id> <operator_id> <topic1> [topic2 ...]
  *   node run.mjs poll <bot_id> <operator_id> [timeout_ms] [topic1] [topic2 ...]
  *
- * Env: MQTT_BROKER_URL, MQTT_CLIENT_ID, IDENTITY_SERVICE_URL (optional).
+ * Env: MQTT_BROKER_URL, MQTT_CLIENT_ID, CHAIN_RPC_URL, REGISTRY_ADDRESS.
  */
 
 import { IdentityClient } from "@clanker-chain/identity-node-client";

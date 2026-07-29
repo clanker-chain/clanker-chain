@@ -19,8 +19,10 @@ Edit `.env` and add your values (no quotes unless the value contains spaces):
 GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 IDENTITY_ASSET_ID=371654497
 
-# Optional: any runtime vars for the gateway (e.g. for identity skill)
-# IDENTITY_SERVICE_URL=http://identity-service:8080
+# Optional: runtime vars for MQTT / identity (chain-direct)
+# CHAIN_RPC_URL=https://sepolia.base.org
+# REGISTRY_ADDRESS=0xD650467f9D7A20f37E55ec23Ca1c711598f97958
+# MQTT_AUTH_SERVICE_URL=http://mqtt-auth:9090
 ```
 
 **Important:** Ensure `.env` is in `.gitignore` (e.g. `.env` or `.env.*`) so it is never committed.
@@ -41,9 +43,10 @@ services:
         IDENTITY_ASSET_ID: ${IDENTITY_ASSET_ID:-371654497}
 ```
 
-- For **runtime** env vars (e.g. for the identity skill inside the container), either:
+- For **runtime** env vars (MQTT channel / identity client), either:
   - Add `env_file: .env` to the service, or
-  - List vars explicitly: `environment: IDENTITY_SERVICE_URL: ${IDENTITY_SERVICE_URL}` so only the names are in the repo and values come from `.env`.
+  - List vars explicitly: `environment: CHAIN_RPC_URL: ${CHAIN_RPC_URL}` / `REGISTRY_ADDRESS: ${REGISTRY_ADDRESS}` so only the names are in the repo and values come from `.env`.
+  - Do **not** set `IDENTITY_SERVICE_URL` for CONNECT — that indexer path is deprecated.
 
 Then run:
 
