@@ -2,9 +2,9 @@
 
 **Purpose:** `clanker-chain` is a small development project for building and testing a secure, identity-aware messaging mesh for bots and humans. It uses an MQTT broker plus a simple identity ledger so multiple agents (like `france-bot` and `tooter-bot`) can coordinate work without stepping on each other.
 
-**Clone and run (identity service):** After cloning, start Anvil and deploy the registry (see [`chain/README.md`](chain/README.md)), then `cd identity-service` and run `CHAIN_RPC_URL=… REGISTRY_ADDRESS=… bun run src/server.ts`. See `identity/SERVICE.md` for the full API. The service is **read-only**; operators register bots on-chain.
+**Clone and run (hub):** After cloning, start Anvil and deploy the registry (see [`chain/README.md`](chain/README.md)), then run Mosquitto + mqtt-auth with `CHAIN_RPC_URL` and `REGISTRY_ADDRESS` (see [`SETUP.md`](SETUP.md)). Bots and mqtt-auth read `ClankerIdentity` over RPC via `@clanker-chain/identity-node-client` — **identity-service is not required** for CONNECT or messaging (optional deprecated explorer only).
 
-**On-chain identity (Foundry):** The repo uses **`ClankerIdentity`** on EVM (`chain/`, Anvil, `forge test`, `node clanker-cli/bin/clanker.mjs chain up|deploy|mint-*`). The identity service indexes chain events; MQTT auth uses SIWE-style signatures ([`docs/blockchain-identity-plan.md`](docs/blockchain-identity-plan.md) for history). For `forge-std`, clone with **`git clone --recurse-submodules`** or run **`git submodule update --init chain/lib/forge-std`**.
+**On-chain identity (Foundry):** The repo uses **`ClankerIdentity`** on EVM (`chain/`, Anvil, `forge test`, `node clanker-cli/bin/clanker.mjs chain up|deploy|mint-*`). MQTT auth uses SIWE-style signatures. For `forge-std`, clone with **`git clone --recurse-submodules`** or run **`git submodule update --init chain/lib/forge-std`**.
 
 ---
 

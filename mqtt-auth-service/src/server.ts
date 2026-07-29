@@ -22,9 +22,11 @@ const NONCE_RATE_MAX =
   Number(process.env.MQTT_NONCE_RATE_MAX ?? Bun.env.MQTT_NONCE_RATE_MAX ?? 30) || 30;
 const registryCacheTtlRaw =
   process.env.REGISTRY_CACHE_TTL_MS ?? Bun.env.REGISTRY_CACHE_TTL_MS;
+// Auth gate: default uncached so revoke / rotateBotKey take effect immediately.
+// Set REGISTRY_CACHE_TTL_MS>0 only if public RPC rate limits require it.
 const REGISTRY_CACHE_TTL_MS =
   registryCacheTtlRaw === undefined || registryCacheTtlRaw === ""
-    ? 10_000
+    ? 0
     : Number(registryCacheTtlRaw);
 
 if (!CHAIN_RPC_URL || !REGISTRY_ADDRESS?.startsWith("0x")) {
@@ -266,7 +268,21 @@ const server = Bun.serve({
     }
 
     if (path === "/health" || path === "/") {
-      return new Response("ok", { status: 200 });
+      try {
+        const chainId = await registry.getChainId();
+        return json(200, {
+          ok: true,
+          chainId,
+          registryAddress: REGISTRY_ADDRESS,
+        });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return json(503, {
+          ok: false,
+          error: "registry_unavailable",
+          message,
+        });
+      }
     }
 
     return new Response("Not Found", { status: 404 });

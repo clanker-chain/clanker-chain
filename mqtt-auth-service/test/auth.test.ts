@@ -35,7 +35,16 @@ async function waitHttpOk(url: string, max = 40): Promise<void> {
   for (let i = 0; i < max; i++) {
     try {
       const r = await fetch(url);
-      if (r.ok) return;
+      if (r.ok) {
+        // /health returns JSON { ok: true, ... } when registry is reachable.
+        const ct = r.headers.get("content-type") ?? "";
+        if (ct.includes("application/json")) {
+          const body = (await r.json()) as { ok?: boolean };
+          if (body.ok === true) return;
+        } else {
+          return;
+        }
+      }
     } catch {
       /* retry */
     }
