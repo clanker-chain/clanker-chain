@@ -40,6 +40,13 @@ const { signature, signature_scheme } = await client.signMessage(envelope);
 
 Env fallbacks: `CHAIN_RPC_URL` / `BASE_SEPOLIA_RPC_URL`, `REGISTRY_ADDRESS`, `MQTT_AUTH_SERVICE_URL`.
 
+## Caching
+
+| Surface | Default TTL | Notes |
+|---------|-------------|--------|
+| mqtt-auth `RegistryClient` | `0` (uncached) | Revoke / `rotateBotKey` take effect on the next CONNECT |
+| Bot `IdentityClient` | `10s` | Rate-limit friendly on public RPCs; a revoked peer may still pass `verifyMessage` until TTL expires. Override with `cacheTtlMs: 0` if you need immediate enforcement on the messaging path. |
+
 ## Version
 
 CalVer `2026.7.29` — chain-direct reads (hard-cut off identity-service HTTP).

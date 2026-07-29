@@ -210,6 +210,57 @@ test("pinned chainId mismatch throws", async () => {
   await assert.rejects(() => client.getChainId(), /does not match pinned chainId/);
 });
 
+test("probeRpc always hits getChainId and getBlockNumber", async () => {
+  let chainCalls = 0;
+  let blockCalls = 0;
+  const pc = {
+    async getChainId() {
+      chainCalls += 1;
+      return 84532;
+    },
+    async getBlockNumber() {
+      blockCalls += 1;
+      return 123n;
+    },
+    async readContract() {
+      throw new Error("unexpected");
+    },
+  } as unknown as PublicClient;
+  const client = new RegistryClient({
+    rpcUrl: "http://127.0.0.1:1",
+    registryAddress: REGISTRY,
+    publicClient: pc,
+    cacheTtlMs: 0,
+  });
+  const first = await client.probeRpc();
+  assert.deepEqual(first, { chainId: 84532, blockNumber: 123n });
+  await client.probeRpc();
+  assert.equal(chainCalls, 2);
+  assert.equal(blockCalls, 2);
+});
+
+test("clearCache clears memoized chainId", async () => {
+  let chainCalls = 0;
+  const pc = makeMockClient({ chainId: 31337 });
+  const origGetChainId = pc.getChainId.bind(pc);
+  pc.getChainId = (async () => {
+    chainCalls += 1;
+    return origGetChainId();
+  }) as typeof pc.getChainId;
+  const client = new RegistryClient({
+    rpcUrl: "http://127.0.0.1:1",
+    registryAddress: REGISTRY,
+    publicClient: pc,
+    cacheTtlMs: 0,
+  });
+  await client.getChainId();
+  await client.getChainId();
+  assert.equal(chainCalls, 1);
+  client.clearCache();
+  await client.getChainId();
+  assert.equal(chainCalls, 2);
+});
+
 test("getEip712Domain uses chainId + registryAddress", async () => {
   const pc = makeMockClient({ chainId: 84532 });
   const client = new RegistryClient({

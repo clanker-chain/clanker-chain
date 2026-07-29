@@ -2,14 +2,16 @@
 name: mqtt
 description: Connect to the MQTT broker and communicate with other bots (send DMs, coordination messages, announce join/leave, read inbox).
 metadata:
-  {"openclaw":{"requires":{"env":["MQTT_BROKER_URL","MQTT_CLIENT_ID"]},"primaryEnv":"MQTT_BROKER_URL"}}
+  {"openclaw":{"requires":{"env":["MQTT_BROKER_URL","MQTT_CLIENT_ID","CHAIN_RPC_URL","REGISTRY_ADDRESS"]},"primaryEnv":"MQTT_BROKER_URL"}}
 ---
 
 # MQTT skill
 
 Use this skill when this bot needs to communicate with other bots (e.g. tooter-bot, france-bot): connect to the broker, send direct messages, coordination messages, announce join/leave, or read from this bot's inbox.
 
-Authentication uses **cryptographic auth**: the broker accepts a short-lived JWT (from the identity skill's `identity_issue_mqtt_token`) as the password, with username = `bot_id`. No separate username/password store.
+Authentication is **SIWE-style**: username = `bot_id`, password = `<nonce>.<signatureHex>` from `IdentityClient.issueMqttConnectPassword()` (identity skill `identity_issue_mqtt_password` / mqtt-auth `GET /nonce`). JWT CONNECT is not supported.
+
+Requires `CHAIN_RPC_URL` + `REGISTRY_ADDRESS` (and usually `MQTT_AUTH_SERVICE_URL`). For a static Mosquitto password without SIWE, use `@clanker-chain/mqtt-plugin` / `mqtt-client-plugin` with `MQTT_STATIC_PASSWORD` — this workspace skill has no static-password path.
 
 ---
 
@@ -18,7 +20,9 @@ Authentication uses **cryptographic auth**: the broker accepts a short-lived JWT
 - **MQTT_BROKER_URL** (required): e.g. `mqtt://localhost:1883` or `mqtts://broker.example.com:8883`
 - **MQTT_CLIENT_ID** (required): Usually the bot's canonical id, e.g. `openclaw.france.prod-1`
 - **MQTT_BOT_DISPLAY_NAME** (optional): Display name for default poll topics (e.g. `france-bot`). If unset, MQTT_CLIENT_ID is used for inbox topic.
-- **Bot identity** (for token): `bot_id` and `operator_id` as for the identity skill (e.g. env or passed as args). The skill uses the identity client to obtain a token for connect.
+- **CHAIN_RPC_URL** / **REGISTRY_ADDRESS**: Enable SIWE against ClankerIdentity.
+- **MQTT_AUTH_SERVICE_URL** (optional): Nonce service (default `http://localhost:9090`).
+- **Bot identity**: pass `bot_id` and `operator_id` as command args; key at `~/.openclaw/keys/{bot_id}.key`.
 
 ---
 
@@ -28,7 +32,7 @@ Run from the workspace root. Replace `{baseDir}` with the path to this skill fol
 
 ### mqtt_connect — verify connection
 
-Connects with a fresh token, then disconnects. Use to verify broker reachability and auth.
+Connects with a fresh SIWE password, then disconnects. Use to verify broker reachability and auth.
 
 ```bash
 node {baseDir}/run.mjs connect <bot_id> <operator_id>
@@ -91,7 +95,7 @@ Per bot-comms.md:
 - **DM coordination**: `dm/<bot1>-<bot2>/coordination` (e.g. `dm/france-bot-tooter-bot/coordination`)
 - **Status**: `bots/<bot>/status` (retained heartbeat)
 
-Sign coordination/request/response messages with the identity skill (`identity_sign`) before publishing when required.
+Sign coordination/request/response messages with the identity skill (`identity_sign` / EIP-712) before publishing when required.
 
 ---
 
