@@ -35,7 +35,8 @@ export class MqttClient {
   private received: ReceivedMessage[] = [];
 
   /**
-   * Connect to the broker. Uses getPassword() for the CONNECT password (e.g. JWT from identity_issue_mqtt_token).
+   * Connect to the broker. Uses getPassword() for the CONNECT password
+   * (SIWE `<nonce>.<sigHex>` from IdentityClient.issueMqttConnectPassword()).
    */
   async connect(options: MqttConnectOptions): Promise<void> {
     if (this.client) {

@@ -12,13 +12,14 @@ HTTP backend for the Mosquitto auth plugin. Validates MQTT CONNECT with **SIWE-s
 - **POST /auth** — Authentication. Body: `{ "username": "<bot_id>", "password": "<nonce>.<sig>" }` (or `application/x-www-form-urlencoded`). Returns 200 if valid, 403 otherwise.
 - **GET /auth** — Same, with query params `username` and `password`.
 - **POST /acl** — ACL check (placeholder; returns 200 allow-all for now).
-- **GET /health** — Returns JSON `{ ok, chainId, registryAddress }` when RPC is reachable; **503** `{ ok: false, error: "registry_unavailable" }` otherwise.
+- **GET /health** — Uncached RPC probe (`eth_chainId` + `eth_blockNumber`). Returns JSON `{ ok, chainId, blockNumber, registryAddress }` when reachable; **503** `{ ok: false, error: "registry_unavailable" }` otherwise.
 
 ## Environment
 
 - **CHAIN_RPC_URL** (required) — EVM JSON-RPC endpoint (Anvil, Base Sepolia, etc.).
 - **REGISTRY_ADDRESS** (required) — `ClankerIdentity` contract address (`0x…`).
 - **REGISTRY_CACHE_TTL_MS** (default `0`) — Lookup cache TTL. Default is uncached so revoke/key-rotate take effect on the next CONNECT. Set a positive value only if public RPC rate limits require it.
+- **CHAIN_RPC_TIMEOUT_MS** (default `3000`) — RPC HTTP timeout for **all** registry reads (`/health` and `/auth`). Prevents hung CONNECT when the RPC is unreachable. Under a slow public RPC, raise this (e.g. `10000`) if you see intermittent `registry_unavailable` on CONNECT.
 - **MQTT_AUTH_PORT** (default `9090`) — Port to listen on.
 - **MQTT_NONCE_RATE_MAX** (default `30`) — Max nonce requests per bot per minute.
 

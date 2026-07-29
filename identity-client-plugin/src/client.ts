@@ -1,211 +1,32 @@
-import { promises as fs } from "fs";
-import path from "path";
-import os from "os";
-import * as ed25519 from "@noble/ed25519";
-import { SignJWT, importJWK } from "jose";
-import type { BotRecord, IdentityMessageEnvelope, OperatorRecord, PublicKeyRecord } from "./types";
+/**
+ * @deprecated Legacy Ed25519 / IDENTITY_SERVICE_URL client.
+ * Use `@clanker-chain/identity-node-client` with CHAIN_RPC_URL + REGISTRY_ADDRESS.
+ */
 
-const MQTT_TOKEN_AUD = "clanker-mqtt";
+export type { BotRecord, IdentityMessageEnvelope, OperatorRecord, PublicKeyRecord } from "./types";
 
-function base64url(buf: Uint8Array): string {
-  return Buffer.from(buf)
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
+const DEPRECATION =
+  "@clanker-chain/identity-plugin is deprecated (Ed25519 / IDENTITY_SERVICE_URL). " +
+  "Use @clanker-chain/identity-node-client with CHAIN_RPC_URL + REGISTRY_ADDRESS. " +
+  "See identity-client-plugin/DEPRECATED.md";
 
 export interface IdentityClientOptions {
   botId: string;
   operatorId: string;
-  /**
-   * Base URL of the identity service, e.g. "http://localhost:8080".
-   * Defaults to process.env.IDENTITY_SERVICE_URL or http://localhost:8080.
-   */
+  /** @deprecated Legacy identity-service HTTP URL. */
   identityServiceUrl?: string;
-  /**
-   * Path to the private key file. Defaults to ~/.openclaw/keys/{botId}.key
-   */
   keyPath?: string;
 }
 
+/**
+ * @deprecated Construction always throws. Import `@clanker-chain/identity-node-client` instead.
+ */
 export class IdentityClient {
-  private readonly botId: string;
-  private readonly operatorId: string;
-  private readonly baseUrl: string;
-  private readonly keyPath: string;
-
-  constructor(options: IdentityClientOptions) {
-    this.botId = options.botId;
-    this.operatorId = options.operatorId;
-    this.baseUrl = options.identityServiceUrl ?? process.env.IDENTITY_SERVICE_URL ?? "http://localhost:8080";
-    const defaultKeyPath = path.join(os.homedir(), ".openclaw", "keys", `${this.botId}.key`);
-    this.keyPath = options.keyPath ?? defaultKeyPath;
-  }
-
-  /**
-   * Ensure a private key exists on disk, returning the 32-byte private key.
-   */
-  private async loadOrCreatePrivateKey(): Promise<Uint8Array> {
-    try {
-      const raw = await fs.readFile(this.keyPath, "utf8");
-      const bytes = Buffer.from(raw.trim(), "base64");
-      if (bytes.length !== 32) {
-        throw new Error("invalid key length");
-      }
-      return new Uint8Array(bytes);
-    } catch {
-      await fs.mkdir(path.dirname(this.keyPath), { recursive: true });
-      const priv = ed25519.utils.randomPrivateKey();
-      const b64 = Buffer.from(priv).toString("base64");
-      await fs.writeFile(this.keyPath, `${b64}\n`, { encoding: "utf8", mode: 0o600 });
-      return priv;
-    }
-  }
-
-  /**
-   * Derive the base64-encoded public key from the local private key.
-   */
-  async getPublicKeyBase64(): Promise<string> {
-    const priv = await this.loadOrCreatePrivateKey();
-    const pub = await ed25519.getPublicKeyAsync(priv);
-    return Buffer.from(pub).toString("base64");
-  }
-
-  private async getJson<T>(pathName: string): Promise<T> {
-    const url = new URL(pathName, this.baseUrl).toString();
-    const res = await fetch(url, { method: "GET" });
-    const text = await res.text();
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      throw new Error(`Unexpected response from identity service: ${text}`);
-    }
-    if (!res.ok) {
-      const err = parsed as { error?: string; message?: string };
-      throw new Error(err.message || err.error || `HTTP ${res.status}`);
-    }
-    return parsed as T;
-  }
-
-  /**
-   * Verify that the operator and bot exist in the identity service and that
-   * this instance's public key is registered on the bot. Does not create
-   * operator or bot; they must be minted by the operator first.
-   * Safe to call multiple times.
-   */
-  async init(): Promise<void> {
-    try {
-      await this.getJson<OperatorRecord>(
-        `/v1/operators/${encodeURIComponent(this.operatorId)}`,
-      );
-    } catch {
-      throw new Error(
-        "Operator not registered. Operator must be minted first (genesis or mint-operator).",
-      );
-    }
-
-    let bot: BotRecord;
-    try {
-      bot = await this.getJson<BotRecord>(
-        `/v1/bots/${encodeURIComponent(this.botId)}`,
-      );
-    } catch {
-      throw new Error(
-        "Bot not registered or key not found; operator must mint this bot with your public key.",
-      );
-    }
-
-    const publicKey = await this.getPublicKeyBase64();
-    const hasKey =
-      bot.public_keys?.some(
-        (k) => k.public_key === publicKey && k.status === "active",
-      ) ?? false;
-    if (!hasKey) {
-      throw new Error(
-        "Bot not registered or key not found; operator must mint this bot with your public key.",
-      );
-    }
-  }
-
-  async getBot(): Promise<BotRecord> {
-    return this.getJson<BotRecord>(`/v1/bots/${encodeURIComponent(this.botId)}`);
-  }
-
-  /**
-   * Canonical JSON serialization used for signing, following bot-comms.md.
-   */
-  private static canonicalizeForSignature(msg: IdentityMessageEnvelope): string {
-    const canonicalFields: Record<string, unknown> = {
-      body: msg.body,
-      correlation_id: msg.correlation_id,
-      from: msg.from,
-      from_id: msg.from_id,
-      message_id: msg.message_id,
-      operator_id: msg.operator_id,
-      subtype: msg.subtype,
-      timestamp: msg.timestamp,
-      to: msg.to,
-      to_id: msg.to_id,
-      type: msg.type,
-    };
-    for (const key of Object.keys(canonicalFields)) {
-      if (canonicalFields[key] === undefined || canonicalFields[key] === null) {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-        // Dynamic delete is intentional to keep the canonical JSON minimal.
-        // @ts-ignore dynamic delete
-        delete (canonicalFields as Record<string, unknown>)[key];
-      }
-    }
-    const sortedKeys = Object.keys(canonicalFields).sort();
-    return JSON.stringify(canonicalFields, sortedKeys as (keyof typeof canonicalFields)[]);
-  }
-
-  /**
-   * Sign a message envelope using the local Ed25519 private key.
-   * Returns base64(signature) and signature_scheme.
-   */
-  async signMessage(msg: IdentityMessageEnvelope): Promise<{
-    signature: string;
-    signature_scheme: "ed25519";
-  }> {
-    const priv = await this.loadOrCreatePrivateKey();
-    const canonical = IdentityClient.canonicalizeForSignature(msg);
-    const bytes = new TextEncoder().encode(canonical);
-    const sig = await ed25519.signAsync(bytes, priv);
-    return {
-      signature: Buffer.from(sig).toString("base64"),
-      signature_scheme: "ed25519",
-    };
-  }
-
-  /**
-   * Issue a short-lived JWT for MQTT broker authentication (EdDSA / Ed25519).
-   * Use as the MQTT CONNECT password with username = bot_id.
-   */
-  async issueMqttToken(ttlSec: number = 300): Promise<string> {
-    const priv = await this.loadOrCreatePrivateKey();
-    const pub = await ed25519.getPublicKeyAsync(priv);
-    const jwk = {
-      kty: "OKP" as const,
-      crv: "Ed25519" as const,
-      d: base64url(priv),
-      x: base64url(pub),
-    };
-    const key = await importJWK(jwk, "EdDSA");
-    if (!key) {
-      throw new Error("Failed to import key for MQTT token");
-    }
-    const exp = Math.floor(Date.now() / 1000) + ttlSec;
-    const jwt = await new SignJWT({})
-      .setProtectedHeader({ alg: "EdDSA", typ: "JWT" })
-      .setSubject(this.botId)
-      .setAudience(MQTT_TOKEN_AUD)
-      .setExpirationTime(exp)
-      .sign(key);
-    return jwt;
+  constructor(_options: IdentityClientOptions) {
+    throw new Error(DEPRECATION);
   }
 }
 
-export * from "./types";
+export function deprecatedIdentityPluginMessage(): string {
+  return DEPRECATION;
+}

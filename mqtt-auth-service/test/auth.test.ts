@@ -323,3 +323,66 @@ test("SIWE auth rejected when operator is revoked", async () => {
   expect(authRes.status).toBe(403);
   expect(await authRes.text()).toBe("operator_not_active");
 });
+
+test("/health returns ok when RPC is up", async () => {
+  if (siweSkip || !siweHarness) return;
+  const res = await fetch(`${siweHarness.mqttUrl}/health`);
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as {
+    ok?: boolean;
+    chainId?: number;
+    blockNumber?: string;
+    registryAddress?: string;
+  };
+  expect(body.ok).toBe(true);
+  expect(typeof body.chainId).toBe("number");
+  expect(body.blockNumber).toMatch(/^\d+$/);
+  expect(body.registryAddress?.toLowerCase()).toBe(siweHarness.registry.toLowerCase());
+});
+
+test("/health returns 503 when RPC is down", async () => {
+  if (siweSkip) {
+    console.log(`SKIP SIWE: ${siweSkip}`);
+    return;
+  }
+  const port = 25000 + Math.floor(Math.random() * 500);
+  const mqttUrl = `http://127.0.0.1:${port}`;
+  const mqttProc = Bun.spawn(["bun", "run", "src/server.ts"], {
+    cwd: mqttAuthServiceDir,
+    stdout: "ignore",
+    stderr: "ignore",
+    env: {
+      ...process.env,
+      MQTT_AUTH_PORT: String(port),
+      // Reserved TEST-NET address — connection refused (fast fail with short RPC timeout).
+      CHAIN_RPC_URL: "http://127.0.0.1:1",
+      REGISTRY_ADDRESS: "0x1234567890123456789012345678901234567890",
+      REGISTRY_CACHE_TTL_MS: "0",
+      CHAIN_RPC_TIMEOUT_MS: "500",
+    },
+  });
+
+  let saw503 = false;
+  for (let i = 0; i < 40; i++) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 2_000);
+    try {
+      const res = await fetch(`${mqttUrl}/health`, { signal: ac.signal });
+      if (res.status === 503) {
+        const body = (await res.json()) as { ok?: boolean; error?: string };
+        expect(body.ok).toBe(false);
+        expect(body.error).toBe("registry_unavailable");
+        saw503 = true;
+        break;
+      }
+    } catch {
+      /* server not up yet, or aborted */
+    } finally {
+      clearTimeout(timer);
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  mqttProc.kill();
+  await mqttProc.exited;
+  expect(saw503).toBe(true);
+});

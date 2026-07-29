@@ -20,14 +20,19 @@ const REAPER_MS = 60_000;
 const NONCE_RATE_WINDOW_MS = 60_000;
 const NONCE_RATE_MAX =
   Number(process.env.MQTT_NONCE_RATE_MAX ?? Bun.env.MQTT_NONCE_RATE_MAX ?? 30) || 30;
-const registryCacheTtlRaw =
-  process.env.REGISTRY_CACHE_TTL_MS ?? Bun.env.REGISTRY_CACHE_TTL_MS;
 // Auth gate: default uncached so revoke / rotateBotKey take effect immediately.
 // Set REGISTRY_CACHE_TTL_MS>0 only if public RPC rate limits require it.
-const REGISTRY_CACHE_TTL_MS =
-  registryCacheTtlRaw === undefined || registryCacheTtlRaw === ""
-    ? 0
-    : Number(registryCacheTtlRaw);
+const registryCacheParsed = Number(
+  process.env.REGISTRY_CACHE_TTL_MS ?? Bun.env.REGISTRY_CACHE_TTL_MS ?? 0,
+);
+const REGISTRY_CACHE_TTL_MS = Number.isFinite(registryCacheParsed)
+  ? Math.max(0, registryCacheParsed)
+  : 0;
+// Shared by /health and /auth registry reads. Raise for slow public RPCs
+// (e.g. CHAIN_RPC_TIMEOUT_MS=10000) if CONNECT sees registry_unavailable.
+const CHAIN_RPC_TIMEOUT_MS =
+  Number(process.env.CHAIN_RPC_TIMEOUT_MS ?? Bun.env.CHAIN_RPC_TIMEOUT_MS ?? 3_000) ||
+  3_000;
 
 if (!CHAIN_RPC_URL || !REGISTRY_ADDRESS?.startsWith("0x")) {
   console.error(
@@ -40,6 +45,7 @@ const registry = new RegistryClient({
   rpcUrl: CHAIN_RPC_URL,
   registryAddress: REGISTRY_ADDRESS,
   cacheTtlMs: REGISTRY_CACHE_TTL_MS,
+  rpcTimeoutMs: CHAIN_RPC_TIMEOUT_MS,
 });
 
 interface NonceEntry {
@@ -269,10 +275,12 @@ const server = Bun.serve({
 
     if (path === "/health" || path === "/") {
       try {
-        const chainId = await registry.getChainId();
+        // Uncached eth_chainId + eth_blockNumber — getChainId() alone is memoized.
+        const { chainId, blockNumber } = await registry.probeRpc();
         return json(200, {
           ok: true,
           chainId,
+          blockNumber: blockNumber.toString(),
           registryAddress: REGISTRY_ADDRESS,
         });
       } catch (e) {

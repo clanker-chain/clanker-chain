@@ -19,8 +19,13 @@ export interface RegistryClientOptions {
   registryAddress: Address;
   /** Optional pinned chain id; must match eth_chainId when set. */
   chainId?: number;
-  /** Cache TTL for label/id lookups (default 10s). Use 0 to disable (auth gates). */
+  /** Cache TTL for label/id lookups (default 10s). Use `0` to disable.
+   * mqtt-auth defaults to `0` so revoke/rotate take effect immediately.
+   * Bot `IdentityClient` keeps the 10s default for public-RPC rate limits on
+   * `init` / `verifyMessage` — revoked peers may still verify for up to TTL. */
   cacheTtlMs?: number;
+  /** HTTP timeout for RPC transport in ms (viem `http` timeout). Default 10_000. */
+  rpcTimeoutMs?: number;
   /** Test injection. */
   publicClient?: PublicClient;
 }
@@ -114,11 +119,21 @@ export class RegistryClient {
   constructor(options: RegistryClientOptions) {
     this.registry = options.registryAddress;
     this.pinnedChainId = options.chainId;
-    this.cacheTtlMs = options.cacheTtlMs ?? 10_000;
+    const ttl = options.cacheTtlMs;
+    this.cacheTtlMs =
+      typeof ttl === "number" && Number.isFinite(ttl) && ttl >= 0 ? ttl : 10_000;
+    const rpcTimeout =
+      typeof options.rpcTimeoutMs === "number" &&
+      Number.isFinite(options.rpcTimeoutMs) &&
+      options.rpcTimeoutMs > 0
+        ? options.rpcTimeoutMs
+        : 10_000;
     this.client =
       options.publicClient ??
       createPublicClient({
-        transport: http(options.rpcUrl),
+        transport: http(options.rpcUrl, {
+          timeout: rpcTimeout,
+        }),
       });
   }
 
@@ -132,6 +147,25 @@ export class RegistryClient {
     }
     this.cachedChainId = id;
     return id;
+  }
+
+  /**
+   * Uncached liveness probe for healthchecks (always hits RPC).
+   * Prefer this over `getChainId()` when you need to detect RPC outages.
+   */
+  async probeRpc(): Promise<{ chainId: number; blockNumber: bigint }> {
+    const [chainIdRaw, blockNumber] = await Promise.all([
+      this.client.getChainId(),
+      this.client.getBlockNumber(),
+    ]);
+    const chainId = Number(chainIdRaw);
+    if (this.pinnedChainId !== undefined && chainId !== this.pinnedChainId) {
+      throw new Error(
+        `RPC chainId ${chainId} does not match pinned chainId ${this.pinnedChainId}`,
+      );
+    }
+    this.cachedChainId = chainId;
+    return { chainId, blockNumber };
   }
 
   async getEip712Domain(): Promise<ClankerEip712Domain> {
@@ -227,6 +261,7 @@ export class RegistryClient {
     this.botCache.clear();
     this.operatorByLabelCache.clear();
     this.operatorByIdCache.clear();
+    this.cachedChainId = undefined;
   }
 }
 
