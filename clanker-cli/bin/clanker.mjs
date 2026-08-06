@@ -88,7 +88,7 @@ Commands:
   chain rotate-bot-key    Rotate bot signing key on-chain.
   chain revoke-bot        Revoke a bot on-chain.
   check mqtt              Run scripts/check-mqtt.sh with the given bot and operator ids.
-  check identity          Run scripts/check-identity.sh for the given operator id (default: org.openclaw.operator).
+  check identity          Verify operator is active on ClankerIdentity (CHAIN_RPC_URL + REGISTRY_ADDRESS; requires cast).
 `);
 }
 

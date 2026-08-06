@@ -105,9 +105,9 @@ If you prefer not to use npm or need a specific release:
 
 See `SETUP.md` in this repo for:
 
-- MQTT-only setup with static password/JWT.
-- Identity-only flows (identity service and minting bots).
-- Full-stack identity + MQTT wiring, including health checks (`scripts/check-mqtt.sh`, `scripts/check-identity.sh`).
+- MQTT hub setup (Mosquitto + mqtt-auth with `CHAIN_RPC_URL` + `REGISTRY_ADDRESS`).
+- On-chain minting (`clanker chain mint-operator` / `mint-bot`).
+- Full-stack wiring and health checks: `clanker check mqtt` and `clanker check identity` (RPC / `cast`, not identity-service).
 
 ---
 
