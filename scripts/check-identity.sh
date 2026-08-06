@@ -24,11 +24,30 @@ OPERATOR_ID="${1:-org.openclaw.operator}"
 RPC_URL="${CHAIN_RPC_URL:-${BASE_SEPOLIA_RPC_URL:-}}"
 REGISTRY="${REGISTRY_ADDRESS:-}"
 
-fail() {
+# Before jq is available: only used for the missing-jq path.
+fail_no_jq() {
   local msg="$1"
-  echo "{\"ok\": false, \"error\": $(printf '%s' "$msg" | jq -Rs .)}"
+  # Minimal escape for a short static message (no arbitrary cast stderr here).
+  local s="$msg"
+  s=${s//\\/\\\\}
+  s=${s//\"/\\\"}
+  printf '{"ok": false, "error": "%s"}\n' "$s"
   exit 1
 }
+
+if ! command -v jq >/dev/null 2>&1; then
+  fail_no_jq "jq not found on PATH"
+fi
+
+fail() {
+  local msg="$1"
+  jq -nc --arg error "$msg" '{ok:false, error:$error}'
+  exit 1
+}
+
+if ! command -v cast >/dev/null 2>&1; then
+  fail "cast not found on PATH (install Foundry)"
+fi
 
 if [ -z "$RPC_URL" ]; then
   fail "CHAIN_RPC_URL or BASE_SEPOLIA_RPC_URL is required"
@@ -38,22 +57,21 @@ if [ -z "$REGISTRY" ] || [[ ! "$REGISTRY" =~ ^0x[0-9a-fA-F]{40}$ ]]; then
   fail "REGISTRY_ADDRESS is required (0x + 40 hex)"
 fi
 
-if ! command -v cast >/dev/null 2>&1; then
-  fail "cast not found on PATH (install Foundry)"
-fi
-
-if ! command -v jq >/dev/null 2>&1; then
-  fail "jq not found on PATH"
-fi
-
 OP_ID="$(cast keccak "$(cast from-utf8 "$OPERATOR_ID")")"
 
+CAST_ERR="$(mktemp)"
+trap 'rm -f "$CAST_ERR"' EXIT
+
 set +e
-RAW_JSON="$(cast call "$REGISTRY" "operators(bytes32)(address,uint64,uint64)" "$OP_ID" --rpc-url "$RPC_URL" --json 2>/dev/null)"
+RAW_JSON="$(cast call "$REGISTRY" "operators(bytes32)(address,uint64,uint64)" "$OP_ID" --rpc-url "$RPC_URL" --json 2>"$CAST_ERR")"
 STATUS="$?"
 set -e
 
 if [ "$STATUS" -ne 0 ] || [ -z "$RAW_JSON" ]; then
+  ERR_DETAIL="$(tr '\n' ' ' <"$CAST_ERR" | sed 's/[[:space:]]*$//')"
+  if [ -n "$ERR_DETAIL" ]; then
+    fail "RPC call failed: ${ERR_DETAIL}"
+  fi
   fail "RPC call failed (check CHAIN_RPC_URL / REGISTRY_ADDRESS)"
 fi
 
