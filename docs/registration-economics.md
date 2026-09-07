@@ -78,4 +78,4 @@ Convert USD targets to wei at deploy time using spot ETH/USD. Mainnet deploy is 
 
 `clanker chain mint-operator` and `clanker chain mint-bot` read `operatorFee` / `botFee` from the deployed registry and send the exact `msg.value` required. Works with zero-fee and nonzero-fee deploys.
 
-See also: [`chain/README.md`](../chain/README.md), [`blockchain-identity-plan.md`](blockchain-identity-plan.md).
+See also: [`chain/README.md`](../chain/README.md), [`archive/blockchain-identity-plan.md`](archive/blockchain-identity-plan.md) (historical).

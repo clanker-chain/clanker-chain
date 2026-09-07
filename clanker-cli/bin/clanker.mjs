@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import os from "node:os";
 import process from "node:process";
@@ -80,7 +80,7 @@ Usage:
   clanker check identity [operator_id]
 
 Commands:
-  init-openclaw           Wire clanker-chain-identity and clanker-chain-mqtt into the current OpenClaw repo (.env + basic config).
+  init-openclaw           Create a starter ~/.openclaw/openclaw.json with mqtt + mqtt-tools and a channels.mqtt stub (does not rewrite an existing config).
   chain up                Start local Anvil (Foundry). Default: --host 0.0.0.0 --port 8545 --state chain/.anvil-state.json under the repo root.
   chain deploy            Deploy ClankerIdentity via forge script (defaults: Anvil RPC + Anvil test account #0 key — dev only).
   chain mint-operator     Register an operator on ClankerIdentity (label = operator_id string).
@@ -272,39 +272,8 @@ async function main() {
   }
 
   if (cmd === "init-openclaw") {
-    // Run from within an OpenClaw repo.
-    const cwd = process.cwd();
-    const envPath = join(cwd, ".env");
-    let envContent = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
-
-    const extensionsMatch = envContent.match(/^OPENCLAW_EXTENSIONS=(.*)$/m);
-
-    if (!extensionsMatch) {
-      const line = 'OPENCLAW_EXTENSIONS=clanker-chain-identity clanker-chain-mqtt';
-      envContent = envContent.trimEnd() + (envContent ? "\n" : "") + line + "\n";
-      writeFileSync(envPath, envContent, "utf8");
-      console.log(`Wrote OPENCLAW_EXTENSIONS to ${envPath}`);
-    } else if (!extensionsMatch[1].includes("clanker-chain-identity") || !extensionsMatch[1].includes("clanker-chain-mqtt")) {
-      const existingValues = extensionsMatch[1].split(/\s+/).filter(Boolean);
-      const mergedValues = [...existingValues];
-
-      for (const extension of ["clanker-chain-identity", "clanker-chain-mqtt"]) {
-        if (!mergedValues.includes(extension)) {
-          mergedValues.push(extension);
-        }
-      }
-
-      envContent = envContent.replace(
-        /^OPENCLAW_EXTENSIONS=.*$/m,
-        `OPENCLAW_EXTENSIONS=${mergedValues.join(" ")}`,
-      );
-      writeFileSync(envPath, envContent, "utf8");
-      console.log(`Updated OPENCLAW_EXTENSIONS in ${envPath}`);
-    } else {
-      console.log(`OPENCLAW_EXTENSIONS already configured in ${envPath}`);
-    }
-
-    // Ensure a basic ~/.openclaw/openclaw.json exists with plugins array.
+    // Starter OpenClaw config for the current channel + tools plugins.
+    // Does not write OPENCLAW_EXTENSIONS bake-in ids (clanker-chain-identity / clanker-chain-mqtt).
     const home = os.homedir();
     const openclawDir = join(home, ".openclaw");
     const cfgPath = join(openclawDir, "openclaw.json");
@@ -312,19 +281,40 @@ async function main() {
       mkdirSync(openclawDir, { recursive: true });
     }
 
-    if (!existsSync(cfgPath)) {
-      const cfg = {
-        plugins: {
-          enabled: ["clanker-chain-identity", "clanker-chain-mqtt"],
-        },
-      };
-      writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
-      console.log(`Created ${cfgPath} with clanker-chain-identity and clanker-chain-mqtt enabled.`);
-    } else {
-      console.log(`${cfgPath} already exists. Please ensure clanker-chain-identity and clanker-chain-mqtt are enabled there.`);
+    if (existsSync(cfgPath)) {
+      console.log(`${cfgPath} already exists.`);
+      console.log(
+        "Ensure plugins.enabled includes \"mqtt\" and \"mqtt-tools\", and channels.mqtt has botId, operatorId, brokerUrl, chainRpcUrl, registryAddress.",
+      );
+      console.log(
+        "Install: openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29 && openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29",
+      );
+      console.log("See SETUP.md — do not enable clanker-chain-identity or clanker-chain-mqtt.");
+      process.exit(0);
     }
 
-    console.log("init-openclaw complete. Rebuild your OpenClaw images and restart the stack.");
+    const cfg = {
+      plugins: {
+        enabled: ["mqtt", "mqtt-tools"],
+      },
+      channels: {
+        mqtt: {
+          enabled: true,
+          botId: "openclaw.your-bot.local",
+          operatorId: "org.openclaw.your-operator",
+          brokerUrl: "mqtt://localhost:1883",
+          chainRpcUrl: "https://sepolia.base.org",
+          registryAddress: "0xD650467f9D7A20f37E55ec23Ca1c711598f97958",
+          mqttAuthServiceUrl: "http://localhost:9090",
+        },
+      },
+    };
+    writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
+    console.log(`Created ${cfgPath} with mqtt + mqtt-tools and a channels.mqtt stub.`);
+    console.log(
+      "Next: openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29 && openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29",
+    );
+    console.log("Then set botId / operatorId / broker URLs and mint a key via clanker chain mint-bot.");
     process.exit(0);
   }
 
