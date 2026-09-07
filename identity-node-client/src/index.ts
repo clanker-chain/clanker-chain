@@ -102,9 +102,9 @@ export class IdentityClient {
         options.chainRpcUrl ?? process.env.CHAIN_RPC_URL ?? process.env.BASE_SEPOLIA_RPC_URL;
       const registryAddress = (options.registryAddress ??
         process.env.REGISTRY_ADDRESS) as Address | undefined;
-      if (!rpcUrl || !registryAddress?.startsWith("0x")) {
+      if (!rpcUrl || !registryAddress || !/^0x[0-9a-fA-F]{40}$/.test(registryAddress)) {
         throw new Error(
-          "IdentityClient requires chainRpcUrl + registryAddress (or CHAIN_RPC_URL + REGISTRY_ADDRESS)",
+          "IdentityClient requires chainRpcUrl + registryAddress (or CHAIN_RPC_URL + REGISTRY_ADDRESS; registry must be 0x + 40 hex)",
         );
       }
       this.registry = new RegistryClient({

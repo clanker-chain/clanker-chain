@@ -340,6 +340,54 @@ test("/health returns ok when RPC is up", async () => {
   expect(body.registryAddress?.toLowerCase()).toBe(siweHarness.registry.toLowerCase());
 });
 
+test("/health returns 503 when RPC is up but registry address is bogus", async () => {
+  if (siweSkip || !siweHarness) {
+    if (siweSkip) console.log(`SKIP SIWE: ${siweSkip}`);
+    return;
+  }
+  const port = 25000 + Math.floor(Math.random() * 500);
+  const mqttUrl = `http://127.0.0.1:${port}`;
+  // Valid address shape, no contract code on Anvil — botFee eth_call fails.
+  const bogusRegistry = "0x0000000000000000000000000000000000000001";
+  const mqttProc = Bun.spawn(["bun", "run", "src/server.ts"], {
+    cwd: mqttAuthServiceDir,
+    stdout: "ignore",
+    stderr: "ignore",
+    env: {
+      ...process.env,
+      MQTT_AUTH_PORT: String(port),
+      CHAIN_RPC_URL: siweHarness.rpcUrl,
+      REGISTRY_ADDRESS: bogusRegistry,
+      REGISTRY_CACHE_TTL_MS: "0",
+      CHAIN_RPC_TIMEOUT_MS: "3000",
+    },
+  });
+
+  let saw503 = false;
+  for (let i = 0; i < 40; i++) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 2_000);
+    try {
+      const res = await fetch(`${mqttUrl}/health`, { signal: ac.signal });
+      if (res.status === 503) {
+        const body = (await res.json()) as { ok?: boolean; error?: string };
+        expect(body.ok).toBe(false);
+        expect(body.error).toBe("registry_unavailable");
+        saw503 = true;
+        break;
+      }
+    } catch {
+      /* server not up yet, or aborted */
+    } finally {
+      clearTimeout(timer);
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  mqttProc.kill();
+  await mqttProc.exited;
+  expect(saw503).toBe(true);
+});
+
 test("/health returns 503 when RPC is down", async () => {
   if (siweSkip) {
     console.log(`SKIP SIWE: ${siweSkip}`);

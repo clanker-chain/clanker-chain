@@ -210,9 +210,10 @@ test("pinned chainId mismatch throws", async () => {
   await assert.rejects(() => client.getChainId(), /does not match pinned chainId/);
 });
 
-test("probeRpc always hits getChainId and getBlockNumber", async () => {
+test("probeRpc always hits getChainId, getBlockNumber, and botFee", async () => {
   let chainCalls = 0;
   let blockCalls = 0;
+  let botFeeCalls = 0;
   const pc = {
     async getChainId() {
       chainCalls += 1;
@@ -222,8 +223,12 @@ test("probeRpc always hits getChainId and getBlockNumber", async () => {
       blockCalls += 1;
       return 123n;
     },
-    async readContract() {
-      throw new Error("unexpected");
+    async readContract(args: { functionName: string }) {
+      if (args.functionName === "botFee") {
+        botFeeCalls += 1;
+        return 0n;
+      }
+      throw new Error(`unexpected ${args.functionName}`);
     },
   } as unknown as PublicClient;
   const client = new RegistryClient({
@@ -237,6 +242,28 @@ test("probeRpc always hits getChainId and getBlockNumber", async () => {
   await client.probeRpc();
   assert.equal(chainCalls, 2);
   assert.equal(blockCalls, 2);
+  assert.equal(botFeeCalls, 2);
+});
+
+test("probeRpc fails when registry is not callable", async () => {
+  const pc = {
+    async getChainId() {
+      return 31337;
+    },
+    async getBlockNumber() {
+      return 1n;
+    },
+    async readContract() {
+      throw new Error("execution reverted");
+    },
+  } as unknown as PublicClient;
+  const client = new RegistryClient({
+    rpcUrl: "http://127.0.0.1:1",
+    registryAddress: REGISTRY,
+    publicClient: pc,
+    cacheTtlMs: 0,
+  });
+  await assert.rejects(() => client.probeRpc(), /execution reverted/);
 });
 
 test("clearCache clears memoized chainId", async () => {

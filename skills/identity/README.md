@@ -6,6 +6,6 @@ This folder remains an optional skill template that wraps `identity-node-client`
 
 If you still copy this skill into a workspace:
 
-1. Depend on `@clanker-chain/identity-node-client@2026.7.29` (not unscoped `^0.1.0`).
+1. Depend on `@clanker-chain/identity-node-client` from this repo (`file:` / local build) or a published CalVer after release (see [`docs/VERSIONING.md`](../../docs/VERSIONING.md)).
 2. Set `CHAIN_RPC_URL` and `REGISTRY_ADDRESS` for the agent.
 3. See [`SKILL.md`](./SKILL.md) for command details.

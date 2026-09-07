@@ -20,7 +20,8 @@ export interface RegistryClientOptions {
   /** Optional pinned chain id; must match eth_chainId when set. */
   chainId?: number;
   /** Cache TTL for label/id lookups (default 10s). Use `0` to disable.
-   * mqtt-auth defaults to `0` so revoke/rotate take effect immediately.
+   * mqtt-auth defaults to `0` so revoke/rotate take effect on the **next CONNECT**
+   * (live sessions are not kicked; `/acl` is allow-all).
    * Bot `IdentityClient` keeps the 10s default for public-RPC rate limits on
    * `init` / `verifyMessage` — revoked peers may still verify for up to TTL. */
   cacheTtlMs?: number;
@@ -151,7 +152,13 @@ export class RegistryClient {
 
   /**
    * Uncached liveness probe for healthchecks (always hits RPC).
+   * Calls chainId + blockNumber, then a cheap `botFee()` read so a typo'd or
+   * empty-code REGISTRY_ADDRESS fails the probe (not only "RPC is up").
    * Prefer this over `getChainId()` when you need to detect RPC outages.
+   *
+   * Revoke / rotateBotKey take effect on the **next CONNECT** when mqtt-auth
+   * uses cacheTtlMs=0. Live MQTT sessions are not dropped; bot IdentityClient
+   * may still verify peers for up to its own cache TTL (default 10s).
    */
   async probeRpc(): Promise<{ chainId: number; blockNumber: bigint }> {
     const [chainIdRaw, blockNumber] = await Promise.all([
@@ -164,6 +171,13 @@ export class RegistryClient {
         `RPC chainId ${chainId} does not match pinned chainId ${this.pinnedChainId}`,
       );
     }
+    // Confirm verifyingContract is callable ClankerIdentity bytecode.
+    await this.client.readContract({
+      address: this.registry,
+      abi: clankerIdentityAbi,
+      functionName: "botFee",
+      args: [],
+    });
     this.cachedChainId = chainId;
     return { chainId, blockNumber };
   }
