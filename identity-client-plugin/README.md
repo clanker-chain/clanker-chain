@@ -1,5 +1,7 @@
 # @clanker-chain/identity-plugin
 
-**Deprecated** — use [`@clanker-chain/identity-node-client@2026.5.23`](https://www.npmjs.com/package/@clanker-chain/identity-node-client) instead.
+**DEPRECATED.** Do not use this package.
 
-This package is frozen at CalVer `2026.5.23` (Ed25519/JWT legacy). See [DEPRECATED.md](./DEPRECATED.md).
+Use `@clanker-chain/identity-node-client` with `CHAIN_RPC_URL` + `REGISTRY_ADDRESS`. See [`DEPRECATED.md`](./DEPRECATED.md) and [`skills/identity`](../skills/identity/).
+
+`IdentityClient` construction throws a migration error.

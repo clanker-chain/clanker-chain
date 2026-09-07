@@ -6,7 +6,7 @@ Why and how operator/bot registration fees work on the canonical registry.
 
 Identity is valuable to verifiers (MQTT CONNECT, EIP-712 message verify, future reputation) when creating a new bot identity has a **sunk cost**. Cheap or free registration makes Sybil churn — register, abuse, revoke, repeat — economical.
 
-Fees are enforced **in the smart contract**, not in `identity-service`, CLI config, or OpenClaw. Verifiers pin one canonical `(chainId, registryAddress)`; copying the contract bytecode to another address does not grant entries in the canonical registry.
+Fees are enforced **in the smart contract**, not in CLI config or OpenClaw. Verifiers pin one canonical `(chainId, registryAddress)`; copying the contract bytecode to another address does not grant entries in the canonical registry.
 
 ## What is charged
 
@@ -28,7 +28,7 @@ Fees are **forwarded to `feeRecipient`** on each successful register. There is n
 
 ## Trust model
 
-- **Canonical registry:** publish `REGISTRY_ADDRESS` per network (Base Sepolia, Base mainnet). All relying parties (`identity-service`, `mqtt-auth-service`, bots) use that address as EIP-712 `verifyingContract`.
+- **Canonical registry:** publish `REGISTRY_ADDRESS` per network (Base Sepolia, Base mainnet). All relying parties (`mqtt-auth-service`, OpenClaw bots via `IdentityClient` / `RegistryClient`) use that address as EIP-712 `verifyingContract`.
 - **Clones at other addresses** are separate namespaces; they do not affect the canonical registry.
 
 ## Deploy parameters
@@ -78,4 +78,4 @@ Convert USD targets to wei at deploy time using spot ETH/USD. Mainnet deploy is 
 
 `clanker chain mint-operator` and `clanker chain mint-bot` read `operatorFee` / `botFee` from the deployed registry and send the exact `msg.value` required. Works with zero-fee and nonzero-fee deploys.
 
-See also: [`chain/README.md`](../chain/README.md), [`blockchain-identity-plan.md`](blockchain-identity-plan.md).
+See also: [`chain/README.md`](../chain/README.md), [`archive/blockchain-identity-plan.md`](archive/blockchain-identity-plan.md) (historical).

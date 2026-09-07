@@ -1,5 +1,11 @@
 import { expect, test } from "bun:test";
-import { IdentityClient } from "@clanker-chain/identity-node-client";
+import {
+  IdentityClient,
+  registryLabelToId,
+  type IdentityRegistryReader,
+  type OnchainBot,
+  type OnchainOperator,
+} from "@clanker-chain/identity-node-client";
 import {
   attachSignature,
   buildCoordinationEnvelope,
@@ -27,6 +33,8 @@ test("parseSignedEnvelope rejects legacy truncated payloads", () => {
 test("sign → wire → parse → verify round trip", async () => {
   const botId = "openclaw.france.prod-1";
   const operatorId = "org.openclaw.pat";
+  const domain = { chainId: 31337, registryAddress: REGISTRY };
+  const operatorIdBytes = registryLabelToId(operatorId);
 
   const envelope = buildCoordinationEnvelope({
     botId,
@@ -37,11 +45,41 @@ test("sign → wire → parse → verify round trip", async () => {
     timestamp: "2026-05-23T12:00:00.000Z",
   });
 
+  const operator: OnchainOperator = {
+    owner: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    status: "active",
+    registeredAt: 1n,
+    revokedAt: 0n,
+  };
+  const bot: OnchainBot = {
+    botId,
+    operatorId: operatorIdBytes,
+    botKey: TEST_ADDRESS,
+    status: "active",
+    registeredAt: 1n,
+    revokedAt: 0n,
+  };
+  const registry: IdentityRegistryReader = {
+    async getBotByLabel() {
+      return bot;
+    },
+    async getOperatorByLabel() {
+      return operator;
+    },
+    async getOperatorById() {
+      return operator;
+    },
+    async getEip712Domain() {
+      return domain;
+    },
+  };
+
   const client = new IdentityClient({
     botId,
     operatorId,
     ethPrivateKey: TEST_KEY,
-    eip712Domain: { chainId: 31337, registryAddress: REGISTRY },
+    eip712Domain: domain,
+    registry,
   });
 
   const { signature, signature_scheme } = await client.signMessage(envelope);
@@ -52,37 +90,10 @@ test("sign → wire → parse → verify round trip", async () => {
   expect(parsed!.envelope.body).toEqual({ text: "ping" });
   expect(parsed!.envelope.message_id).toBe("msg-roundtrip");
 
-  const mockFetch = async (input: RequestInfo | URL) => {
-    const url = new URL(typeof input === "string" ? input : input.toString());
-    if (url.pathname === `/v1/bots/${encodeURIComponent(botId)}`) {
-      return Response.json({
-        bot_id: botId,
-        operator_id: operatorId,
-        status: "active",
-        public_keys: [
-          {
-            algorithm: "secp256k1-eth",
-            public_key: TEST_ADDRESS,
-            status: "active",
-          },
-        ],
-      });
-    }
-    if (url.pathname === `/v1/operators/${encodeURIComponent(operatorId)}`) {
-      return Response.json({ operator_id: operatorId, status: "active" });
-    }
-    return new Response("not found", { status: 404 });
-  };
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = mockFetch as typeof fetch;
-  try {
-    const ok = await client.verifyMessage(
-      parsed!.envelope,
-      parsed!.signature as `0x${string}`,
-      botId,
-    );
-    expect(ok).toBe(true);
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
+  const ok = await client.verifyMessage(
+    parsed!.envelope,
+    parsed!.signature as `0x${string}`,
+    botId,
+  );
+  expect(ok).toBe(true);
 });

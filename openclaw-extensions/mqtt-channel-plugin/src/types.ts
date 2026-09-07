@@ -20,9 +20,12 @@ export interface MqttChannelConfig {
   
   /** MQTT broker URL */
   brokerUrl: string;
-  
-  /** Identity service URL */
-  identityServiceUrl: string;
+
+  /** Chain RPC URL for ClankerIdentity reads */
+  chainRpcUrl: string;
+
+  /** ClankerIdentity contract address */
+  registryAddress: string;
 
   /** MQTT auth service URL (SIWE nonces). Default: http://localhost:9090 */
   mqttAuthServiceUrl?: string;

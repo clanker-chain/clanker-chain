@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Build OpenClaw image. Loads .env and passes GITHUB_TOKEN / IDENTITY_ASSET_ID as build args.
+# Build OpenClaw image via docker compose.
 # Run from the OpenClaw project root (where docker-compose.yml lives).
+# Plugins: use `openclaw plugins install` (see clanker-chain SETUP.md) — do not bake IDENTITY_ASSET_ID.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Default: project root is two levels up (e.g. openclaw/scripts/openclaw-docker -> openclaw). Override if needed.
@@ -16,7 +17,4 @@ if [[ -f .env ]]; then
   source .env
   set +a
 fi
-docker compose build \
-  ${GITHUB_TOKEN:+--build-arg GITHUB_TOKEN="$GITHUB_TOKEN"} \
-  ${IDENTITY_ASSET_ID:+--build-arg IDENTITY_ASSET_ID="$IDENTITY_ASSET_ID"} \
-  "$@"
+docker compose build "$@"

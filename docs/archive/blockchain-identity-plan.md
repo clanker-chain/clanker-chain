@@ -1,5 +1,13 @@
 # Blockchain identity plan
 
+> **Historical archive.** Do not implement from this document.
+>
+> The cutover it describes shipped in PRs [#12](https://github.com/pjsandwich/clanker-chain/pull/12) (chain + SIWE/EIP-712), [#17](https://github.com/pjsandwich/clanker-chain/pull/17) (registration fees), and [#18](https://github.com/pjsandwich/clanker-chain/pull/18) (chain-direct reads; identity-service off the hub path).
+>
+> Current operator docs: [`SETUP.md`](../../SETUP.md), [`chain/README.md`](../../chain/README.md), [`docs/registration-economics.md`](../registration-economics.md).
+
+---
+
 Plan for migrating clanker-chain's bot/operator identity from a JSON-file ledger served by `identity-service` to an on-chain registry, while keeping the data plane (MQTT messaging, OpenClaw plugin) unchanged.
 
 This is a planning doc. No code changes are implied by reading it.

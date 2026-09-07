@@ -1,8 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "fs";
-import { tmpdir } from "os";
 import { join } from "path";
 import {
+  createPublicClient,
   createWalletClient,
   http,
   keccak256,
@@ -11,7 +10,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
-import { clankerIdentityAbi } from "../../identity-service/src/abi/clanker-identity";
+import { clankerIdentityAbi } from "../../identity-node-client/src/abi/clanker-identity";
 import {
   ANVIL_DEFAULT_KEY,
   ANVIL_KEY_1,
@@ -22,7 +21,6 @@ import {
 
 const repoRoot = join(import.meta.dir, "../..");
 const chainDir = join(repoRoot, "chain");
-const identityServiceDir = join(repoRoot, "identity-service");
 const mqttAuthServiceDir = join(repoRoot, "mqtt-auth-service");
 
 function skipSiwe(): string | null {
@@ -37,7 +35,16 @@ async function waitHttpOk(url: string, max = 40): Promise<void> {
   for (let i = 0; i < max; i++) {
     try {
       const r = await fetch(url);
-      if (r.ok) return;
+      if (r.ok) {
+        // /health returns JSON { ok: true, ... } when registry is reachable.
+        const ct = r.headers.get("content-type") ?? "";
+        if (ct.includes("application/json")) {
+          const body = (await r.json()) as { ok?: boolean };
+          if (body.ok === true) return;
+        } else {
+          return;
+        }
+      }
     } catch {
       /* retry */
     }
@@ -51,7 +58,6 @@ interface SiweHarness {
   botId: string;
   secondBotId: string;
   mqttUrl: string;
-  identityUrl: string;
   registry: Hex;
   rpcUrl: string;
   operatorLabel: string;
@@ -67,29 +73,18 @@ async function startSiweHarness(): Promise<SiweHarness> {
     stderr: "ignore",
   });
   for (let i = 0; i < 50; i++) {
-    const ping = Bun.spawnSync(["cast", "chain-id", "--rpc-url", rpcUrl], { stdout: "ignore", stderr: "ignore" });
+    const ping = Bun.spawnSync(["cast", "chain-id", "--rpc-url", rpcUrl], {
+      stdout: "ignore",
+      stderr: "ignore",
+    });
     if (ping.exitCode === 0) break;
     await new Promise((r) => setTimeout(r, 100));
   }
 
-  const { registry, deploymentBlock } = await deployTestRegistry({
+  const { registry } = await deployTestRegistry({
     rpcUrl,
     chainDir,
   });
-
-  const dir = mkdtempSync(join(tmpdir(), "mqtt-auth-evm-"));
-  const snapshotPath = join(dir, "ledger.json");
-  writeFileSync(
-    snapshotPath,
-    JSON.stringify({
-      version: 1,
-      created: new Date().toISOString(),
-      updated: new Date().toISOString(),
-      operators: {},
-      bots: {},
-      operations: [],
-    }),
-  );
 
   const operatorLabel = "org.openclaw.mqtt-evm-test";
   const botId = "openclaw.mqtt.siwe.test";
@@ -122,35 +117,18 @@ async function startSiweHarness(): Promise<SiweHarness> {
     args: [operatorIdBytes as Hex, secondBotId, secondBotKeyAddr],
   });
 
-  const idPort = 22000 + Math.floor(Math.random() * 3000);
-  const identityUrl = `http://127.0.0.1:${idPort}`;
-  const identityProc = Bun.spawn(["bun", "run", "src/server.ts"], {
-    cwd: identityServiceDir,
-    stdout: "ignore",
-    stderr: "ignore",
-    env: {
-      ...process.env,
-      IDENTITY_SERVICE_PORT: String(idPort),
-      CHAIN_RPC_URL: rpcUrl,
-      REGISTRY_ADDRESS: registry,
-      DEPLOYMENT_BLOCK: deploymentBlock.toString(),
-      IDENTITY_LEDGER_PATH: snapshotPath,
-      EVM_POLL_MS: "200",
-    },
-  });
-
-  await waitHttpOk(`${identityUrl}/health`);
-
   const mqttPort = 23000 + Math.floor(Math.random() * 3000);
   const mqttUrl = `http://127.0.0.1:${mqttPort}`;
   const mqttProc = Bun.spawn(["bun", "run", "src/server.ts"], {
     cwd: mqttAuthServiceDir,
     stdout: "ignore",
-    stderr: "ignore",
+    stderr: "pipe",
     env: {
       ...process.env,
       MQTT_AUTH_PORT: String(mqttPort),
-      IDENTITY_SERVICE_URL: identityUrl,
+      CHAIN_RPC_URL: rpcUrl,
+      REGISTRY_ADDRESS: registry,
+      REGISTRY_CACHE_TTL_MS: "0",
     },
   });
 
@@ -160,7 +138,6 @@ async function startSiweHarness(): Promise<SiweHarness> {
     botId,
     secondBotId,
     mqttUrl,
-    identityUrl,
     registry,
     rpcUrl,
     operatorLabel,
@@ -168,9 +145,8 @@ async function startSiweHarness(): Promise<SiweHarness> {
     secondBotSigner: privateKeyToAccount(ANVIL_KEY_2),
     cleanup: async () => {
       mqttProc.kill();
-      identityProc.kill();
       anvil.kill();
-      await Promise.all([mqttProc.exited, identityProc.exited, anvil.exited]);
+      await Promise.all([mqttProc.exited, anvil.exited]);
     },
   };
 }
@@ -229,6 +205,7 @@ test("SIWE auth: replay nonce rejected", async () => {
 
 test("SIWE auth: expired nonce", async () => {
   if (siweSkip || !siweHarness) return;
+  const { rpcUrl, registry } = siweHarness;
   const port = 24000 + Math.floor(Math.random() * 500);
   const mqttUrl = `http://127.0.0.1:${port}`;
   const mqttProc = Bun.spawn(["bun", "run", "src/server.ts"], {
@@ -238,7 +215,9 @@ test("SIWE auth: expired nonce", async () => {
     env: {
       ...process.env,
       MQTT_AUTH_PORT: String(port),
-      IDENTITY_SERVICE_URL: "http://127.0.0.1:1",
+      CHAIN_RPC_URL: rpcUrl,
+      REGISTRY_ADDRESS: registry,
+      REGISTRY_CACHE_TTL_MS: "0",
       MQTT_NONCE_TTL_MS: "1",
     },
   });
@@ -285,28 +264,22 @@ test("JWT password is rejected", async () => {
 
 test("SIWE auth rejected when bot is revoked", async () => {
   if (siweSkip || !siweHarness) return;
-  const { mqttUrl, secondBotId, secondBotSigner, registry, rpcUrl, identityUrl } = siweHarness;
+  const { mqttUrl, secondBotId, secondBotSigner, registry, rpcUrl } = siweHarness;
   const account0 = privateKeyToAccount(ANVIL_DEFAULT_KEY);
   const wallet = createWalletClient({
     account: account0,
     chain: foundry,
     transport: http(rpcUrl),
   });
+  const pc = createPublicClient({ chain: foundry, transport: http(rpcUrl) });
   const botIdBytes = keccak256(toBytes(secondBotId));
-  await wallet.writeContract({
+  const hash = await wallet.writeContract({
     address: registry,
     abi: clankerIdentityAbi,
     functionName: "revokeBot",
     args: [botIdBytes as Hex],
   });
-  for (let i = 0; i < 30; i++) {
-    const botRes = await fetch(`${identityUrl}/v1/bots/${encodeURIComponent(secondBotId)}`);
-    if (botRes.ok) {
-      const bot = (await botRes.json()) as { status?: string };
-      if (bot.status === "retired") break;
-    }
-    await new Promise((r) => setTimeout(r, 100));
-  }
+  await pc.waitForTransactionReceipt({ hash });
 
   const nRes = await fetch(`${mqttUrl}/nonce?bot_id=${encodeURIComponent(secondBotId)}`);
   const { nonce, message } = (await nRes.json()) as { nonce: string; message: string };
@@ -329,23 +302,15 @@ test("SIWE auth rejected when operator is revoked", async () => {
     chain: foundry,
     transport: http(rpcUrl),
   });
+  const pc = createPublicClient({ chain: foundry, transport: http(rpcUrl) });
   const operatorIdBytes = keccak256(toBytes(operatorLabel));
-  await wallet.writeContract({
+  const hash = await wallet.writeContract({
     address: registry,
     abi: clankerIdentityAbi,
     functionName: "revokeOperator",
     args: [operatorIdBytes as Hex],
   });
-  for (let i = 0; i < 30; i++) {
-    const opRes = await fetch(
-      `${siweHarness!.identityUrl}/v1/operators/${encodeURIComponent(operatorLabel)}`,
-    );
-    if (opRes.ok) {
-      const op = (await opRes.json()) as { status?: string };
-      if (op.status === "retired") break;
-    }
-    await new Promise((r) => setTimeout(r, 100));
-  }
+  await pc.waitForTransactionReceipt({ hash });
 
   const nRes = await fetch(`${mqttUrl}/nonce?bot_id=${encodeURIComponent(botId)}`);
   const { nonce, message } = (await nRes.json()) as { nonce: string; message: string };
@@ -357,4 +322,168 @@ test("SIWE auth rejected when operator is revoked", async () => {
   });
   expect(authRes.status).toBe(403);
   expect(await authRes.text()).toBe("operator_not_active");
+});
+
+test("/health returns ok when RPC is up", async () => {
+  if (siweSkip || !siweHarness) return;
+  const res = await fetch(`${siweHarness.mqttUrl}/health`);
+  expect(res.status).toBe(200);
+  const body = (await res.json()) as {
+    ok?: boolean;
+    chainId?: number;
+    blockNumber?: string;
+    registryAddress?: string;
+  };
+  expect(body.ok).toBe(true);
+  expect(typeof body.chainId).toBe("number");
+  expect(body.blockNumber).toMatch(/^\d+$/);
+  expect(body.registryAddress?.toLowerCase()).toBe(siweHarness.registry.toLowerCase());
+});
+
+test("/health returns 503 when RPC is up but registry address is bogus", async () => {
+  if (siweSkip || !siweHarness) {
+    if (siweSkip) console.log(`SKIP SIWE: ${siweSkip}`);
+    return;
+  }
+  const port = 25000 + Math.floor(Math.random() * 500);
+  const mqttUrl = `http://127.0.0.1:${port}`;
+  // Valid address shape, no contract code on Anvil — botFee eth_call fails.
+  const bogusRegistry = "0x0000000000000000000000000000000000000001";
+  const mqttProc = Bun.spawn(["bun", "run", "src/server.ts"], {
+    cwd: mqttAuthServiceDir,
+    stdout: "ignore",
+    stderr: "ignore",
+    env: {
+      ...process.env,
+      MQTT_AUTH_PORT: String(port),
+      CHAIN_RPC_URL: siweHarness.rpcUrl,
+      REGISTRY_ADDRESS: bogusRegistry,
+      REGISTRY_CACHE_TTL_MS: "0",
+      CHAIN_RPC_TIMEOUT_MS: "3000",
+    },
+  });
+
+  let saw503 = false;
+  for (let i = 0; i < 40; i++) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 2_000);
+    try {
+      const res = await fetch(`${mqttUrl}/health`, { signal: ac.signal });
+      if (res.status === 503) {
+        const body = (await res.json()) as { ok?: boolean; error?: string };
+        expect(body.ok).toBe(false);
+        expect(body.error).toBe("registry_unavailable");
+        saw503 = true;
+        break;
+      }
+    } catch {
+      /* server not up yet, or aborted */
+    } finally {
+      clearTimeout(timer);
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  mqttProc.kill();
+  await mqttProc.exited;
+  expect(saw503).toBe(true);
+});
+
+test("/health returns 503 when RPC is down", async () => {
+  if (siweSkip) {
+    console.log(`SKIP SIWE: ${siweSkip}`);
+    return;
+  }
+  const port = 25000 + Math.floor(Math.random() * 500);
+  const mqttUrl = `http://127.0.0.1:${port}`;
+  const mqttProc = Bun.spawn(["bun", "run", "src/server.ts"], {
+    cwd: mqttAuthServiceDir,
+    stdout: "ignore",
+    stderr: "ignore",
+    env: {
+      ...process.env,
+      MQTT_AUTH_PORT: String(port),
+      // Reserved TEST-NET address — connection refused (fast fail with short RPC timeout).
+      CHAIN_RPC_URL: "http://127.0.0.1:1",
+      REGISTRY_ADDRESS: "0x1234567890123456789012345678901234567890",
+      REGISTRY_CACHE_TTL_MS: "0",
+      CHAIN_RPC_TIMEOUT_MS: "500",
+    },
+  });
+
+  let saw503 = false;
+  for (let i = 0; i < 40; i++) {
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 2_000);
+    try {
+      const res = await fetch(`${mqttUrl}/health`, { signal: ac.signal });
+      if (res.status === 503) {
+        const body = (await res.json()) as { ok?: boolean; error?: string };
+        expect(body.ok).toBe(false);
+        expect(body.error).toBe("registry_unavailable");
+        saw503 = true;
+        break;
+      }
+    } catch {
+      /* server not up yet, or aborted */
+    } finally {
+      clearTimeout(timer);
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  mqttProc.kill();
+  await mqttProc.exited;
+  expect(saw503).toBe(true);
+});
+
+test("/auth returns 403 registry_unavailable when RPC is down", async () => {
+  if (siweSkip) {
+    console.log(`SKIP SIWE: ${siweSkip}`);
+    return;
+  }
+  // Distinct port range from /health down tests (25000+) to avoid collisions.
+  const port = 26000 + Math.floor(Math.random() * 500);
+  const mqttUrl = `http://127.0.0.1:${port}`;
+  const mqttProc = Bun.spawn(["bun", "run", "src/server.ts"], {
+    cwd: mqttAuthServiceDir,
+    stdout: "ignore",
+    stderr: "ignore",
+    env: {
+      ...process.env,
+      MQTT_AUTH_PORT: String(port),
+      CHAIN_RPC_URL: "http://127.0.0.1:1",
+      REGISTRY_ADDRESS: "0x1234567890123456789012345678901234567890",
+      REGISTRY_CACHE_TTL_MS: "0",
+      CHAIN_RPC_TIMEOUT_MS: "500",
+    },
+  });
+
+  const botId = "openclaw.mqtt.rpc-down";
+  let ready = false;
+  for (let i = 0; i < 40; i++) {
+    try {
+      const nRes = await fetch(`${mqttUrl}/nonce?bot_id=${encodeURIComponent(botId)}`);
+      if (nRes.status === 200) {
+        ready = true;
+        break;
+      }
+    } catch {
+      /* server not up yet */
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  expect(ready).toBe(true);
+
+  const nRes = await fetch(`${mqttUrl}/nonce?bot_id=${encodeURIComponent(botId)}`);
+  const { nonce, message } = (await nRes.json()) as { nonce: string; message: string };
+  const sig = await privateKeyToAccount(ANVIL_KEY_1).signMessage({ message });
+  const authRes = await fetch(`${mqttUrl}/auth`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ username: botId, password: `${nonce}.${sig}` }),
+  });
+  expect(authRes.status).toBe(403);
+  expect(await authRes.text()).toBe("registry_unavailable");
+
+  mqttProc.kill();
+  await mqttProc.exited;
 });

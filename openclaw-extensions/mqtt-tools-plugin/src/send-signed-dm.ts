@@ -72,7 +72,8 @@ async function getReadyIdentity(
     const client = new IdentityClient({
       botId: mqtt.botId,
       operatorId: mqtt.operatorId,
-      identityServiceUrl: mqtt.identityServiceUrl,
+      chainRpcUrl: mqtt.chainRpcUrl,
+      registryAddress: mqtt.registryAddress as `0x${string}`,
       mqttAuthServiceUrl: mqtt.mqttAuthServiceUrl,
     });
     const ready = client.init().catch((err) => {
@@ -121,7 +122,7 @@ async function sendSignedDmOnce(
   if (!mqtt.configured) {
     throw new Error(
       `mqtt_send: channels.mqtt is not configured for account "${mqtt.accountId}" ` +
-        "(need botId, operatorId, brokerUrl, identityServiceUrl). " +
+        "(need botId, operatorId, brokerUrl, chainRpcUrl, registryAddress). " +
         "Install @clanker-chain/mqtt-channel-plugin and set channels.mqtt or channels.mqtt.accounts.<id>.",
     );
   }
