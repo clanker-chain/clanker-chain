@@ -1,6 +1,6 @@
 # clanker-chain MQTT & Identity Setup
 
-Blockchain identity cutover (CalVer `2026.7.29`+): bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
+Blockchain identity cutover (CalVer `2026.7.29`+ in-repo): bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
 
 ## Stack overview
 
@@ -41,25 +41,30 @@ docker compose build mqtt-auth && docker compose up -d
 
 No identity-service process is required.
 
+**RPC trust:** CONNECT and identity reads trust whatever `CHAIN_RPC_URL` returns. Public Sepolia is fine for LAN/smoke tests; for anything beyond that, use an operator-owned node or an authenticated provider.
+
+**Revoke:** mqtt-auth uses an uncached registry by default, so revoke/rotate take effect on the **next CONNECT**. Live MQTT sessions are not dropped (`/acl` is still allow-all). Bot-side `verifyMessage` may accept a revoked peer for up to the IdentityClient cache TTL (default 10s).
+
 ## 3. Two-plugin OpenClaw install
 
-Full bot-to-bot (receive **and** agent-initiated send on `coding` profile):
+CalVer `2026.7.29` is **not on npm yet** while packages still use monorepo `file:` deps. Install from this checkout after building:
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
-openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
+# from repo root
+(cd identity-node-client && npm ci && npm run build)
+(cd openclaw-extensions/mqtt-channel-plugin && npm run build)
+(cd openclaw-extensions/mqtt-tools-plugin && npm run build)
+
+openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-channel-plugin"
+openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-tools-plugin"
 ```
+
+After `file:` pins are replaced and tagged (see [`docs/VERSIONING.md`](docs/VERSIONING.md)), you can install published CalVer from npm instead.
 
 Enable plugin entries **`mqtt`** and **`mqtt-tools`** in gateway config. Restart:
 
 ```bash
 systemctl --user restart openclaw-gateway
-```
-
-**Channel only** (inbound + reply; initiation via core `message` if your profile has it):
-
-```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
 ```
 
 ### `channels.mqtt` config

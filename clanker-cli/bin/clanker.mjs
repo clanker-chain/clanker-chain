@@ -287,7 +287,13 @@ async function main() {
         "Ensure plugins.enabled includes \"mqtt\" and \"mqtt-tools\", and channels.mqtt has botId, operatorId, brokerUrl, chainRpcUrl, registryAddress.",
       );
       console.log(
-        "Install: openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29 && openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29",
+        "Install from this repo (2026.7.29 not on npm until file: pins are published — see VERSIONING.md):",
+      );
+      console.log(
+        "  openclaw plugins install <repo>/openclaw-extensions/mqtt-channel-plugin",
+      );
+      console.log(
+        "  openclaw plugins install <repo>/openclaw-extensions/mqtt-tools-plugin",
       );
       console.log("See SETUP.md — do not enable clanker-chain-identity or clanker-chain-mqtt.");
       process.exit(0);
@@ -312,7 +318,10 @@ async function main() {
     writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
     console.log(`Created ${cfgPath} with mqtt + mqtt-tools and a channels.mqtt stub.`);
     console.log(
-      "Next: openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29 && openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29",
+      "Next: build identity-node-client + plugins, then openclaw plugins install <path>/mqtt-channel-plugin and mqtt-tools-plugin (see SETUP.md).",
+    );
+    console.log(
+      "npm @2026.7.29 only after file: pins are replaced and tagged — see docs/VERSIONING.md.",
     );
     console.log("Then set botId / operatorId / broker URLs and mint a key via clanker chain mint-bot.");
     process.exit(0);

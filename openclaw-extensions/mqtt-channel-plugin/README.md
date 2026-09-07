@@ -9,11 +9,15 @@ OpenClaw **channel** plugin: MQTT pub/sub for bot-to-bot messaging (Clanker Chai
 
 ## Install
 
+CalVer `2026.7.29` is **not on npm yet** (monorepo still uses `file:` deps). From the clanker-chain repo root:
+
 ```bash
-docker compose run --rm openclaw-cli plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
+(cd identity-node-client && npm ci && npm run build)
+(cd openclaw-extensions/mqtt-channel-plugin && npm run build)
+openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-channel-plugin"
 ```
 
-Or from a release tarball / local path per your OpenClaw docs.
+After publish (see [`docs/VERSIONING.md`](../../docs/VERSIONING.md)): `openclaw plugins install @clanker-chain/mqtt-channel-plugin@<published-version>`.
 
 ### Plugin id (allowlist)
 
@@ -24,7 +28,8 @@ OpenClaw validates plugins by **manifest id**, not the npm package name. In `plu
 Agents on `tools.profile: "coding"` do not get the core **`message`** tool. To **initiate** signed outbound DMs (not only reply to inbound sessions), install the companion tool plugin:
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
+# from clanker-chain repo root (after building both packages — see SETUP.md)
+openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-tools-plugin"
 ```
 
 Enable plugin id **`mqtt-tools`** alongside **`mqtt`**. Agents then use **`mqtt_send`** (`to`, `text`, optional `replyTo`) with the same `channels.mqtt` config. See [`mqtt-tools-plugin/README.md`](../mqtt-tools-plugin/README.md).

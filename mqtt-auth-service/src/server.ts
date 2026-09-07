@@ -20,8 +20,9 @@ const REAPER_MS = 60_000;
 const NONCE_RATE_WINDOW_MS = 60_000;
 const NONCE_RATE_MAX =
   Number(process.env.MQTT_NONCE_RATE_MAX ?? Bun.env.MQTT_NONCE_RATE_MAX ?? 30) || 30;
-// Auth gate: default uncached so revoke / rotateBotKey take effect immediately.
-// Set REGISTRY_CACHE_TTL_MS>0 only if public RPC rate limits require it.
+// Auth gate: default uncached so revoke / rotateBotKey take effect on the next CONNECT.
+// Live sessions are not dropped (/acl allow-all). Set REGISTRY_CACHE_TTL_MS>0 only if
+// public RPC rate limits require it.
 const registryCacheParsed = Number(
   process.env.REGISTRY_CACHE_TTL_MS ?? Bun.env.REGISTRY_CACHE_TTL_MS ?? 0,
 );
@@ -34,9 +35,9 @@ const CHAIN_RPC_TIMEOUT_MS =
   Number(process.env.CHAIN_RPC_TIMEOUT_MS ?? Bun.env.CHAIN_RPC_TIMEOUT_MS ?? 3_000) ||
   3_000;
 
-if (!CHAIN_RPC_URL || !REGISTRY_ADDRESS?.startsWith("0x")) {
+if (!CHAIN_RPC_URL || !/^0x[0-9a-fA-F]{40}$/.test(REGISTRY_ADDRESS ?? "")) {
   console.error(
-    "mqtt-auth-service requires CHAIN_RPC_URL and REGISTRY_ADDRESS (ClankerIdentity).",
+    "mqtt-auth-service requires CHAIN_RPC_URL and REGISTRY_ADDRESS (0x + 40 hex, ClankerIdentity).",
   );
   process.exit(1);
 }

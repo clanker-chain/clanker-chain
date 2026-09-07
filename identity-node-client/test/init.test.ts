@@ -186,3 +186,41 @@ test("signMessage works after init with domain override", async () => {
   });
   assert.ok(signed.signature.startsWith("0x"));
 });
+
+test("constructor throws without chainRpcUrl and registryAddress", async () => {
+  const prevRpc = process.env.CHAIN_RPC_URL;
+  const prevBase = process.env.BASE_SEPOLIA_RPC_URL;
+  const prevReg = process.env.REGISTRY_ADDRESS;
+  delete process.env.CHAIN_RPC_URL;
+  delete process.env.BASE_SEPOLIA_RPC_URL;
+  delete process.env.REGISTRY_ADDRESS;
+  try {
+    assert.throws(
+      () =>
+        new IdentityClient({
+          botId: BOT_ID,
+          operatorId: OPERATOR_ID,
+          ethPrivateKey: TEST_KEY,
+        }),
+      /chainRpcUrl \+ registryAddress/i,
+    );
+    assert.throws(
+      () =>
+        new IdentityClient({
+          botId: BOT_ID,
+          operatorId: OPERATOR_ID,
+          ethPrivateKey: TEST_KEY,
+          chainRpcUrl: "http://127.0.0.1:8545",
+          registryAddress: "0xgg" as Address,
+        }),
+      /0x \+ 40 hex/i,
+    );
+  } finally {
+    if (prevRpc !== undefined) process.env.CHAIN_RPC_URL = prevRpc;
+    else delete process.env.CHAIN_RPC_URL;
+    if (prevBase !== undefined) process.env.BASE_SEPOLIA_RPC_URL = prevBase;
+    else delete process.env.BASE_SEPOLIA_RPC_URL;
+    if (prevReg !== undefined) process.env.REGISTRY_ADDRESS = prevReg;
+    else delete process.env.REGISTRY_ADDRESS;
+  }
+});

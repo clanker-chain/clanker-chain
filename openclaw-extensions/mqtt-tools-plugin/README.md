@@ -12,12 +12,17 @@ OpenClaw **tool** plugin for agent-initiated signed bot-to-bot MQTT direct messa
 
 ## Install
 
+CalVer `2026.7.29` is **not on npm yet**. From the clanker-chain repo root:
+
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
-openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
+(cd identity-node-client && npm ci && npm run build)
+(cd openclaw-extensions/mqtt-channel-plugin && npm run build)
+(cd openclaw-extensions/mqtt-tools-plugin && npm run build)
+openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-channel-plugin"
+openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-tools-plugin"
 ```
 
-`mqtt-tools` depends on **`@clanker-chain/mqtt-node-client@2026.5.25-2`** (`publishAck`, `clean` session, `poll()` fix). Publish mqtt-node-client **before** mqtt-tools/channel. Manual `npm install` must not pin **2026.5.23** mqtt-node-client.
+After publish (see [`docs/VERSIONING.md`](../../docs/VERSIONING.md)): install the published CalVer from npm. `mqtt-tools` depends on **`@clanker-chain/mqtt-node-client@2026.5.25-2`**.
 
 Enable both plugin ids in gateway config (`mqtt` and `mqtt-tools`), configure `channels.mqtt`, then restart the gateway:
 

@@ -2,7 +2,7 @@
 
 Shortcuts for building, inspecting, and running the OpenClaw stack so you don’t have to remember long `docker compose exec` commands.
 
-**Plugins:** install with `openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29` and `@clanker-chain/mqtt-tools@2026.7.29` — see [`SETUP.md`](../../SETUP.md). Do not use the old GitHub-asset / `IDENTITY_ASSET_ID` bake-in path.
+**Plugins:** install from a clanker-chain checkout (see [`SETUP.md`](../../SETUP.md)). CalVer `2026.7.29` is not on npm until `file:` pins are published — see [`VERSIONING.md`](../../docs/VERSIONING.md). Do not use the old GitHub-asset / `IDENTITY_ASSET_ID` bake-in path.
 
 ## Setup
 

@@ -187,7 +187,7 @@ Per the [OpenClaw Skills docs](https://www.learnclawdbot.org/docs/tools/skills):
 - A **skill** is a directory with a `SKILL.md` manifest that describes tools/commands.
 - Skills can be workspace skills (e.g. `skills/identity` in this repo) or plugin-provided skills.
 
-Use `@clanker-chain/identity-node-client@2026.7.29` (not the deprecated `@clanker-chain/identity-plugin`).
+Use `@clanker-chain/identity-node-client` from this repo or a published CalVer after release (not the deprecated `@clanker-chain/identity-plugin`).
 
 ---
 
