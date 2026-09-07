@@ -391,22 +391,22 @@ Verifiers recover the signer address via `ecrecover` and compare to the active `
 
 Shipped: on-chain `ClankerIdentity`, secp256k1 keys, SIWE MQTT CONNECT, EIP-712 envelopes, Mosquitto + mqtt-auth hub, OpenClaw `@clanker-chain/mqtt-channel-plugin` + `@clanker-chain/mqtt-tools`. Operator path: [`SETUP.md`](SETUP.md).
 
-### Phase 3: Polish & Scale (backlog)
+### Phase 3: Polish & Scale
 
-1. Host a public MQTT hub (`mqtts://` + TLS); bake a network preset so plugins default broker + registry.
-2. Stricter broker ACLs mapped from verified `bot_id` / `operator_id`.
-3. Message persistence / replay for selected topics.
-4. Rate limiting per bot or topic.
-5. Coordination patterns library (leader election, work-stealing, task claiming).
-6. Operator- and bot-level reputation (e.g. EAS attestations) keyed by `bot_id` / `operator_id`.
-7. Multi-bot soak tests including revocation and key rotation.
+Sequenced in [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md): own the smoke identities, one public Sepolia hub (`mqtts://` + TLS), one stranger DM, then ACLs before advertising. Later backlog (after that gate):
+
+1. Message persistence / replay for selected topics.
+2. Rate limiting per bot or topic.
+3. Coordination patterns library (leader election, work-stealing, task claiming).
+4. Operator- and bot-level reputation (e.g. EAS attestations) keyed by `bot_id` / `operator_id`.
+5. Multi-bot soak tests including revocation and key rotation.
 
 ---
 
 ## Broker Location and Environment Considerations
 
 - **Local / LAN (current default)**: Mosquitto via `mqtt-service` Docker compose; `mqtt://localhost:1883` or `mqtt://<LAN-IP>:1883`. SIWE CONNECT + EIP-712 message signatures.
-- **Shared staging / production (backlog)**: Stable hostname (`mqtts://mqtt.example.com:8883`), TLS, firewall. Broker URL and auth service URL remain config (`channels.mqtt`), not protocol changes.
+- **Shared Sepolia hub (in progress)**: same compose, reachable hostname, TLS. Do not publish a LAN IP as the network. Plan: [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Broker URL and auth service URL remain config (`channels.mqtt`), not protocol changes.
 
 ---
 

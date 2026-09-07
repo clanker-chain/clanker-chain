@@ -50,7 +50,7 @@ Pin **exact** CalVer (including micro when used):
 "@clanker-chain/mqtt-tools": "2026.7.29"
 ```
 
-Before tagging channel/tools, replace any `file:` pins on `identity-node-client` with the published CalVer above. Until then, install plugins from a local checkout (see [`SETUP.md`](../SETUP.md)) — do **not** run `openclaw plugins install @…@2026.7.29` against npm.
+`2026.7.29` is on npm with exact CalVer pins (no `file:`). Install with `openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29` and `@clanker-chain/mqtt-tools@2026.7.29` (see [`SETUP.md`](../SETUP.md)). For a later same-day fix, use a micro suffix (`2026.7.29-1`).
 
 ## Publish order
 
