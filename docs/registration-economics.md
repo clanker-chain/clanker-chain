@@ -74,7 +74,7 @@ Decide these against a shared Sepolia hub, not against LAN smoke. Sequence: [`pu
 
 - **Namespace policy:** FCFS with fees vs reserving `org.openclaw.*` at genesis vs ENS-gated operators. Genesis requires a **new** registry — choose before inviting strangers if Sepolia should look like mainnet.
 - **Mainnet fee amounts:** set from observed Sepolia mint / revoke / repeat on the public hub.
-- **`feeRecipient`:** Safe multisig recommended from day one on mainnet; must accept plain ETH (see deploy invariant above). Anvil `0xf39F…` is smoke-only.
+- **`feeRecipient`:** Safe multisig recommended from day one on mainnet; must accept plain ETH (see deploy invariant above). Live Sepolia `feeRecipient` is Foundry `0x07e8…` (not Anvil; Anvil `0xf39F…` is local-dev only).
 
 ## CLI
 

@@ -1,0 +1,27 @@
+# Public auth front: only /nonce and /health. /auth and /acl stay on the Docker network.
+mqtt-auth.clanker-chain.com {
+	tls /etc/letsencrypt/live/mqtt.clanker-chain.com/fullchain.pem /etc/letsencrypt/live/mqtt.clanker-chain.com/privkey.pem
+
+	handle /nonce* {
+		reverse_proxy mqtt-auth:9090
+	}
+	handle /health* {
+		reverse_proxy mqtt-auth:9090
+	}
+	handle {
+		respond "Not Found" 404
+	}
+}
+
+# MQTT hostname: ACME webroot + placeholder (broker is mqtts on :8883, not HTTPS).
+mqtt.clanker-chain.com {
+	tls /etc/letsencrypt/live/mqtt.clanker-chain.com/fullchain.pem /etc/letsencrypt/live/mqtt.clanker-chain.com/privkey.pem
+
+	handle /.well-known/acme-challenge/* {
+		root * /var/www/certbot
+		file_server
+	}
+	handle {
+		respond "clanker-chain mqtt hub" 200
+	}
+}

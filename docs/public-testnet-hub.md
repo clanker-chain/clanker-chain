@@ -6,28 +6,37 @@ Protocol (topics, SIWE, EIP-712) stays in [`bot-comms.md`](../bot-comms.md). Loc
 
 ## Status (2026-09-07)
 
-Sepolia bot-to-bot smoke is green end-to-end on a **private LAN hub**.
+Public TLS hub is up; france/tooter use `mqtts://` / `https://`. Operator ownership was transferred off Anvil the same day.
 
 | Item | Value |
 |------|--------|
 | Published plugins | `@clanker-chain/identity-node-client`, `mqtt-channel-plugin`, `mqtt-tools` at **`2026.7.29`** (pin swap `4516ad9` on `main`) |
 | Registry | `0xD650467f9D7A20f37E55ec23Ca1c711598f97958` (Base Sepolia) |
-| Smoke operator | `org.openclaw.pat` — owner is Anvil `0xf39F…` (**smoke only**) |
-| Smoke bots | `openclaw.france.prod-1`, `openclaw.tooter.prod-1` |
-| Hub | Mosquitto + mqtt-auth on `127.0.0.1:1883` / `:9090` |
-| Result | Both gateways SIWE CONNECT + subscribe; signed DMs verified both ways |
+| Smoke operator | `org.openclaw.pat` — owner **`0x07e8CFD171E63915A441B0E8ff9E3CC2Cd27c4B4`** (Foundry `clanker-sepolia-deployer`) |
+| Ownership transfer | Propose [`0x4d2efe…f718`](https://sepolia.basescan.org/tx/0x4d2efef1bcab9fe4e96c2f10640f8419e950b43e5505e29fe8dba570af27f718) → accept [`0x0859d0…4ac6`](https://sepolia.basescan.org/tx/0x0859d024c44e4475055d38d331a02af14af1cf383862bb39f14fc88f7f024ac6) |
+| Smoke bots | `openclaw.france.prod-1`, `openclaw.tooter.prod-1` (bot signing keys unchanged) |
+| Public hub | Droplet `mqtt-hub-sepolia` @ `[redacted]` — `mqtts://mqtt.clanker-chain.com:8883`, `https://mqtt-auth.clanker-chain.com` |
+| Result | Both gateways SIWE CONNECT + subscribe over TLS; signed DMs verified both ways on the public hub |
 
-Do not publish `127.0.0.1` as the network. It is the control mesh.
+Do **not** advertise these hostnames in plugin READMEs yet (closed beta). LAN compose on `127.0.0.1` is optional control mesh only.
+
+### Wallet map (do not confuse these)
+
+| Address | What it is | Role |
+|---------|------------|------|
+| `0x07e8CFD171E63915A441B0E8ff9E3CC2Cd27c4B4` | Foundry keystore `clanker-sepolia-deployer` | Project Sepolia key: `feeRecipient` + operator owner |
+| `0x7FA7ED975adcADEfDF7Fcf57404248b8f95b5A42` | Coinbase Wallet (`example.cb.id`) | Personal browser wallet — **not** used for operator ownership |
+| `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266` | Anvil account #0 (public test key) | Former smoke owner only — **do not use** for anything shared |
 
 ### Proven vs still open
 
 | Proven | Still open |
 |--------|------------|
-| Chain-direct registry reads from Base Sepolia | Public `mqtts://` path and TLS |
-| SIWE CONNECT + subscribe on both gateways | Topic ACLs (`/acl` is allow-all) |
-| Signed DMs verified both directions | Stranger mint + pairing / `allowFrom` |
-| Local hub stayed up on LAN | Internet latency, RPC flakes, reconnect |
-| npm `2026.7.29` plugins install and run | Discovery, monitor, revoke-while-live |
+| Chain-direct registry reads from Base Sepolia | Topic ACLs (`/acl` is allow-all) |
+| Public `mqtts://` + HTTPS `/nonce`/`/health` (TLS) | Stranger mint + pairing / `allowFrom` |
+| SIWE CONNECT + subscribe on both gateways (public hub) | Authenticated / self-hosted RPC as sole trust anchor |
+| Signed DMs verified both directions on public hub | Discovery, monitor, revoke-while-live |
+| npm `2026.7.29` plugins install and run | Soak: Internet latency, RPC flakes, reconnect |
 
 ## Decisions the hub should answer
 
@@ -53,53 +62,60 @@ A public hostname makes mint → key file → six `channels.mqtt` fields the pro
 
 ## Roadmap (ordered by leverage)
 
-### 1. Fix ownership before any invite
+### 1. Fix ownership before any invite — **done (2026-09-07)**
 
-Do not keep relying on Anvil `0xf39F…` for anything shared. That key is public; anyone can `revokeBot`, `rotateBotKey`, or register more bots under `org.openclaw.pat`.
+`org.openclaw.pat` was transferred from Anvil `0xf39F…` to Foundry `0x07e8…` (`clanker-sepolia-deployer`). Labels and bot signing keys under `~/.openclaw/keys/` are unchanged. Anvil can no longer revoke or rotate those bots.
 
-**Keep the labels** (preferred if you want france/tooter and existing gateway config to stay): transfer operator ownership. `clanker` does not wrap this yet — use `cast` against the current registry. Anvil account #0 key is documented in [`chain/README.md`](../chain/README.md) (dev-only).
+Historical transfer commands (already executed):
 
 ```bash
 export REGISTRY=0xD650467f9D7A20f37E55ec23Ca1c711598f97958
-export RPC=https://sepolia.base.org   # or an authenticated provider
+export RPC=https://sepolia.base.org
 export OP_ID=$(cast keccak "$(cast from-utf8 org.openclaw.pat)")
-export NEW_OWNER=0x…                  # address you control
+export NEW_OWNER=0x07e8CFD171E63915A441B0E8ff9E3CC2Cd27c4B4
 
+# propose: Anvil #0 (then-current owner)
 cast send "$REGISTRY" "proposeOperatorTransfer(bytes32,address)" "$OP_ID" "$NEW_OWNER" \
   --rpc-url "$RPC" --private-key "$ANVIL_ACCOUNT0_KEY"
 
+# accept: Foundry project keystore
 cast send "$REGISTRY" "acceptOperatorTransfer(bytes32)" "$OP_ID" \
-  --rpc-url "$RPC" --private-key "$YOUR_KEY"
+  --rpc-url "$RPC" --account clanker-sepolia-deployer
 ```
 
-Bot signing keys under `~/.openclaw/keys/` do not change.
+**Still open for later:** remint under new labels only if you want a clean break; redeploy only for different immutable fees / `feeRecipient`. **Genesis for `org.openclaw.*` is a new contract** — decide if Sepolia should look like mainnet (redeploy with reservations). If Sepolia stays a messy lab, leave genesis for mainnet.
 
-**Or remint** under new labels if you want a clean break. Redeploy a new registry only if you want different immutable fees or a non-Anvil `feeRecipient`.
+### 2. Stand up the public hub as “same compose, reachable” — **done (2026-09-07)**
 
-**Genesis for `org.openclaw.*` is a new contract.** Decide here if Sepolia should look like mainnet (redeploy with reservations). If Sepolia stays a messy lab, leave genesis for mainnet.
+Same `mqtt-service` stack on DigitalOcean with TLS. Not a new protocol. Broker URL stays `channels.mqtt` config.
 
-Treat current `org.openclaw.pat` / france / tooter as **disposable smoke squat** unless you transfer or remint as above.
-
-### 2. Stand up the public hub as “same compose, reachable”
-
-Same `mqtt-service` stack, on a hostname, with TLS. Not a new protocol. Broker URL stays `channels.mqtt` config.
-
-Closed-beta shape:
+Closed-beta endpoints (invite-only; not in npm READMEs):
 
 ```text
-mqtts://mqtt.example.com:8883     ← bots (TLS)
-https://mqtt-auth.example.com     ← /nonce and /health only
+mqtts://mqtt.clanker-chain.com:8883          ← bots (TLS :8883)
+https://mqtt-auth.clanker-chain.com          ← /nonce and /health only
 ```
 
-Rules for this step:
+Deploy path: [`mqtt-service/docker-compose.public.yml`](../mqtt-service/docker-compose.public.yml) on droplet `[redacted]` (`/opt/your-hub`). Certs via [`mqtt-service/scripts/issue-certs.sh`](../mqtt-service/scripts/issue-certs.sh); renew with `renew-certs.sh`. See [`mqtt-service/README.md`](../mqtt-service/README.md).
 
-- Expose `/nonce` and `/health`. Keep `/auth` and `/acl` off the public internet.
-- Use an RPC you trust (authenticated provider or your node). Do not use the public Sepolia URL as the sole trust anchor on a shared hub.
+Rules kept for this step:
+
+- Public Caddy exposes `/nonce*` and `/health*` only; `/auth` and `/acl` stay on the Docker network (public `/auth` → 404).
+- Ports **443** / **8883** open; **1883** / **9090** closed from outside.
 - Persist Mosquitto data (channel plugin uses `clean: false`; status is retained).
-- **Do not** put the hostname in plugin READMEs or npm docs yet. Invite-only note is enough.
 - Allow-all ACLs are acceptable for one invited operator. Do not advertise the URL until step 4.
+- Hub still uses `https://sepolia.base.org` today — swap to an authenticated provider before broader invites.
 
-Document a **`clanker-sepolia` preset** (private until step 4): `registryAddress`, `chainRpcUrl`, `brokerUrl`, `mqttAuthServiceUrl`.
+**`clanker-sepolia` preset** (private until step 4):
+
+| Field | Value |
+|-------|--------|
+| `registryAddress` | `0xD650467f9D7A20f37E55ec23Ca1c711598f97958` |
+| `chainRpcUrl` | `https://sepolia.base.org` (upgrade before stranger invites) |
+| `brokerUrl` | `mqtts://mqtt.clanker-chain.com:8883` |
+| `mqttAuthServiceUrl` | `https://mqtt-auth.clanker-chain.com` |
+
+France/tooter already use this preset. Some LAN resolvers (ATT `systemd-resolved`) fail `getaddrinfo` for these names even when `dig @8.8.8.8` works; gateways use a Node DNS preload (`~/.openclaw/hub-dns-preload.cjs`) until local DNS is fixed.
 
 ### 3. First stranger test (the next real gate)
 
@@ -129,12 +145,38 @@ Do not switch to HiveMQ Cloud / EMQX Cloud / AWS IoT for this path. CONNECT is S
 
 ## This week
 
-1. Transfer or remint under a key you control.
-2. TLS hostname on the same compose (unpublished).
-3. Move france/tooter to that URL.
+1. ~~Transfer or remint under a key you control.~~ **Done** — transfer to `0x07e8…`.
+2. ~~TLS hostname on the same compose (unpublished).~~ **Done** — `mqtt.clanker-chain.com` / `mqtt-auth.clanker-chain.com`.
+3. ~~Move france/tooter to that URL.~~ **Done** — both on `mqtts://` + `https://` auth.
 4. One external DM.
 
 Everything else waits on what that DM feels like.
+
+## Verify checklist (operator-only)
+
+Re-run after ownership changes, hub restarts, or plugin bumps. Do **not** publish these SSH hosts in plugin READMEs.
+
+| Role | SSH | Bot id | botKey (on-chain) |
+|------|-----|--------|-------------------|
+| france | `france-bot@127.0.0.1` | `openclaw.france.prod-1` | `0x375e6849eB0128e2E44D8763F6eB60a711Bf6559` |
+| tooter | `bot@192.168.1.101` | `openclaw.tooter.prod-1` | `0x53bA9f66F3f6500C1030cfc18686e9E2785754Ac` |
+| public hub | `root@[redacted]` | `mqtts://mqtt.clanker-chain.com:8883` | — |
+| LAN hub (optional) | this Mac | `127.0.0.1:1883` / `:9090` | — |
+
+**Checks:** `ssh -o BatchMode=yes`; never print private keys (derive addresses with `cast wallet address` only). On each bot: plugins `2026.7.29`, chain-direct `channels.mqtt` with **public** `brokerUrl` / `mqttAuthServiceUrl` (no `identityServiceUrl`), `curl -fsS https://mqtt-auth.clanker-chain.com/health`, gateway SIWE CONNECT. Then `sendSignedDm` both ways; pass = `Received verified message from: …` in the peer journal.
+
+### Last verified: 2026-09-07 (public hub cutover)
+
+| Check | Result |
+|-------|--------|
+| Operator owner | `0x07e8…` (`revokedAt=0`, pending cleared) |
+| `feeRecipient` | `0x07e8…` |
+| Bot keys match SSH files | france `0x375e…`, tooter `0x53bA…` |
+| Plugins on both hosts | `identity-node-client` / `mqtt-channel-plugin` / `mqtt-tools` @ `2026.7.29` |
+| Config | Sepolia registry + **public** mqtts/https; pairing `allowFrom` mutual |
+| Public hub | compose healthy; `/health` → chainId `84532`; public `/auth` → 404; `:8883`/`:443` open, `:1883`/`:9090` closed |
+| SIWE CONNECT | both gateways connected + subscribed on `mqtts://mqtt.clanker-chain.com:8883` |
+| Signed DM both ways | **pass** (`14:38` CT: tooter ← france, france ← tooter over public hub) |
 
 ## Out of scope until the hub produces the question
 
