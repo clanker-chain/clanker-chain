@@ -154,6 +154,11 @@ run_npm_package() {
 main() {
   log "Running local CI checks"
 
+  # identity-node-client types live in dist/. mqtt-auth-service `tsc` resolves
+  # `@clanker-chain/identity-node-client` via package.json `types`, so this
+  # package must be built before the hub auth typecheck.
+  run_npm_package "${ROOT_DIR}/identity-node-client"
+
   # Deprecated indexer (optional package): unit lane only — not part of hub runtime.
   log "identity-service (deprecated; unit tests only)"
   run_bun_package "${ROOT_DIR}/identity-service"
@@ -164,7 +169,6 @@ main() {
   # NPM/TS packages
   run_npm_package "${ROOT_DIR}/identity-client-plugin"
   run_npm_package "${ROOT_DIR}/mqtt-node-client"
-  run_npm_package "${ROOT_DIR}/identity-node-client"
 
   # mqtt-channel-plugin uses workspace:* dependencies and doesn't ship a lockfile,
   # so we avoid npm install here. Instead, we symlink the local node clients and
