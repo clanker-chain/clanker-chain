@@ -9,12 +9,20 @@
  *   node run.mjs sign '<envelope_json>'
  *   node run.mjs issue-mqtt-password
  *
- * Env: IDENTITY_SERVICE_URL, MQTT_AUTH_SERVICE_URL, BOT_ETH_PRIVATE_KEY (optional).
+ * Env: CHAIN_RPC_URL, REGISTRY_ADDRESS, MQTT_AUTH_SERVICE_URL, BOT_ETH_PRIVATE_KEY (optional).
+ * Minting is on-chain via clanker-cli (not this skill).
  */
 
 import { IdentityClient } from "@clanker-chain/identity-node-client";
 
 const [,, cmd, ...args] = process.argv;
+
+function chainEnv() {
+  return {
+    chain_rpc_url: process.env.CHAIN_RPC_URL ?? process.env.BASE_SEPOLIA_RPC_URL ?? null,
+    registry_address: process.env.REGISTRY_ADDRESS ?? null,
+  };
+}
 
 function usage() {
   console.error(`Usage:
@@ -23,6 +31,7 @@ function usage() {
   node run.mjs get-bot <bot_id>
   node run.mjs sign '<envelope_json>'
   node run.mjs issue-mqtt-password <bot_id> <operator_id>
+Env: CHAIN_RPC_URL, REGISTRY_ADDRESS (required for IdentityClient)
 `);
 }
 
@@ -41,7 +50,6 @@ async function main() {
         process.exit(1);
       }
       const client = new IdentityClient({ botId, operatorId });
-      const identityServiceUrl = process.env.IDENTITY_SERVICE_URL ?? "http://localhost:8080";
       await client.init();
       const bot = await client.getBot();
       const onchainKey = bot.public_keys?.find(
@@ -53,7 +61,7 @@ async function main() {
           ok: true,
           bot_id: botId,
           operator_id: operatorId,
-          identity_service_url: identityServiceUrl,
+          ...chainEnv(),
           bot_key: onchainKey,
           bot,
         }),
@@ -69,14 +77,13 @@ async function main() {
         process.exit(1);
       }
 
-      const identityServiceUrl = process.env.IDENTITY_SERVICE_URL ?? "http://localhost:8080";
       const client = new IdentityClient({ botId, operatorId });
 
       const result = {
         ok: false,
         bot_id: botId,
         operator_id: operatorId,
-        identity_service_url: identityServiceUrl,
+        ...chainEnv(),
         operator: { exists: false },
         bot: { exists: false },
         key: { matches: false, bot_key: undefined },

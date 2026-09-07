@@ -1,0 +1,11 @@
+{
+  "name": "@clanker-chain/chain",
+  "private": true,
+  "description": "Foundry package helpers for ClankerIdentity (local Anvil + Base Sepolia).",
+  "scripts": {
+    "test": "forge test -vvv",
+    "build": "forge build",
+    "deploy:local": "bash ./scripts/deploy.sh local",
+    "deploy:sepolia": "bash ./scripts/deploy.sh sepolia"
+  }
+}

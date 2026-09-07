@@ -2,8 +2,9 @@
 /**
  * Manual integration test: SIWE CONNECT + optional EIP-712 sign smoke test.
  *
- * Prerequisites: Anvil + identity-service (EVM), mqtt-auth-service, Mosquitto.
+ * Prerequisites: Anvil (or Sepolia RPC) + registry, mqtt-auth-service, Mosquitto.
  *
+ *   CHAIN_RPC_URL=http://127.0.0.1:8545 REGISTRY_ADDRESS=0x… \
  *   BOT_ETH_PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \
  *     node mqtt-service/test-connect.mjs
  */
@@ -12,13 +13,19 @@ import { IdentityClient } from "../identity-node-client/dist/index.js";
 import { MqttClient, topicForInbox, topicForAnnounce } from "../mqtt-node-client/dist/index.js";
 
 const brokerUrl = process.env.MQTT_BROKER_URL || "mqtt://localhost:1883";
-const identityUrl = process.env.IDENTITY_SERVICE_URL || "http://localhost:8080";
+const chainRpcUrl =
+  process.env.CHAIN_RPC_URL || process.env.BASE_SEPOLIA_RPC_URL || "http://127.0.0.1:8545";
+const registryAddress = process.env.REGISTRY_ADDRESS;
 const mqttAuthUrl = process.env.MQTT_AUTH_SERVICE_URL || "http://localhost:9090";
 
 async function main() {
+  if (!registryAddress?.startsWith("0x")) {
+    throw new Error("REGISTRY_ADDRESS is required");
+  }
   console.log("Testing MQTT connect with SIWE auth...");
   console.log("Broker:", brokerUrl);
-  console.log("Identity:", identityUrl);
+  console.log("RPC:", chainRpcUrl);
+  console.log("Registry:", registryAddress);
   console.log("MQTT auth:", mqttAuthUrl);
 
   const franceBotId = "openclaw.france.prod-1";
@@ -28,7 +35,8 @@ async function main() {
   const identityFrance = new IdentityClient({
     botId: franceBotId,
     operatorId: franceOperator,
-    identityServiceUrl: identityUrl,
+    chainRpcUrl,
+    registryAddress,
     mqttAuthServiceUrl: mqttAuthUrl,
     ethPrivateKey: process.env.BOT_ETH_PRIVATE_KEY,
   });
@@ -49,39 +57,21 @@ async function main() {
     message_id: `test-${Date.now()}`,
     body: { action: "test-connect" },
   };
-  const signed = await identityFrance.signMessage(envelope);
-  console.log("EIP-712 signature_scheme:", signed.signature_scheme);
 
-  const client = new MqttClient();
-  await client.connect({
+  const { signature, signature_scheme } = await identityFrance.signMessage(envelope);
+  console.log("Signed envelope scheme:", signature_scheme, "sig len:", signature.length);
+
+  const mqtt = new MqttClient();
+  await mqtt.connect({
     brokerUrl,
     clientId: franceBotId,
-    username: franceBotId,
     getPassword: () => identityFrance.issueMqttConnectPassword(),
   });
-  console.log("France bot connected.");
+  console.log("Connected OK");
 
-  await client.subscribe([topicForAnnounce(), "bots/#"]);
-  client.publishAnnounce({
-    ...envelope,
-    signature: signed.signature,
-    signature_scheme: signed.signature_scheme,
-  });
-  console.log("Published signed message to bots/all/announce.");
-
-  const tooterInbox = topicForInbox("tooter-bot");
-  client.publishToInbox("tooter-bot", {
-    ...envelope,
-    signature: signed.signature,
-    signature_scheme: signed.signature_scheme,
-  });
-  console.log("Published to", tooterInbox);
-
-  const messages = await client.poll(2000);
-  console.log("Poll received", messages.length, "message(s):", JSON.stringify(messages, null, 2));
-
-  await client.disconnect();
-  console.log("Done.");
+  await mqtt.subscribe([topicForInbox(franceBotId), topicForAnnounce()]);
+  await mqtt.disconnect();
+  console.log("Done");
 }
 
 main().catch((err) => {

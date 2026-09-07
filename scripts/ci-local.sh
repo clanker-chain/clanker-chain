@@ -154,14 +154,21 @@ run_npm_package() {
 main() {
   log "Running local CI checks"
 
-  # Bun packages (identity service + mqtt auth service)
+  # identity-node-client types live in dist/. mqtt-auth-service `tsc` resolves
+  # `@clanker-chain/identity-node-client` via package.json `types`, so this
+  # package must be built before the hub auth typecheck.
+  run_npm_package "${ROOT_DIR}/identity-node-client"
+
+  # Deprecated indexer (optional package): unit lane only — not part of hub runtime.
+  log "identity-service (deprecated; unit tests only)"
   run_bun_package "${ROOT_DIR}/identity-service"
+
+  # Hub auth (chain-direct RegistryClient)
   run_bun_package "${ROOT_DIR}/mqtt-auth-service"
 
   # NPM/TS packages
   run_npm_package "${ROOT_DIR}/identity-client-plugin"
   run_npm_package "${ROOT_DIR}/mqtt-node-client"
-  run_npm_package "${ROOT_DIR}/identity-node-client"
 
   # mqtt-channel-plugin uses workspace:* dependencies and doesn't ship a lockfile,
   # so we avoid npm install here. Instead, we symlink the local node clients and
@@ -217,10 +224,9 @@ main() {
     log "forge not on PATH — skipping ABI drift check."
   fi
 
-  # Anvil-backed integration lane (separate from the fast unit lane above).
+  # Anvil-backed integration lane (mqtt-auth SIWE against chain; no identity-service).
   if have_cmd forge && have_cmd anvil; then
     log "Running anvil-backed integration suites"
-    run_bun_integration "${ROOT_DIR}/identity-service"
     run_bun_integration "${ROOT_DIR}/mqtt-auth-service"
   elif [ "$CI_MODE" = "1" ]; then
     echo "ERROR: --ci requires Foundry (anvil + forge) for integration tests." >&2

@@ -1,6 +1,6 @@
 {
   "name": "mqtt-auth-service",
-  "version": "2026.5.23",
+  "version": "2026.7.29",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,6 +11,7 @@
     "test:integration": "bun test"
   },
   "dependencies": {
+    "@clanker-chain/identity-node-client": "file:../identity-node-client",
     "viem": "^2.21.0"
   },
   "devDependencies": {

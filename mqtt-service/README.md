@@ -4,17 +4,20 @@ Runs the MQTT broker (Mosquitto with HTTP auth plugin) and the mqtt-auth-service
 
 ## Prerequisites
 
-- Identity service (EVM mode) running and reachable.
+- Reachable chain RPC and deployed `ClankerIdentity` (`CHAIN_RPC_URL`, `REGISTRY_ADDRESS`).
 - Docker and Docker Compose.
 
 ## Configuration
 
-- **IDENTITY_SERVICE_URL**: URL of the identity service. Default `http://host.docker.internal:8080`.
+- **CHAIN_RPC_URL** — EVM RPC for mqtt-auth registry reads (e.g. `https://sepolia.base.org` or Anvil).
+- **REGISTRY_ADDRESS** — `ClankerIdentity` address (required).
 
 ## Run
 
 ```bash
 cd mqtt-service
+export CHAIN_RPC_URL=https://sepolia.base.org
+export REGISTRY_ADDRESS=0xD650467f9D7A20f37E55ec23Ca1c711598f97958
 docker compose build mqtt-auth && docker compose up -d
 ```
 
@@ -27,7 +30,8 @@ docker compose build mqtt-auth && docker compose up -d
 cd identity-node-client && npm run build
 cd ../mqtt-node-client && npm run build
 
-BOT_ETH_PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \
+CHAIN_RPC_URL=http://127.0.0.1:8545 REGISTRY_ADDRESS=0x… \
+  BOT_ETH_PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d \
   node mqtt-service/test-connect.mjs
 ```
 

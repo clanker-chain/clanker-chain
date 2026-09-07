@@ -22,7 +22,7 @@ export interface MqttMessageEnvelope {
 export interface MqttConnectOptions {
   brokerUrl: string;
   clientId: string;
-  /** Called to get the MQTT password (e.g. JWT from identity_issue_mqtt_token). */
+  /** Called to get the MQTT password (SIWE `<nonce>.<sigHex>` from IdentityClient). */
   getPassword: () => Promise<string>;
   /** Optional username; defaults to clientId. */
   username?: string;

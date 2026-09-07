@@ -63,8 +63,8 @@ export class MqttChannelProvider {
   private pollingPromise?: Promise<void>;
 
   constructor(config: MqttChannelConfig) {
-    if (!config.identityServiceUrl) {
-      throw new Error('MqttChannelProvider requires identityServiceUrl');
+    if (!config.chainRpcUrl || !config.registryAddress) {
+      throw new Error('MqttChannelProvider requires chainRpcUrl and registryAddress');
     }
 
     // Set defaults
@@ -96,7 +96,8 @@ export class MqttChannelProvider {
     this.identityClient = new IdentityClient({
       botId: config.botId,
       operatorId: config.operatorId,
-      identityServiceUrl: config.identityServiceUrl,
+      chainRpcUrl: config.chainRpcUrl,
+      registryAddress: config.registryAddress as `0x${string}`,
       mqttAuthServiceUrl: config.mqttAuthServiceUrl,
     });
 

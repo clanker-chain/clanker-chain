@@ -1,36 +1,42 @@
 version: "3.9"
 
+# Full stack example: OpenClaw gateway + real SIWE MQTT hub.
+# Requires REGISTRY_ADDRESS (and optionally CHAIN_RPC_URL). See README.md and SETUP.md.
 services:
   openclaw-gateway:
     image: openclaw/gateway:latest
-    environment:
-      - OPENCLAW_EXTENSIONS=clanker-chain-identity clanker-chain-mqtt
     volumes:
       - ./openclaw.json:/root/.openclaw/openclaw.json:ro
     depends_on:
-      - identity-service
-      - mqtt-broker
+      mqtt-broker:
+        condition: service_started
+      mqtt-auth:
+        condition: service_healthy
 
-  identity-service:
+  mqtt-auth:
     build:
-      context: ../../identity-service
+      context: ../..
+      dockerfile: mqtt-auth-service/Dockerfile
     environment:
-      - IDENTITY_SERVICE_PORT=8080
+      - CHAIN_RPC_URL=${CHAIN_RPC_URL:-https://sepolia.base.org}
+      - REGISTRY_ADDRESS=${REGISTRY_ADDRESS:?Set REGISTRY_ADDRESS}
+      - MQTT_AUTH_PORT=9090
     ports:
-      - "8080:8080"
+      - "9090:9090"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:9090/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 15s
+      retries: 3
+      start_period: 10s
 
   mqtt-broker:
-    image: eclipse-mosquitto:2
+    image: iegomez/mosquitto-go-auth:3.0.0-mosquitto_2.0.18
     ports:
       - "1883:1883"
-
-  mqtt-auth-service:
-    build:
-      context: ../../mqtt-auth-service
-    environment:
-      - IDENTITY_SERVICE_URL=http://identity-service:8080
-      - MQTT_BROKER_URL=mqtt://mqtt-broker:1883
+    volumes:
+      - ../../mqtt-service/mosquitto.conf:/etc/mosquitto/mosquitto.conf:ro
+      - ../../mqtt-service/conf.d/go-auth.conf:/etc/mosquitto/conf.d/go-auth.conf:ro
     depends_on:
-      - identity-service
-      - mqtt-broker
-
+      mqtt-auth:
+        condition: service_healthy

@@ -8,7 +8,8 @@ export type ResolvedMqttToolsConfig = {
   botId: string;
   operatorId: string;
   brokerUrl: string;
-  identityServiceUrl: string;
+  chainRpcUrl: string;
+  registryAddress: string;
   mqttAuthServiceUrl: string;
 };
 
@@ -17,6 +18,13 @@ export const CANONICAL_BOT_ID_PATTERN = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 export const MAX_BOT_ID_LENGTH = 128;
 export const MAX_MESSAGE_TEXT_BYTES = 32 * 1024;
 export const MAX_REPLY_TO_LENGTH = 256;
+
+/** Same bar as mqtt-auth / IdentityClient: 0x + 40 hex. */
+const REGISTRY_ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
+
+function isValidRegistryAddress(value: string): boolean {
+  return REGISTRY_ADDRESS_PATTERN.test(value);
+}
 
 type MqttSection = Record<string, unknown>;
 
@@ -68,7 +76,8 @@ export function resolveMqttToolsConfig(
       botId: "",
       operatorId: "",
       brokerUrl: "",
-      identityServiceUrl: "",
+      chainRpcUrl: "",
+      registryAddress: "",
       mqttAuthServiceUrl: "http://localhost:9090",
     };
   }
@@ -80,13 +89,22 @@ export function resolveMqttToolsConfig(
   const botId = readString(slice, "botId");
   const operatorId = readString(slice, "operatorId");
   const brokerUrl = readString(slice, "brokerUrl");
-  const identityServiceUrl = readString(slice, "identityServiceUrl");
+  const chainRpcUrl =
+    readString(slice, "chainRpcUrl") || readString(section, "chainRpcUrl");
+  const registryAddress =
+    readString(slice, "registryAddress") || readString(section, "registryAddress");
   const mqttAuthServiceUrl =
     readString(slice, "mqttAuthServiceUrl") ||
     readString(section, "mqttAuthServiceUrl") ||
     "http://localhost:9090";
 
-  const configured = Boolean(botId && operatorId && brokerUrl && identityServiceUrl);
+  const configured = Boolean(
+    botId &&
+      operatorId &&
+      brokerUrl &&
+      chainRpcUrl &&
+      isValidRegistryAddress(registryAddress),
+  );
   const userEnabled = topEnabled && sliceEnabled;
 
   return {
@@ -96,7 +114,8 @@ export function resolveMqttToolsConfig(
     botId,
     operatorId,
     brokerUrl,
-    identityServiceUrl,
+    chainRpcUrl,
+    registryAddress,
     mqttAuthServiceUrl,
   };
 }

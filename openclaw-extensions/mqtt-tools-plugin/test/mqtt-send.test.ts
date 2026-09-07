@@ -1,3 +1,4 @@
+/// <reference types="bun-types" />
 import { expect, test } from "bun:test";
 import { topicForInbox } from "@clanker-chain/mqtt-node-client";
 import {
@@ -23,7 +24,8 @@ const unconfiguredMqtt = {
   botId: "",
   operatorId: "",
   brokerUrl: "",
-  identityServiceUrl: "",
+  chainRpcUrl: "",
+  registryAddress: "",
   mqttAuthServiceUrl: "http://localhost:9090",
 };
 
@@ -60,7 +62,8 @@ test("resolveMqttToolsConfig reads flat channels.mqtt", () => {
         botId: "openclaw.france.prod-1",
         operatorId: "org.openclaw.pat",
         brokerUrl: "mqtt://192.168.1.197:1883",
-        identityServiceUrl: "http://192.168.1.197:8080",
+        chainRpcUrl: "http://127.0.0.1:8545",
+        registryAddress: "0x1234567890123456789012345678901234567890",
         mqttAuthServiceUrl: "http://192.168.1.197:9090",
       },
     },
@@ -84,7 +87,8 @@ test("resolveMqttToolsConfig reads accounts slice", () => {
             botId: "openclaw.france.prod-1",
             operatorId: "org.openclaw.pat",
             brokerUrl: "mqtt://broker:1883",
-            identityServiceUrl: "http://identity:8080",
+            chainRpcUrl: "http://127.0.0.1:8545",
+            registryAddress: "0x1234567890123456789012345678901234567890",
           },
         },
       },
@@ -107,7 +111,8 @@ test('resolveMqttToolsConfig "default" is unconfigured when only accounts.* exis
             botId: "openclaw.france.prod-1",
             operatorId: "org.openclaw.pat",
             brokerUrl: "mqtt://broker:1883",
-            identityServiceUrl: "http://identity:8080",
+            chainRpcUrl: "http://127.0.0.1:8545",
+            registryAddress: "0x1234567890123456789012345678901234567890",
           },
         },
       },
@@ -118,6 +123,60 @@ test('resolveMqttToolsConfig "default" is unconfigured when only accounts.* exis
   expect(resolveMqttToolsConfig(cfg, "france").configured).toBe(true);
 });
 
+test("resolveMqttToolsConfig not configured when chainRpcUrl is missing", () => {
+  const mqtt = resolveMqttToolsConfig({
+    channels: {
+      mqtt: {
+        enabled: true,
+        botId: "openclaw.france.prod-1",
+        operatorId: "org.openclaw.pat",
+        brokerUrl: "mqtt://broker:1883",
+        registryAddress: "0x1234567890123456789012345678901234567890",
+      },
+    },
+  });
+  expect(mqtt.configured).toBe(false);
+});
+
+test("resolveMqttToolsConfig not configured when registryAddress is empty", () => {
+  const mqtt = resolveMqttToolsConfig({
+    channels: {
+      mqtt: {
+        enabled: true,
+        botId: "openclaw.france.prod-1",
+        operatorId: "org.openclaw.pat",
+        brokerUrl: "mqtt://broker:1883",
+        chainRpcUrl: "http://127.0.0.1:8545",
+        registryAddress: "",
+      },
+    },
+  });
+  expect(mqtt.configured).toBe(false);
+});
+
+test("resolveMqttToolsConfig not configured when registryAddress is not 0x+40 hex", () => {
+  for (const bad of [
+    "not-an-address",
+    "0x1234",
+    "0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+    "1234567890123456789012345678901234567890",
+  ]) {
+    const mqtt = resolveMqttToolsConfig({
+      channels: {
+        mqtt: {
+          enabled: true,
+          botId: "openclaw.france.prod-1",
+          operatorId: "org.openclaw.pat",
+          brokerUrl: "mqtt://broker:1883",
+          chainRpcUrl: "http://127.0.0.1:8545",
+          registryAddress: bad,
+        },
+      },
+    });
+    expect(mqtt.configured).toBe(false);
+  }
+});
+
 test("resolveGatewayConfigFromToolContext reads api.config", () => {
   const gateway = {
     channels: {
@@ -126,7 +185,8 @@ test("resolveGatewayConfigFromToolContext reads api.config", () => {
         botId: "openclaw.france.prod-1",
         operatorId: "org.openclaw.pat",
         brokerUrl: "mqtt://192.168.1.197:1883",
-        identityServiceUrl: "http://192.168.1.197:8080",
+        chainRpcUrl: "http://127.0.0.1:8545",
+        registryAddress: "0x1234567890123456789012345678901234567890",
       },
     },
   };
@@ -173,7 +233,8 @@ test("sendSignedDm rejects oversized replyTo without going through index", async
         botId: "openclaw.france.prod-1",
         operatorId: "org.openclaw.pat",
         brokerUrl: "mqtt://broker:1883",
-        identityServiceUrl: "http://identity:8080",
+        chainRpcUrl: "http://127.0.0.1:8545",
+            registryAddress: "0x1234567890123456789012345678901234567890",
       },
       { to: "openclaw.tooter.prod-1", text: "hi", replyTo: longReply },
     ),
@@ -192,7 +253,8 @@ test("sendSignedDm rejects oversized text without going through index", async ()
         botId: "openclaw.france.prod-1",
         operatorId: "org.openclaw.pat",
         brokerUrl: "mqtt://broker:1883",
-        identityServiceUrl: "http://identity:8080",
+        chainRpcUrl: "http://127.0.0.1:8545",
+            registryAddress: "0x1234567890123456789012345678901234567890",
       },
       { to: "openclaw.tooter.prod-1", text: big },
     ),
@@ -225,7 +287,8 @@ test("sendSignedDm rejects disabled account", async () => {
         botId: "openclaw.france.prod-1",
         operatorId: "org.openclaw.pat",
         brokerUrl: "mqtt://broker:1883",
-        identityServiceUrl: "http://identity:8080",
+        chainRpcUrl: "http://127.0.0.1:8545",
+            registryAddress: "0x1234567890123456789012345678901234567890",
       },
       { to: "openclaw.tooter.prod-1", text: "hi" },
     ),
