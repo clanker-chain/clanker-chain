@@ -434,3 +434,56 @@ test("/health returns 503 when RPC is down", async () => {
   await mqttProc.exited;
   expect(saw503).toBe(true);
 });
+
+test("/auth returns 403 registry_unavailable when RPC is down", async () => {
+  if (siweSkip) {
+    console.log(`SKIP SIWE: ${siweSkip}`);
+    return;
+  }
+  // Distinct port range from /health down tests (25000+) to avoid collisions.
+  const port = 26000 + Math.floor(Math.random() * 500);
+  const mqttUrl = `http://127.0.0.1:${port}`;
+  const mqttProc = Bun.spawn(["bun", "run", "src/server.ts"], {
+    cwd: mqttAuthServiceDir,
+    stdout: "ignore",
+    stderr: "ignore",
+    env: {
+      ...process.env,
+      MQTT_AUTH_PORT: String(port),
+      CHAIN_RPC_URL: "http://127.0.0.1:1",
+      REGISTRY_ADDRESS: "0x1234567890123456789012345678901234567890",
+      REGISTRY_CACHE_TTL_MS: "0",
+      CHAIN_RPC_TIMEOUT_MS: "500",
+    },
+  });
+
+  const botId = "openclaw.mqtt.rpc-down";
+  let ready = false;
+  for (let i = 0; i < 40; i++) {
+    try {
+      const nRes = await fetch(`${mqttUrl}/nonce?bot_id=${encodeURIComponent(botId)}`);
+      if (nRes.status === 200) {
+        ready = true;
+        break;
+      }
+    } catch {
+      /* server not up yet */
+    }
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  expect(ready).toBe(true);
+
+  const nRes = await fetch(`${mqttUrl}/nonce?bot_id=${encodeURIComponent(botId)}`);
+  const { nonce, message } = (await nRes.json()) as { nonce: string; message: string };
+  const sig = await privateKeyToAccount(ANVIL_KEY_1).signMessage({ message });
+  const authRes = await fetch(`${mqttUrl}/auth`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ username: botId, password: `${nonce}.${sig}` }),
+  });
+  expect(authRes.status).toBe(403);
+  expect(await authRes.text()).toBe("registry_unavailable");
+
+  mqttProc.kill();
+  await mqttProc.exited;
+});

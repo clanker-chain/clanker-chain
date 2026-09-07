@@ -21,6 +21,13 @@ export type ResolvedMqttAccount = {
 
 type MqttSection = Record<string, unknown>;
 
+/** Same bar as mqtt-auth / IdentityClient: 0x + 40 hex. */
+const REGISTRY_ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
+
+function isValidRegistryAddress(value: string): boolean {
+  return REGISTRY_ADDRESS_PATTERN.test(value);
+}
+
 function getMqttSection(cfg: OpenClawConfig): MqttSection | undefined {
   const channels = cfg.channels as Record<string, unknown> | undefined;
   const mqtt = channels?.mqtt;
@@ -128,7 +135,11 @@ export function resolveMqttAccount(cfg: OpenClawConfig, accountId?: string | nul
   const pollIntervalMs = typeof pollRaw === 'number' && Number.isFinite(pollRaw) ? pollRaw : undefined;
 
   const configured = Boolean(
-    botId && operatorId && brokerUrl && chainRpcUrl && registryAddress,
+    botId &&
+      operatorId &&
+      brokerUrl &&
+      chainRpcUrl &&
+      isValidRegistryAddress(registryAddress),
   );
   const userEnabled = topEnabled && sliceEnabled;
 
@@ -155,7 +166,7 @@ export function isMqttAccountConfigured(account: ResolvedMqttAccount): boolean {
       account.operatorId &&
       account.brokerUrl &&
       account.chainRpcUrl &&
-      account.registryAddress,
+      isValidRegistryAddress(account.registryAddress),
   );
 }
 

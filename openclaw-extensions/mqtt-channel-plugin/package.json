@@ -13,10 +13,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "rm -rf dist",
-    "test": "bun test test/wire-format.test.ts test/deliver-policy.test.ts"
+    "test": "bun test test/wire-format.test.ts test/deliver-policy.test.ts test/accounts.test.ts"
   },
   "openclaw": {
-    "extensions": ["./dist/index.js"],
+    "extensions": [
+      "./dist/index.js"
+    ],
     "setupEntry": "./dist/setup-entry.js",
     "channel": {
       "id": "mqtt",
@@ -37,6 +39,7 @@
     "@clanker-chain/mqtt-node-client": "2026.5.25-2"
   },
   "devDependencies": {
+    "@types/bun": "^1.4.1",
     "@types/node": "^22.0.0",
     "typescript": "^5.9.3"
   }

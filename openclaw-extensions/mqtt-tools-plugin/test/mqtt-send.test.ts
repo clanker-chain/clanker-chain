@@ -1,3 +1,4 @@
+/// <reference types="bun-types" />
 import { expect, test } from "bun:test";
 import { topicForInbox } from "@clanker-chain/mqtt-node-client";
 import {
@@ -120,6 +121,60 @@ test('resolveMqttToolsConfig "default" is unconfigured when only accounts.* exis
 
   expect(resolveMqttToolsConfig(cfg, "default").configured).toBe(false);
   expect(resolveMqttToolsConfig(cfg, "france").configured).toBe(true);
+});
+
+test("resolveMqttToolsConfig not configured when chainRpcUrl is missing", () => {
+  const mqtt = resolveMqttToolsConfig({
+    channels: {
+      mqtt: {
+        enabled: true,
+        botId: "openclaw.france.prod-1",
+        operatorId: "org.openclaw.pat",
+        brokerUrl: "mqtt://broker:1883",
+        registryAddress: "0x1234567890123456789012345678901234567890",
+      },
+    },
+  });
+  expect(mqtt.configured).toBe(false);
+});
+
+test("resolveMqttToolsConfig not configured when registryAddress is empty", () => {
+  const mqtt = resolveMqttToolsConfig({
+    channels: {
+      mqtt: {
+        enabled: true,
+        botId: "openclaw.france.prod-1",
+        operatorId: "org.openclaw.pat",
+        brokerUrl: "mqtt://broker:1883",
+        chainRpcUrl: "http://127.0.0.1:8545",
+        registryAddress: "",
+      },
+    },
+  });
+  expect(mqtt.configured).toBe(false);
+});
+
+test("resolveMqttToolsConfig not configured when registryAddress is not 0x+40 hex", () => {
+  for (const bad of [
+    "not-an-address",
+    "0x1234",
+    "0xGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+    "1234567890123456789012345678901234567890",
+  ]) {
+    const mqtt = resolveMqttToolsConfig({
+      channels: {
+        mqtt: {
+          enabled: true,
+          botId: "openclaw.france.prod-1",
+          operatorId: "org.openclaw.pat",
+          brokerUrl: "mqtt://broker:1883",
+          chainRpcUrl: "http://127.0.0.1:8545",
+          registryAddress: bad,
+        },
+      },
+    });
+    expect(mqtt.configured).toBe(false);
+  }
 });
 
 test("resolveGatewayConfigFromToolContext reads api.config", () => {

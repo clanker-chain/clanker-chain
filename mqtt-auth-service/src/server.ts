@@ -276,7 +276,7 @@ const server = Bun.serve({
 
     if (path === "/health" || path === "/") {
       try {
-        // Uncached eth_chainId + eth_blockNumber — getChainId() alone is memoized.
+        // Uncached chainId + blockNumber + botFee() — confirms REGISTRY_ADDRESS is callable.
         const { chainId, blockNumber } = await registry.probeRpc();
         return json(200, {
           ok: true,

@@ -19,6 +19,13 @@ export const MAX_BOT_ID_LENGTH = 128;
 export const MAX_MESSAGE_TEXT_BYTES = 32 * 1024;
 export const MAX_REPLY_TO_LENGTH = 256;
 
+/** Same bar as mqtt-auth / IdentityClient: 0x + 40 hex. */
+const REGISTRY_ADDRESS_PATTERN = /^0x[0-9a-fA-F]{40}$/;
+
+function isValidRegistryAddress(value: string): boolean {
+  return REGISTRY_ADDRESS_PATTERN.test(value);
+}
+
 type MqttSection = Record<string, unknown>;
 
 function getMqttSection(cfg: OpenClawConfig): MqttSection | undefined {
@@ -92,7 +99,11 @@ export function resolveMqttToolsConfig(
     "http://localhost:9090";
 
   const configured = Boolean(
-    botId && operatorId && brokerUrl && chainRpcUrl && registryAddress,
+    botId &&
+      operatorId &&
+      brokerUrl &&
+      chainRpcUrl &&
+      isValidRegistryAddress(registryAddress),
   );
   const userEnabled = topEnabled && sliceEnabled;
 
