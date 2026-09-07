@@ -5,17 +5,19 @@ Install the clanker-chain MQTT plugins into OpenClaw and wire `channels.mqtt`.
 ## Prerequisites
 
 - OpenClaw available on PATH (or via Docker `openclaw-cli`)
-- A reachable MQTT hub (Mosquitto + mqtt-auth) and `ClankerIdentity` registry — see [`SETUP.md`](../SETUP.md)
-- This repo checked out (plugins are not published at CalVer `2026.7.29` until `file:` pins are replaced — see [`VERSIONING.md`](VERSIONING.md))
+- A reachable MQTT hub (Mosquitto + mqtt-auth) and `ClankerIdentity` registry — see [`SETUP.md`](../SETUP.md). Shared Sepolia hub: [`public-testnet-hub.md`](public-testnet-hub.md).
+- Plugins at CalVer `2026.7.29` on npm (or this checkout — see [`VERSIONING.md`](VERSIONING.md))
 
-## 1. Install the plugins (from this checkout)
+## 1. Install the plugins
 
 ```bash
-# from clanker-chain repo root
-(cd identity-node-client && npm ci && npm run build)
-(cd openclaw-extensions/mqtt-channel-plugin && npm run build)
-(cd openclaw-extensions/mqtt-tools-plugin && npm run build)
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
+```
 
+From this checkout instead (after building `identity-node-client` and both plugin dirs):
+
+```bash
 openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-channel-plugin"
 openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-tools-plugin"
 ```

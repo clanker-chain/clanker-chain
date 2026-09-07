@@ -1,6 +1,8 @@
 # clanker-chain MQTT & Identity Setup
 
-Blockchain identity cutover (CalVer `2026.7.29`+ in-repo): bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
+Blockchain identity cutover (CalVer `2026.7.29`+): bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
+
+Default hub is **local / LAN**. A shared Sepolia hostname is planned — see [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not treat a LAN IP as the public network.
 
 ## Stack overview
 
@@ -49,19 +51,21 @@ On a slow public RPC (e.g. documented Sepolia default), set `CHAIN_RPC_TIMEOUT_M
 
 ## 3. Two-plugin OpenClaw install
 
-CalVer `2026.7.29` is **not on npm yet** while packages still use monorepo `file:` deps. Install from this checkout after building:
+CalVer **`2026.7.29`** is on npm. Prefer published packages:
 
 ```bash
-# from repo root
-(cd identity-node-client && npm ci && npm run build)
-(cd openclaw-extensions/mqtt-channel-plugin && npm run build)
-(cd openclaw-extensions/mqtt-tools-plugin && npm run build)
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
+```
 
+To install from this checkout instead (after `npm ci && npm run build` in `identity-node-client` and both plugin dirs):
+
+```bash
 openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-channel-plugin"
 openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-tools-plugin"
 ```
 
-After `file:` pins are replaced and tagged (see [`docs/VERSIONING.md`](docs/VERSIONING.md)), you can install published CalVer from npm instead.
+See [`docs/VERSIONING.md`](docs/VERSIONING.md) for publish order.
 
 Enable plugin entries **`mqtt`** and **`mqtt-tools`** in gateway config. Restart:
 

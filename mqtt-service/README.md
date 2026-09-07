@@ -21,7 +21,7 @@ export REGISTRY_ADDRESS=0xD650467f9D7A20f37E55ec23Ca1c711598f97958
 docker compose build mqtt-auth && docker compose up -d
 ```
 
-- Broker: `mqtt://localhost:1883`
+- Broker: `mqtt://localhost:1883` (LAN / local default; public `mqtts://` hub: [`docs/public-testnet-hub.md`](../docs/public-testnet-hub.md))
 - Auth service: `http://localhost:9090`
 
 ## Test connect

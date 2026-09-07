@@ -24,6 +24,7 @@ Full steps: [`SETUP.md`](SETUP.md). Plugin details: [`openclaw-extensions/mqtt-c
 ## Reference
 
 - Protocol (topics, envelope, signing): [`bot-comms.md`](bot-comms.md)
+- Public Sepolia hub roadmap: [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md)
 - Registration fees: [`docs/registration-economics.md`](docs/registration-economics.md)
 - CalVer / publish order: [`docs/VERSIONING.md`](docs/VERSIONING.md)
 - Optional identity skill for agents: [`skills/identity/`](skills/identity/) (wraps `identity-node-client`; prefer the channel + tools plugins for messaging)
