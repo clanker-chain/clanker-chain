@@ -187,9 +187,9 @@ docker compose build mqtt-auth && docker compose up -d
 
 The in-repo `identity-service` indexer is **deprecated** (optional local explorer). See [`SETUP.md`](../SETUP.md) and [`identity-service/DEPRECATED.md`](../identity-service/DEPRECATED.md).
 
-See [`docs/blockchain-identity-plan.md`](../docs/blockchain-identity-plan.md) for historical migration notes.
+See [`docs/archive/blockchain-identity-plan.md`](../docs/archive/blockchain-identity-plan.md) for historical migration notes.
 
 ## Repo integration
 
 - CI runs `forge test` in `chain/` when `forge` is available (see [`scripts/ci-local.sh`](../scripts/ci-local.sh)).
-- High-level roadmap: [`docs/blockchain-identity-plan.md`](../docs/blockchain-identity-plan.md).
+- Historical roadmap (archive): [`docs/archive/blockchain-identity-plan.md`](../docs/archive/blockchain-identity-plan.md).

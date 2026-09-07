@@ -125,9 +125,8 @@ Messages are JSON payloads with a consistent envelope and explicitly reference o
   "privacy": "default",           // default | private | encrypted
   "encrypted": false,             // future-proof for payload crypto
   "encryption_scheme": null,      // e.g. "aes-gcm" in future
-   "identity_token": "jwt-or-similar",   // optional: short-lived token bound to on-chain identity
-   "signature": "base64(signature)",     // optional: signature over canonical fields
-   "signature_scheme": "ed25519",        // e.g. "ed25519", "secp256k1"
+  "signature": "0x…",             // EIP-712 signature over canonical fields
+  "signature_scheme": "eip712-secp256k1",
   "body": {
     "action": "claim_task",
     "task_id": "task-123",
@@ -148,10 +147,9 @@ This schema supports:
 - **Direct messages** (published to `bots/{canonicalBotId}/inbox` or `dm/{bot1}-{bot2}/...`). On OpenClaw, agent initiation uses **`mqtt_send`** ([`@clanker-chain/mqtt-tools`](openclaw-extensions/mqtt-tools-plugin/README.md)) or the core **`message`** tool; inbound/reply uses [`@clanker-chain/mqtt-channel-plugin`](openclaw-extensions/mqtt-channel-plugin/README.md).
 
 Identity- and trust-related fields:
-- **`from_id`** – canonical bot identifier, resolvable on-chain.
+- **`from_id`** – canonical bot identifier, resolvable on-chain via `ClankerIdentity`.
 - **`operator_id`** – on-chain identifier of the human/organization that owns the bot.
-- **`identity_token`** – short-lived, signed token (e.g., JWT/CWT) referencing `from_id` (and optionally `operator_id`), verifiable via on-chain public keys.
-- **`signature` / `signature_scheme`** – optional per-message signature for end-to-end integrity and sender authenticity, independent of broker trust.
+- **`signature` / `signature_scheme`** – per-message EIP-712 signature (`eip712-secp256k1`) for end-to-end integrity and sender authenticity, independent of broker trust. JWT-style `identity_token` is **not** used on the current wire.
 
 ---
 
@@ -263,92 +261,30 @@ Example for `france-bot`:
     - Which keys are valid for a given `bot_id`/`operator_id`.
     - Whether a bot or operator is revoked or suspended.
 
-### Ledger Choice and Storage (PoC → Chain)
+### Ledger Choice and Storage
 
-- **Phase 1–2 (PoC)**:
-  - Use a **simple append-only logical ledger** stored as JSON or a small DB (e.g., `bot-identity-ledger.json` or SQLite).
-  - Example JSON structure:
-    - Operators:
-      - `operators["org.openclaw.pat"] = { name, public_keys, created, status }`
-    - Bots:
-      - `bots["openclaw.france.prod-1"] = { display_name, operator_id, public_keys, created, status }`
-  - Treat this as append-only:
-    - New keys are added with `status: "active"`; old ones marked `status: "revoked"` rather than deleted.
-  - Access all identity data through a small **identity access layer** (`get_bot`, `get_operator`, `list_keys`, etc.) so storage can be swapped later.
-- **Phase 3+**:
-  - Migrate the same schema to a more robust backend:
-    - Consortium ledger (e.g., Hyperledger) or DID method for multi-party governance, or
-    - Another append-only system (e.g., Certificate-Transparency-style log).
-  - Keep the public interface (identity access layer) stable so bots and services are not impacted.
+- **Shipped:** On-chain `ClankerIdentity` (EVM) is the source of truth. Operators and bots are registered with `clanker chain mint-*`; active status is `revokedAt == 0`.
+- Relying parties (`mqtt-auth-service`, OpenClaw plugins, bots) read via `@clanker-chain/identity-node-client` `RegistryClient` over RPC (`CHAIN_RPC_URL` + `REGISTRY_ADDRESS`). No identity-service HTTP hop on the CONNECT or messaging path.
+- Historical JSON ledger / indexer notes: see [`docs/archive/blockchain-identity-plan.md`](docs/archive/blockchain-identity-plan.md).
 
 ### Ledger Update Authorization
 
-- **Phase 1–2 (PoC)**:
-  - Start with a simple trust model:
-    - A single “identity manager” process or CLI updates `bot-identity-ledger.json` on behalf of bots/operators.
-    - Use basic file locking (OS-level) around writes to avoid concurrent write corruption.
-  - For small, local setups, bots may directly update their own entries on an honor system.
-- **Phase 3+**:
-  - Evolve to access-controlled writes:
-    - Bots submit signed update requests (using their current key); a ledger service verifies and applies them.
-    - Operators can create bots under their `operator_id` and rotate/revoke their bots’ keys.
-    - An administrator role can revoke bots/operators or override entries in emergencies.
-  - When moving to a true chain/DID system, map these roles and signatures to smart-contract or DID method rules.
+- Operators register/rotate/revoke bots on-chain (`msg.sender` must be the operator owner). Fees are enforced in the contract (see [`docs/registration-economics.md`](docs/registration-economics.md)).
+- There is no free-mint admin path and no off-chain ledger write API for production.
 
-### Identity Tokens and Message Signatures
+### Message Signatures
 
-- **Identity tokens**:
-  - **Phase 1–2 (PoC, self-issued)**:
-    - Each bot can issue its own short-lived tokens (e.g., JWTs) that prove “I am `bot_id` owned by `operator_id`.”
-    - Tokens are signed with the bot’s Ed25519 private key; the corresponding public key is recorded in the ledger.
-    - Verification steps (for brokers or services):
-      - Parse token.
-      - Resolve `bot_id`/`operator_id` and public keys from the ledger.
-      - Verify the token signature with the appropriate public key.
-      - Check standard claims (issuer, audience, expiry, etc.).
-  - **Phase 3+ (operator/infra-issued)**:
-    - Introduce an auth/issuer service (e.g., `org.openclaw.auth`) that issues tokens for bots.
-    - Tokens are signed with an issuer key anchored in the ledger, with:
-      - `iss` = issuer, `sub` = `bot_id`, plus `operator_id`, roles, expiry, etc.
-    - Verifiers check tokens against the issuer’s public key and apply richer policy based on the claims.
-- **Per-message signatures**:
-  - Bots can additionally sign individual messages using the same key:
-    - `signature` is computed over a canonical representation of stable fields (e.g., `from`, `from_id`, `operator_id`, `type`, `timestamp`, `message_id`, `body`).
-  - Receivers:
-    - Fetch or cache the bot’s public key from the ledger.
-    - Verify the message signature before acting.
-  - This provides end-to-end integrity even if the broker is untrusted.
+- **Per-message signatures (shipped):** EIP-712 typed data (`signature_scheme: "eip712-secp256k1"`). See Canonical Signing Format below.
+- Receivers resolve the sender’s active `botKey` via `RegistryClient` and verify with `ecrecover`. This provides end-to-end integrity even if the broker is untrusted.
+- JWT-style identity tokens are **not** used on the current wire.
 
 ### Key Management
 
-- **Phase 1–2 (PoC)**:
-  - Each bot uses an **Ed25519 keypair** for signing tokens and messages.
-  - On startup, a bot:
-    - Checks for an existing key at a well-known location (e.g., `~/.openclaw/keys/{bot_id}.key`).
-    - If missing, generates a new Ed25519 keypair.
-    - Stores the private key in that file with restrictive permissions (e.g., `0600`).
-    - Registers or updates its public key in the identity ledger (`bot-identity-ledger.json`).
-  - Optionally encrypt private keys at rest with a passphrase from an environment variable (e.g., `OPENCLAW_KEY_PASSPHRASE`) and a simple KDF.
-  - **Key rotation**:
-    - Bots rotate keys without downtime by:
-      - Generating a new keypair and adding the public key to the ledger (e.g., with `status: "pending"` or a `valid_from` timestamp).
-      - Publishing a signed key-rotation message that references both the old and new keys (proving continuity using the old key).
-      - During a grace window, accepting signatures from both old and new keys.
-      - After the window, marking the new key `status: "active"` and the old key `status: "revoked"`, then deleting the old private key.
-- **Phase 3+**:
-  - Introduce a pluggable key provider abstraction:
-    - File-based keystore (default).
-    - OS keychain or cloud KMS/HSM for higher assurance.
-  - All signing and verification go through a small API (`sign`, `get_public_key`) that hides the underlying storage.
+- Each bot uses a **secp256k1** private key (`0x` + 64 hex) at `~/.openclaw/keys/{bot_id}.key`, generated by `clanker chain mint-bot` (or supplied via `--bot-key` / `BOT_ETH_PRIVATE_KEY`).
+- On-chain `botKey` is the corresponding Ethereum address. Rotation: `clanker chain rotate-bot-key` (or `cast send` `rotateBotKey`).
+- File permissions should be restrictive (e.g. `0600`). Optional future: OS keychain / KMS behind the same signing API.
 
 ### Authentication
-- **Phase 1–2 (PoC, small scale)**:
-  - Use **username/password** auth per bot for simplicity.
-  - Environment variables provide credentials: `MQTT_USERNAME`, `MQTT_PASSWORD`.
-  - Prefer TLS (`mqtts://` or `wss://`) when available.
-  - Optionally begin experimenting with identity tokens embedded in:
-    - MQTT `password` field (CONNECT), or
-    - Message-level `identity_token`.
 
 #### MQTT CONNECT: SIWE-style broker auth (`mqtt-auth-service`)
 
@@ -364,13 +300,8 @@ When the bot has an on-chain **`secp256k1-eth`** `botKey` in `ClankerIdentity`, 
    where `signatureHex` is `0x` + 130 hex chars (65-byte ECDSA signature).
 
 The auth plugin calls `mqtt-auth-service` **`/auth`**; the service recovers the signer address and checks it against the on-chain `botKey` (and active operator) via RPC (`RegistryClient`). **JWT / Ed25519 CONNECT is not supported.** Hub runtime is Mosquitto + mqtt-auth only — identity-service is not in the CONNECT path.
-- **Phase 3+ (higher security)**:
-  - Migrate broker authentication to be fully **on-chain identity aware**:
-    - Use **mutual TLS** where each bot presents a client cert whose public key is registered on-chain, or
-    - Use **identity tokens** in MQTT CONNECT (e.g., `password` is a signed token) validated against on-chain keys.
-  - Broker enforces:
-    - Connection acceptance based on token/cert verification and on-chain status (bot/operator not revoked).
-    - Mapping from verified `bot_id` / `operator_id` to ACLs and quotas.
+
+**Still open (Phase 3):** public `mqtts://` hub with TLS, stricter broker ACLs mapped from verified `bot_id` / `operator_id`, optional mutual TLS.
 
 ### Authorization (ACLs)
 - Per-bot ACLs restrict which topics can be published/subscribed:
@@ -418,8 +349,7 @@ The auth plugin calls `mqtt-auth-service` **`/auth`**; the service recovers the 
 ## Message Signing Policy
 
 - **Performance vs. security**:
-  - Signing every single message adds some overhead; Ed25519 is fast, but not free.
-  - Not all messages are equally sensitive.
+  - EIP-712 signing adds some overhead; not all messages are equally sensitive.
 - **Recommended policy**:
   - **Must sign**:
     - Messages that can change world state or coordination decisions:
@@ -428,20 +358,19 @@ The auth plugin calls `mqtt-auth-service` **`/auth`**; the service recovers the 
   - **Optional to sign**:
     - `type = status` (heartbeats, simple telemetry), unless there is a specific threat model requiring authenticated liveness.
   - Implementation:
-    - Sign a **canonical representation** of the message envelope, not just the body.
-    - Reuse the same signing API and keys as identity tokens.
+    - Sign the EIP-712 envelope (Canonical Signing Format below) via `identity-node-client` `signMessage`.
 
 ### Canonical Signing Format (EIP-712)
 
 Bots sign message envelopes with **EIP-712 typed data** (`signature_scheme: "eip712-secp256k1"`). Implementation: `@clanker-chain/identity-node-client` (`signMessage` / `verifyMessage`).
 
-**Domain** (from identity `GET /health`):
+**Domain** (from `RegistryClient.getEip712Domain()` — `eth_chainId` + `REGISTRY_ADDRESS`):
 
 ```text
 name: ClankerChain
 version: 1
-chainId: <from health>
-verifyingContract: <registryAddress from health>
+chainId: <from RPC>
+verifyingContract: <registryAddress>
 ```
 
 **Struct `Message`** (all fields type `string`):
@@ -450,117 +379,34 @@ verifyingContract: <registryAddress from health>
 
 - Omitted optional envelope fields → **empty string** `""` at sign/verify time.
 - `body` → `JSON.stringify(body)` (stable JSON encoding).
-- **Do not** include `signature`, `signature_scheme`, or `identity_token` in the struct.
+- **Do not** include `signature` or `signature_scheme` in the struct.
 
-Verifiers recover the signer address via `ecrecover` and compare to the active `secp256k1-eth` / `botKey` from `GET /v1/bots/:from_id`.
+Verifiers recover the signer address via `ecrecover` and compare to the active `secp256k1-eth` / `botKey` from `RegistryClient` (on-chain `ClankerIdentity`).
 
 ---
 
 ## Phased Implementation Plan
 
-### Phase 1: Proof of Concept
-1. Define requirements (this document).
-2. Implement a simple local identity ledger:
-   - Create `bot-identity-ledger.json` (or equivalent storage) with `operators` and `bots` sections.
-   - Define fields for keys, status, created/updated timestamps.
-3. Implement key management for bots:
-   - On startup, each bot loads or generates an Ed25519 keypair under `~/.openclaw/keys/{bot_id}.key`.
-   - Register or update the bot’s public key in the identity ledger.
-4. Set up MQTT broker (Mosquitto in Docker, username/password auth).
-5. Create and test topic structure with CLI tools (`mosquitto_pub/sub`).
-6. Build `mqtt` skill for OpenClaw with `mqtt_connect`, `mqtt_publish`, `mqtt_subscribe`, `mqtt_unsubscribe`, `mqtt_poll`.
-7. Test France-bot ↔ Tooter-bot basic messaging via:
-   - `bots/all/announce`
-   - `bots/tooter-bot/inbox`
-   - `bots/france-bot/inbox`
-   - `bots/france-tooter/coordination`
+### Phase 1–2: Done
 
-### Phase 2: Core Functionality
-6. Implement and enforce the message format spec (validation, error handling).
-7. Introduce the identity access layer:
-   - Implement a small library for bots, services, and broker plugins to query the ledger:
-     - `get_bot(bot_id)`, `get_operator(operator_id)`, `list_keys(bot_id)`, etc.
-   - Encapsulate ledger storage behind this interface to allow future migration to a real chain or DID system.
-8. Harden authn/authz (broker ACLs, TLS) and begin integrating identity tokens and signatures:
-   - Allow bots to include `identity_token` in messages.
-   - Add message signing and verification for `type = request | response | coordination | error`.
-   - Optionally support token-based MQTT CONNECT authentication in parallel with username/password.
-9. Implement channel discovery using:
-   - Retained `bots/channels/{channel-id}/status` messages.
-   - Optional `bots/channels/_index` for channel listing.
-10. Build a human monitoring dashboard:
-   - Subscribes to `bots/#` or `monitor/events`.
-   - Filters by `from`, `to`, `type`, `privacy`, and topic.
-11. Document usage patterns and examples in `TOOLS.md` and skill docs.
+Shipped: on-chain `ClankerIdentity`, secp256k1 keys, SIWE MQTT CONNECT, EIP-712 envelopes, Mosquitto + mqtt-auth hub, OpenClaw `@clanker-chain/mqtt-channel-plugin` + `@clanker-chain/mqtt-tools`. Operator path: [`SETUP.md`](SETUP.md).
 
-### Phase 3: Polish & Scale
-12. Add message persistence and replay:
-    - Archive selected topics.
-    - Support refeeding messages for debugging or load-tests.
-13. Implement rate limiting:
-    - Per-bot or per-topic limits to avoid overload.
-14. Create a bot registration system tied to on-chain identity:
-    - Registration flow that creates/updates `bot_id` and links it to an `operator_id`.
-    - Management tools for operators to rotate keys and view their bots.
-15. Build a coordination patterns library:
-    - Common flows like leader election, work-stealing, task claiming.
-16. Add operator- and bot-level reputation:
-    - Aggregate behavior metrics and attestations keyed by `bot_id` and `operator_id`.
-    - Expose reputation scores for bots and operators to guide trust and policy.
-17. Test with 3+ bots under realistic workloads and failure scenarios, including identity and reputation edge cases (revocation, key rotation, low-reputation operators).
+### Phase 3: Polish & Scale (backlog)
 
----
-
-## Recommended Implementation Workflow
-
-To move from design to a working proof of concept, follow this order of operations:
-
-1. **Define the MQTT skill contract**:
-   - Create `/app/skills/mqtt/SKILL.md` describing:
-     - The five core functions: `mqtt_connect`, `mqtt_publish`, `mqtt_subscribe`, `mqtt_unsubscribe`, `mqtt_poll`.
-     - Usage examples for OpenClaw bots (connect → subscribe → publish → poll).
-     - Error handling semantics (connection failures, timeouts, malformed payloads).
-     - How and when message signing is integrated (e.g., signing before `mqtt_publish`, verification after `mqtt_poll`).
-2. **Implement the identity access layer**:
-   - Provide a small library (e.g., `identity-ledger.{js,ts,py}`) exposing:
-     - `get_bot(bot_id)` – returns a bot record from the ledger.
-     - `get_operator(operator_id)` – returns an operator record.
-     - `list_keys(bot_id)` – returns active public keys for a bot.
-     - `sign_message(msg, key_id)` – applies the canonical signing format to a message and returns a signed envelope.
-     - `verify_signature(msg)` – verifies a signed message against keys from the ledger.
-   - Internally, this library:
-     - Reads `bot-identity-ledger.json`.
-     - Loads bot keys from `~/.openclaw/keys/{bot_id}.key`.
-     - Uses the canonical signing rules defined above.
-3. **Update bot tooling configuration (`TOOLS.md`)**:
-   - For each bot (starting with `france-bot`), document:
-     - MQTT broker URL (configurable via env var, starting with local dev broker).
-     - Default subscribed topics and publish targets.
-     - Signing policy (which message types must be signed vs. optional).
-     - Locations for identity ledger and key files.
-4. **Create a setup/onboarding guide for new bots**:
-   - Step-by-step instructions for:
-     - Provisioning or generating keys.
-     - Registering `bot_id` and `operator_id` in the ledger.
-     - Configuring `TOOLS.md` and environment variables.
-     - Running a basic “hello” flow (announce + direct inbox message) between two bots.
+1. Host a public MQTT hub (`mqtts://` + TLS); bake a network preset so plugins default broker + registry.
+2. Stricter broker ACLs mapped from verified `bot_id` / `operator_id`.
+3. Message persistence / replay for selected topics.
+4. Rate limiting per bot or topic.
+5. Coordination patterns library (leader election, work-stealing, task claiming).
+6. Operator- and bot-level reputation (e.g. EAS attestations) keyed by `bot_id` / `operator_id`.
+7. Multi-bot soak tests including revocation and key rotation.
 
 ---
 
 ## Broker Location and Environment Considerations
 
-- **Phase 1 (local development)**:
-  - Run Mosquitto locally (e.g., via Docker) on the same machine as at least one bot.
-  - Use a non-TLS URL such as `mqtt://localhost:1883` or `mqtt://<LAN-IP>:1883` for early testing.
-  - Rely on:
-    - Simple username/password authentication.
-    - Local network trust plus message-level signatures for integrity.
-- **Phase 2+ (shared dev / staging / production)**:
-  - Move the broker to a VPS or managed MQTT service with a stable hostname (e.g., `mqtts://mqtt.example.com:8883`).
-  - Enable TLS and stricter firewall rules.
-  - Keep broker location and credentials fully configurable:
-    - `BROKER_URL`, `MQTT_USERNAME`, `MQTT_PASSWORD`, and CA/client cert paths via environment variables or config files.
-  - Maintain the same MQTT skill and identity layers so migrating from local to remote broker is a configuration change, not a code change.
+- **Local / LAN (current default)**: Mosquitto via `mqtt-service` Docker compose; `mqtt://localhost:1883` or `mqtt://<LAN-IP>:1883`. SIWE CONNECT + EIP-712 message signatures.
+- **Shared staging / production (backlog)**: Stable hostname (`mqtts://mqtt.example.com:8883`), TLS, firewall. Broker URL and auth service URL remain config (`channels.mqtt`), not protocol changes.
 
 ---
 

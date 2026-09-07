@@ -2,6 +2,8 @@
 
 Shortcuts for building, inspecting, and running the OpenClaw stack so you don’t have to remember long `docker compose exec` commands.
 
+**Plugins:** install with `openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29` and `@clanker-chain/mqtt-tools@2026.7.29` — see [`SETUP.md`](../../SETUP.md). Do not use the old GitHub-asset / `IDENTITY_ASSET_ID` bake-in path.
+
 ## Setup
 
 **Option A – Use from OpenClaw repo (recommended)**  
@@ -39,19 +41,17 @@ export OPENCLAW_ROOT=~/services/openclaw
 
 ## Scripts
 
-| Script                      | What it does |
-|-----------------------------|--------------|
-| `install-identity-extension.sh` | Download clanker-chain-identity from a GitHub release asset and run its install (extensions + pnpm lockfile). Usage: `GITHUB_TOKEN=ghp_xxx ./install-identity-extension.sh <ASSET_ID>`. |
-| `install-mqtt-extension.sh`    | Download clanker-chain-mqtt from a GitHub release asset and run its install. Usage: `GITHUB_TOKEN=ghp_xxx ./install-mqtt-extension.sh <ASSET_ID>`. |
-| `build.sh`                  | `docker compose build`; loads `.env` and passes `GITHUB_TOKEN` / `IDENTITY_ASSET_ID` as build args. |
-| `ls-extensions.sh`          | `docker compose exec openclaw-gateway ls -la /app/extensions` |
-| `ls-skills.sh`              | `docker compose exec openclaw-gateway ls -la /app/skills` |
-| `shell.sh`                  | Open a shell in the gateway container (working dir `/app`). |
-| `up.sh`                     | `docker compose up -d` |
-| `down.sh`                   | `docker compose down` |
-| `logs.sh`                   | `docker compose logs -f openclaw-gateway` (pass args to override, e.g. `./logs.sh --tail 100`). |
+| Script | What it does |
+|--------|--------------|
+| `build.sh` | `docker compose build` (loads `.env` if present) |
+| `ls-extensions.sh` | `docker compose exec openclaw-gateway ls -la /app/extensions` |
+| `ls-skills.sh` | `docker compose exec openclaw-gateway ls -la /app/skills` |
+| `shell.sh` | Open a shell in the gateway container (working dir `/app`) |
+| `up.sh` | `docker compose up -d` |
+| `down.sh` | `docker compose down` |
+| `logs.sh` | `docker compose logs -f openclaw-gateway` (pass args to override, e.g. `./logs.sh --tail 100`) |
 
-For a full quickstart (scripts → install plugins → openclaw.json → build → up), see [OpenClaw extensions quickstart](../../docs/openclaw-extensions-quickstart.md).
+Full plugin install + config: [`docs/openclaw-extensions-quickstart.md`](../../docs/openclaw-extensions-quickstart.md).
 
 ## Overrides
 
@@ -63,17 +63,3 @@ Example:
 ```bash
 COMPOSE_SERVICE=openclaw-gateway ./scripts/openclaw-docker/ls-extensions.sh
 ```
-
-## One-liner symlinks (optional)
-
-From the OpenClaw project root, add short names on your `PATH`:
-
-```bash
-ln -sf "$(pwd)/scripts/openclaw-docker/build.sh" ~/bin/oc-build
-ln -sf "$(pwd)/scripts/openclaw-docker/ls-extensions.sh" ~/bin/oc-ls-ext
-ln -sf "$(pwd)/scripts/openclaw-docker/ls-skills.sh" ~/bin/oc-ls-skills
-ln -sf "$(pwd)/scripts/openclaw-docker/shell.sh" ~/bin/oc-shell
-# ensure ~/bin is in PATH
-```
-
-Then from anywhere (with `OPENCLAW_ROOT` set if not in the openclaw repo): `oc-build`, `oc-ls-ext`, `oc-shell`, etc.

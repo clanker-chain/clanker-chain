@@ -64,7 +64,7 @@ openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
 
 ### `channels.mqtt` config
 
-Example (France host → broker at `192.168.1.197`, Base Sepolia registry):
+Example (dev: France host → LAN broker, Base Sepolia registry). Replace the broker/auth host with your hub when you have a public MQTT URL:
 
 ```json
 {
@@ -98,7 +98,3 @@ CHAIN_RPC_URL=http://127.0.0.1:8545 REGISTRY_ADDRESS=$REGISTRY \
 ```
 
 See [`docs/VERSIONING.md`](docs/VERSIONING.md) for release tags and publish order (`identity-node-client` → mqtt-channel → mqtt-tools).
-
-## Dev-only MQTT (no identity)
-
-For a plain Mosquitto password without SIWE, set `MQTT_STATIC_PASSWORD` in the mqtt skill — not for production.

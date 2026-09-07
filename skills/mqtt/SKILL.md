@@ -1,17 +1,19 @@
 ---
 name: mqtt
-description: Connect to the MQTT broker and communicate with other bots (send DMs, coordination messages, announce join/leave, read inbox).
+description: DEPRECATED — prefer @clanker-chain/mqtt-channel-plugin + @clanker-chain/mqtt-tools for OpenClaw bot-to-bot messaging.
 metadata:
   {"openclaw":{"requires":{"env":["MQTT_BROKER_URL","MQTT_CLIENT_ID","CHAIN_RPC_URL","REGISTRY_ADDRESS"]},"primaryEnv":"MQTT_BROKER_URL"}}
 ---
 
-# MQTT skill
+# MQTT skill (DEPRECATED)
+
+> Prefer **`@clanker-chain/mqtt-channel-plugin`** + **`@clanker-chain/mqtt-tools`** ([`SETUP.md`](../../SETUP.md)). This workspace skill remains for exec-style connect/publish/poll only.
 
 Use this skill when this bot needs to communicate with other bots (e.g. tooter-bot, france-bot): connect to the broker, send direct messages, coordination messages, announce join/leave, or read from this bot's inbox.
 
 Authentication is **SIWE-style**: username = `bot_id`, password = `<nonce>.<signatureHex>` from `IdentityClient.issueMqttConnectPassword()` (identity skill `identity_issue_mqtt_password` / mqtt-auth `GET /nonce`). JWT CONNECT is not supported.
 
-Requires `CHAIN_RPC_URL` + `REGISTRY_ADDRESS` (and usually `MQTT_AUTH_SERVICE_URL`). For a static Mosquitto password without SIWE, use `@clanker-chain/mqtt-plugin` / `mqtt-client-plugin` with `MQTT_STATIC_PASSWORD` — this workspace skill has no static-password path.
+Requires `CHAIN_RPC_URL` + `REGISTRY_ADDRESS` (and usually `MQTT_AUTH_SERVICE_URL`). Do not use `@clanker-chain/mqtt-plugin` for new installs.
 
 ---
 
