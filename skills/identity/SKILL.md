@@ -13,7 +13,16 @@ Use this skill when:
 - **Sending a signed message** to another bot over MQTT (or any channel): produce an EIP-712 signed envelope so the recipient can verify authenticity.
 - **Looking up a bot's record** (e.g. public keys, operator, status) for debugging or coordination.
 
-This skill wraps `@clanker-chain/identity-node-client` (RPC reads). Registration happens on-chain (`clanker chain mint-*`), not via HTTP POST. The deprecated `identity-service` indexer is not required.
+This skill wraps `@clanker-chain/identity-node-client` (RPC reads). Registration happens on-chain via the operator CLI, not via HTTP POST. The deprecated `identity-service` indexer is not required.
+
+**Prefer the operator CLI for mint / identity discovery** ([`docs/operator-cli.md`](../../docs/operator-cli.md)):
+
+```bash
+clanker whoami --json
+clanker bot mint <label> --json    # operator inferred from ~/.clanker when possible
+```
+
+Do not assemble `--registry` / `--rpc` / operator labels by hand if `~/.clanker/config.json` already exists.
 
 ---
 
@@ -21,30 +30,34 @@ This skill wraps `@clanker-chain/identity-node-client` (RPC reads). Registration
 
 At minimum, you must configure:
 
-- **Chain RPC + registry**:
+- **Chain RPC + registry** (or rely on `clanker init --preset`):
   - Env: `CHAIN_RPC_URL` (e.g. `https://sepolia.base.org` or `http://127.0.0.1:8545`)
   - Env: `REGISTRY_ADDRESS` (ClankerIdentity `0x…`)
 - **Bot identity**:
   - `bot_id`: canonical bot id, for example: `openclaw.france.prod-1`
-  - Local private key path: `~/.openclaw/keys/{bot_id}.key` (`0x` + 64 hex secp256k1)
+  - Local private key path: `~/.openclaw/keys/{bot_id}.key` (`0x` + 64 hex secp256k1); also under `~/.clanker/keys/` after `clanker bot mint`
 - **Operator identity**:
   - `operator_id`: operator that owns the bot, for example: `org.openclaw.pat`
+  - Operator signing key: `OPERATOR_PRIVATE_KEY` (never Anvil #0 on Sepolia)
 
-The default key path is derived from `bot_id`:
+The default bot key path is derived from `bot_id`:
 
 - `~/.openclaw/keys/{bot_id}.key` (e.g. `~/.openclaw/keys/openclaw.france.prod-1.key`)
 
 The **mint / registration step is performed by the operator on-chain**, not by this skill:
 
-1. Operator registers the bot on-chain (generates key file):
+1. Operator registers (profile-aware):
 
    ```bash
-   node clanker-cli/bin/clanker.mjs chain mint-bot openclaw.france.prod-1 org.openclaw.pat --registry "$REGISTRY"
+   node clanker-cli/bin/clanker.mjs init --preset sepolia   # once
+   export OPERATOR_PRIVATE_KEY=0x…
+   node clanker-cli/bin/clanker.mjs operator mint org.openclaw.pat
+   node clanker-cli/bin/clanker.mjs bot mint openclaw.france.prod-1
    ```
 
 2. The private key file is securely copied to the bot host and kept at `~/.openclaw/keys/openclaw.france.prod-1.key` (mode `0600`).
 
-3. Ensure `CHAIN_RPC_URL` and `REGISTRY_ADDRESS` are set so bots can read `ClankerIdentity` over RPC.
+3. Ensure `CHAIN_RPC_URL` and `REGISTRY_ADDRESS` are set (or use the CLI preset) so bots can read `ClankerIdentity` over RPC.
 
 After this one-time registration, the **bot** uses this skill to verify its identity and sign messages; it does not perform registration itself.
 
@@ -93,7 +106,7 @@ On **success**, `identity_init` prints JSON to stdout:
 On **failure**, it writes a JSON error to stderr and exits with a non-zero code:
 
 ```json
-{ "error": "Operator not registered. Register the operator on-chain first (clanker chain mint-operator)." }
+{ "error": "Operator not registered. Register the operator on-chain first (clanker operator mint)." }
 ```
 
 ### identity_get_bot — fetch bot record
@@ -196,7 +209,7 @@ Use `@clanker-chain/identity-node-client` from this repo or a published CalVer a
 Common failure modes and what they mean:
 
 - **RPC unreachable / connection error**: treat as infrastructure outage; retry with backoff.
-- **"Operator not registered"** from `identity_init`: register the operator on-chain first (`clanker chain mint-operator`).
+- **"Operator not registered"** from `identity_init`: register the operator on-chain first (`clanker operator mint` / see [`docs/operator-cli.md`](../../docs/operator-cli.md)).
 - **ChainId / registry misconfig**: ensure `CHAIN_RPC_URL` and `REGISTRY_ADDRESS` match the network you minted on.
 - **Operator or bot not active**: on-chain revocation; operator must re-register or un-revoke.
 - **Missing key file**: if `~/.openclaw/keys/{bot_id}.key` does not exist or is unreadable, the bot cannot sign; fix key provisioning rather than silently generating a new key.
