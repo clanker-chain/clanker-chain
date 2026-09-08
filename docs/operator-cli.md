@@ -7,15 +7,15 @@ Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include
 ## Quick start (Sepolia closed beta)
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.7-3
+npm install -g @clanker-chain/clanker-cli@2026.9.7-4
 
 clanker setup
-# guided: preset, owner address, operator label, optional key pointer
-# detects Foundry account names + ~/.openclaw/keys (context only)
+# Clack-guided: network select, Foundry account picker, chain spinner, optional key
 
-clanker whoami          # works from operator.json owner (read-only)
-clanker operator mint org.you --key-file ~/.clanker/op.key   # if not registered yet
-clanker bot mint you.laptop
+clanker doctor          # readiness table (whoami vs mint)
+clanker whoami          # fast; add --with-bots to enrich child bots
+clanker operator mint org.you --key-file ~/.clanker/op.key   # plan + confirm unless --yes
+clanker bot mint you.laptop --yes
 ```
 
 Non-interactive (agents / CI):
@@ -36,17 +36,28 @@ Closed-beta hub values live in the **sepolia** preset (same numbers as [`public-
 
 ## `clanker setup`
 
-Interactive (TTY) wizard that:
+Interactive (TTY) wizard powered by **`@clack/prompts`** + **`picocolors`**:
 
-1. Detects existing `config.json` / `operator.json`, `OPERATOR_PRIVATE_KEY` (address only), Foundry `cast wallet list` names, and OpenClaw bot key basenames.
-2. Chooses preset (`sepolia` / `local`). On Sepolia, offers `fromBlock` **46000000** for faster public-RPC scans (registry floor remains 35000000).
-3. Sets operator **owner address** + **label**.
-4. Verifies on-chain: refuses Anvil `#0` on public RPC; refuses saving if the label’s current owner ≠ chosen address.
-5. Optionally stores a signing **pointer** (`keyFile` or `OPERATOR_PRIVATE_KEY`). Omit for a read-only profile — `whoami` / `bots` still work; mint/revoke need a key later.
+1. Detects existing `config.json` / `operator.json`, `OPERATOR_PRIVATE_KEY` (address only), Foundry `cast wallet list` names, and OpenClaw bot key basenames (table).
+2. Chooses preset (`sepolia` / `local`). Sepolia defaults `fromBlock` to **46000000** (historical floor **35000000** still available via `--from-block`).
+3. Sets operator **owner address** + **label** (Foundry accounts are a select list; paste `0x` next).
+4. Verifies on-chain with a spinner: refuses Anvil `#0` on public RPC; refuses saving if the label’s current owner ≠ chosen address.
+5. Optionally stores a signing **pointer** (`keyFile` or `OPERATOR_PRIVATE_KEY`). Omit for a read-only profile.
 
-Never stores raw hex keys. Foundry passwords are not unlocked or saved; paste the address (or unlock via `cast` yourself). Bot keys are not the operator owner.
+Never stores raw hex keys. Flag parity for agents: `--preset`, `--operator`, `--address`, `--key-file`, `--skip-key`, `--yes`, `--force`.
 
-`clanker init --preset …` remains the non-interactive network-only writer.
+## `clanker doctor`
+
+Prints the detection table plus pass/warn/fail checks. Exit `0` if ready for `whoami`. `--json` for agents. Suggests next commands (git-status habit).
+
+## Mutates (plan → confirm)
+
+`operator mint`, `bot mint` / `revoke` / `rotate`, and `operator transfer *` print a plan and confirm on a TTY unless `--yes` or `--json`. Success paths print a **Next:** hint.
+
+## Reads
+
+- `whoami` uses profile owner when no key; does **not** scan bot logs unless `--with-bots`.
+- Prefer `clanker bots` for bot listings.
 
 ## Profile layout
 
@@ -92,8 +103,9 @@ On any other RPC, missing key or Anvil #0 → hard error. After mint / transfer 
 
 | Command | Behavior |
 |---------|----------|
-| `clanker setup …` | Interactive or flagged profile wizard |
-| `clanker whoami [--json] [--operator <label>] [--address 0x…]` | Current operators for address (+ child bots) |
+| `clanker setup …` | Interactive or flagged profile wizard (Clack) |
+| `clanker doctor [--json]` | Local readiness checks |
+| `clanker whoami [--json] [--operator <label>] [--address 0x…] [--with-bots]` | Operators for address; bots only with `--with-bots` |
 | `clanker operator mint <label>` | `registerOperator`; writes `operator.json` after receipt |
 | `clanker bot mint <label> [operator]` | Infers operator from profile / sole active operator if omitted; dual-writes keys; prints harness stub |
 | `clanker bots [--json] [--operator] [--address]` | Bots for the inferred (or preferred) label; `--address` is read-only |
