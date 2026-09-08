@@ -14,9 +14,9 @@ import { detectSetupHints, formatSetupDetectTable } from "./setup-detect.mjs";
 import { c, nextHint } from "./ui.mjs";
 
 /**
- * @param {{ home?: string, env?: NodeJS.ProcessEnv, openclawDir?: string, castBin?: string, spawn?: Function }} [opts]
+ * @param {{ home?: string, env?: NodeJS.ProcessEnv, openclawDir?: string, castBin?: string, spawn?: Function, fetchImpl?: typeof fetch }} [opts]
  */
-export function runDoctorChecks(opts = {}) {
+export async function runDoctorChecks(opts = {}) {
   const env = opts.env ?? process.env;
   const home = opts.home ?? clankerHome(env);
   const hints = detectSetupHints({
@@ -28,6 +28,7 @@ export function runDoctorChecks(opts = {}) {
   });
   const config = hints.config ?? loadConfig(home);
   const operator = hints.operator ?? loadOperator(home);
+  const fetchImpl = opts.fetchImpl ?? globalThis.fetch;
 
   /** @type {{ id: string, ok: boolean, level: 'pass'|'warn'|'fail', message: string }[]} */
   const checks = [];
@@ -102,6 +103,46 @@ export function runDoctorChecks(opts = {}) {
       : "Foundry cast not on PATH (optional)",
   });
 
+  const authUrl = config?.mqttAuthServiceUrl;
+  if (authUrl && typeof fetchImpl === "function") {
+    const healthUrl = `${String(authUrl).replace(/\/$/, "")}/health`;
+    try {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), 5000);
+      const res = await fetchImpl(healthUrl, { signal: ac.signal });
+      clearTimeout(t);
+      if (res.ok) {
+        checks.push({
+          id: "mqtt_auth_health",
+          ok: true,
+          level: "pass",
+          message: `mqtt-auth health OK (${healthUrl})`,
+        });
+      } else {
+        checks.push({
+          id: "mqtt_auth_health",
+          ok: false,
+          level: "fail",
+          message: `mqtt-auth health HTTP ${res.status} (${healthUrl})`,
+        });
+      }
+    } catch (err) {
+      checks.push({
+        id: "mqtt_auth_health",
+        ok: false,
+        level: "warn",
+        message: `mqtt-auth health unreachable: ${err.message ?? err}`,
+      });
+    }
+  } else if (config) {
+    checks.push({
+      id: "mqtt_auth_health",
+      ok: true,
+      level: "warn",
+      message: "mqttAuthServiceUrl not set — skip hub health",
+    });
+  }
+
   const readyWhoami = checks
     .filter((ch) => ch.id === "config" || ch.id === "registry" || ch.id === "operator")
     .every((ch) => ch.ok);
@@ -125,7 +166,7 @@ export function runDoctorChecks(opts = {}) {
  */
 export async function runDoctor(argv = [], opts = {}) {
   const json = argv.includes("--json");
-  const report = runDoctorChecks(opts);
+  const report = await runDoctorChecks(opts);
 
   if (json) {
     console.log(

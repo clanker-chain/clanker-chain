@@ -28,7 +28,13 @@ import {
   detectSetupHints,
   formatSetupDetectTable,
 } from "./setup-detect.mjs";
+import {
+  defaultOperatorKeyPath,
+  exportFoundryKey,
+  resolveFoundryAddress,
+} from "./foundry.mjs";
 import { c, nextHint } from "./ui.mjs";
+import { join } from "node:path";
 
 /**
  * @param {string[]} argv
@@ -44,6 +50,8 @@ export function parseSetupFlags(argv) {
   let yes = false;
   let skipKey = false;
   let skipChainCheck = false;
+  let foundryAccount = null;
+  let exportKey = false;
 
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
@@ -53,6 +61,8 @@ export function parseSetupFlags(argv) {
     else if (a === "--key-file" && argv[i + 1]) keyFile = argv[++i];
     else if (a === "--key-env" && argv[i + 1]) keyEnv = argv[++i];
     else if (a === "--from-block" && argv[i + 1]) fromBlock = BigInt(argv[++i]);
+    else if (a === "--foundry-account" && argv[i + 1]) foundryAccount = argv[++i];
+    else if (a === "--export-key") exportKey = true;
     else if (a === "--force") force = true;
     else if (a === "--yes" || a === "-y") yes = true;
     else if (a === "--skip-key") skipKey = true;
@@ -70,6 +80,8 @@ export function parseSetupFlags(argv) {
     yes,
     skipKey,
     skipChainCheck,
+    foundryAccount,
+    exportKey,
   };
 }
 
@@ -197,15 +209,38 @@ export async function runSetupNonInteractive(argv, opts = {}) {
   if (!flags.operator) {
     throw new Error("Non-interactive setup requires --operator <label>");
   }
-  if (!flags.address && !flags.keyFile && !env.OPERATOR_PRIVATE_KEY) {
-    throw new Error(
-      "Non-interactive setup requires --address 0x…, --key-file, or OPERATOR_PRIVATE_KEY",
-    );
-  }
 
   let address = flags.address;
-  if (!address && flags.keyFile) address = addressFromKeyFile(flags.keyFile);
+  let keyFile = flags.keyFile;
+  const castOpts = {
+    castBin: opts.castBin,
+    spawn: opts.spawn,
+    inheritStdio: false,
+  };
+
+  if (flags.foundryAccount) {
+    if (!address) {
+      address = resolveFoundryAddress(flags.foundryAccount, castOpts);
+    }
+    if (flags.exportKey && !keyFile && !flags.skipKey) {
+      const dest = defaultOperatorKeyPath(home);
+      const exported = exportFoundryKey(flags.foundryAccount, dest, castOpts);
+      keyFile = exported.path;
+      if (getAddress(exported.address) !== getAddress(address)) {
+        throw new Error(
+          `Exported Foundry key address ${exported.address} does not match ${address}`,
+        );
+      }
+    }
+  }
+
+  if (!address && keyFile) address = addressFromKeyFile(keyFile);
   if (!address && env.OPERATOR_PRIVATE_KEY) address = addressFromEnv(env);
+  if (!address) {
+    throw new Error(
+      "Non-interactive setup requires --address 0x…, --key-file, OPERATOR_PRIVATE_KEY, or --foundry-account",
+    );
+  }
 
   const preset = PRESETS[flags.preset];
   let fromBlock = flags.fromBlock;
@@ -225,14 +260,14 @@ export async function runSetupNonInteractive(argv, opts = {}) {
   });
 
   const key = buildKeyPointer({
-    keyFile: flags.keyFile,
+    keyFile,
     keyEnv: flags.keyEnv,
     skipKey: flags.skipKey,
     env,
   });
 
-  if (flags.keyFile && flags.address) {
-    const fromKey = getAddress(addressFromKeyFile(flags.keyFile));
+  if (keyFile && flags.address) {
+    const fromKey = getAddress(addressFromKeyFile(keyFile));
     if (fromKey !== getAddress(flags.address)) {
       throw new Error(
         `Key file address ${fromKey} does not match --address ${getAddress(flags.address)}`,
@@ -330,6 +365,7 @@ export async function runSetupInteractive(argv, opts = {}) {
   }
 
   let address = flags.address ?? null;
+  let foundryAccountUsed = null;
   if (!address && flags.keyFile) {
     address = addressFromKeyFile(flags.keyFile);
     clack.log.info(`Address from --key-file: ${address}`);
@@ -357,7 +393,7 @@ export async function runSetupInteractive(argv, opts = {}) {
       ...hints.foundryAccounts.map((n) => ({
         value: n,
         label: n,
-        hint: "Foundry keystore — paste 0x next",
+        hint: "resolve via cast wallet address",
       })),
       { value: "__paste__", label: "Paste an address…", hint: "0x…" },
     ];
@@ -378,14 +414,26 @@ export async function runSetupInteractive(argv, opts = {}) {
         }),
       );
     } else {
-      address = cancelIf(
-        await clack.text({
-          message: `Paste 0x address for Foundry account "${pick}"`,
-          placeholder: "0x…",
-          validate: (v) =>
-            /^0x[0-9a-fA-F]{40}$/.test(v || "") ? undefined : "Need 0x + 40 hex",
-        }),
-      );
+      foundryAccountUsed = pick;
+      try {
+        clack.log.step(`Resolving address for Foundry account "${pick}" (unlock if prompted)…`);
+        address = resolveFoundryAddress(pick, {
+          castBin: opts.castBin,
+          spawn: opts.spawn,
+          inheritStdio: true,
+        });
+        clack.log.success(`Foundry address: ${address}`);
+      } catch (err) {
+        clack.log.warn(err.message);
+        address = cancelIf(
+          await clack.text({
+            message: `Paste 0x address for "${pick}"`,
+            placeholder: "0x…",
+            validate: (v) =>
+              /^0x[0-9a-fA-F]{40}$/.test(v || "") ? undefined : "Need 0x + 40 hex",
+          }),
+        );
+      }
     }
   }
   if (!address) {
@@ -439,7 +487,32 @@ export async function runSetupInteractive(argv, opts = {}) {
   let keyEnv = flags.keyEnv;
   let skipKey = flags.skipKey;
   if (!skipKey && !keyFile && !keyEnv) {
-    if (hints.hasOperatorPrivateKeyEnv) {
+    if (foundryAccountUsed) {
+      const doExport = cancelIf(
+        await clack.confirm({
+          message: `Export Foundry key for "${foundryAccountUsed}" to ~/.clanker/op.key for minting?`,
+          initialValue: true,
+        }),
+      );
+      if (doExport) {
+        const dest = defaultOperatorKeyPath(home);
+        clack.log.step("Exporting key via cast (unlock if prompted; key is not printed)…");
+        const exported = exportFoundryKey(foundryAccountUsed, dest, {
+          castBin: opts.castBin,
+          spawn: opts.spawn,
+          inheritStdio: true,
+        });
+        if (getAddress(exported.address) !== address) {
+          throw new Error(
+            `Exported key address ${exported.address} does not match owner ${address}`,
+          );
+        }
+        keyFile = exported.path;
+        clack.log.success(`Wrote ${keyFile} (mode 600)`);
+      } else {
+        skipKey = true;
+      }
+    } else if (hints.hasOperatorPrivateKeyEnv) {
       const use = cancelIf(
         await clack.confirm({
           message: "Store OPERATOR_PRIVATE_KEY pointer for signing?",
@@ -452,7 +525,7 @@ export async function runSetupInteractive(argv, opts = {}) {
       const path = cancelIf(
         await clack.text({
           message: "Operator key file path (Enter = read-only)",
-          placeholder: "~/.clanker/op.key",
+          placeholder: join(home, "op.key"),
         }),
       );
       if (path && String(path).trim()) keyFile = String(path).trim();

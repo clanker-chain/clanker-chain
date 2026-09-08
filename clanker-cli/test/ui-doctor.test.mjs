@@ -59,13 +59,14 @@ describe("sepolia preset fromBlock", () => {
 });
 
 describe("doctor", () => {
-  it("fails without operator.json", () => {
+  it("fails without operator.json", async () => {
     const home = mkdtempSync(join(tmpdir(), "clanker-doc-"));
     initProfile("sepolia", { home });
-    const report = runDoctorChecks({
+    const report = await runDoctorChecks({
       home,
       env: {},
       spawn: () => ({ status: 1, error: new Error("no cast") }),
+      fetchImpl: async () => ({ ok: true, status: 200 }),
     });
     assert.equal(report.readyWhoami, false);
     assert.equal(report.ok, false);
@@ -82,10 +83,11 @@ describe("doctor", () => {
       },
       home,
     );
-    const report = runDoctorChecks({
+    const report = await runDoctorChecks({
       home,
       env: {},
       spawn: () => ({ status: 0, stdout: "", error: null }),
+      fetchImpl: async () => ({ ok: true, status: 200 }),
     });
     assert.equal(report.readyWhoami, true);
     assert.equal(report.readyMint, false);
@@ -97,7 +99,11 @@ describe("doctor", () => {
       printed += a.join(" ") + "\n";
     };
     try {
-      const { exitCode } = await runDoctor(["--json"], { home, env: {} });
+      const { exitCode } = await runDoctor(["--json"], {
+        home,
+        env: {},
+        fetchImpl: async () => ({ ok: true, status: 200 }),
+      });
       assert.equal(exitCode, 0);
       const parsed = JSON.parse(printed.trim());
       assert.equal(parsed.readyWhoami, true);

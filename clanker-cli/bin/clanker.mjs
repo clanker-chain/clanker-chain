@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import os from "node:os";
 import process from "node:process";
 import { getAddress } from "viem";
 import {
   ANVIL_DEFAULT_PRIVATE_KEY,
-  harnessSnippet,
   initProfile,
   isLocalRpc,
   loadConfig,
@@ -26,6 +25,10 @@ import {
 import { resolveForRead, resolveOperatorKey, resolveReadIdentity } from "../lib/resolve.mjs";
 import { runSetup } from "../lib/setup.mjs";
 import { runDoctor } from "../lib/doctor.mjs";
+import {
+  hubConnectChecklist,
+  wireOpenClawMqtt,
+} from "../lib/openclaw-wire.mjs";
 import {
   c,
   confirmPlan,
@@ -599,19 +602,38 @@ async function main() {
       );
       if (!ok) process.exit(0);
       const result = await chainMintBot(botLabel, operatorLabel, flags);
-      if (hasFlag(flags, "--json")) printJson(result);
-      else {
+      const mqtt = result.channels_mqtt ?? {};
+      const wire = wireOpenClawMqtt({
+        botId: botLabel,
+        operatorId: operatorLabel,
+        network: {
+          rpc: mqtt.chainRpcUrl,
+          registry: mqtt.registryAddress,
+          brokerUrl: mqtt.brokerUrl,
+          mqttAuthServiceUrl: mqtt.mqttAuthServiceUrl,
+        },
+        keyPath: result.key_path,
+      });
+      if (hasFlag(flags, "--json")) {
+        printJson({ ...result, openclaw: wire });
+      } else {
         console.log(c.green(`Minted bot ${botLabel} under ${operatorLabel}`));
         console.log(`botKey:   ${result.bot_key}`);
         console.log(`key file: ${result.key_path}`);
         console.log(`also:     ${result.clanker_key_path}`);
         console.log(`tx:       ${result.tx}`);
-        console.log("\nchannels.mqtt stub:");
-        console.log(JSON.stringify(result.channels_mqtt, null, 2));
-        nextHint([
-          "Paste channels.mqtt into openclaw.json",
-          "openclaw plugins install @clanker-chain/mqtt-channel-plugin@…",
-        ]);
+        console.log(
+          wire.created
+            ? c.green(`Wrote ${wire.path}`)
+            : c.green(`Updated channels.mqtt in ${wire.path}`),
+        );
+        nextHint(
+          hubConnectChecklist({
+            botId: botLabel,
+            channelsMqtt: wire.channelsMqtt,
+            pluginPin: wire.pluginPin,
+          }),
+        );
       }
       return;
     }
@@ -869,22 +891,6 @@ async function main() {
   }
 
   if (cmd === "init-openclaw") {
-    const home = os.homedir();
-    const openclawDir = join(home, ".openclaw");
-    const cfgPath = join(openclawDir, "openclaw.json");
-    if (!existsSync(openclawDir)) {
-      mkdirSync(openclawDir, { recursive: true });
-    }
-
-    if (existsSync(cfgPath)) {
-      console.log(`${cfgPath} already exists.`);
-      console.log(
-        'Ensure plugins.enabled includes "mqtt" and "mqtt-tools", and channels.mqtt has botId, operatorId, brokerUrl, chainRpcUrl, registryAddress.',
-      );
-      console.log("See SETUP.md and docs/operator-cli.md.");
-      process.exit(0);
-    }
-
     const profile = loadConfig();
     const operator = loadOperator();
     // No profile: local defaults only — do not mix Sepolia registry with localhost MQTT.
@@ -902,27 +908,21 @@ async function main() {
           mqttAuthServiceUrl: "http://localhost:9090",
         };
 
-    const mqtt = harnessSnippet({
+    const wire = wireOpenClawMqtt({
       botId: "openclaw.your-bot.local",
       operatorId: operator?.label ?? "org.openclaw.your-operator",
       network,
     });
-    if (!mqtt.registryAddress) {
-      mqtt.registryAddress = "0x0000000000000000000000000000000000000000";
-    }
-
-    const cfg = {
-      plugins: {
-        enabled: ["mqtt", "mqtt-tools"],
-      },
-      channels: {
-        mqtt,
-      },
-    };
-    writeFileSync(cfgPath, JSON.stringify(cfg, null, 2), "utf8");
-    console.log(`Created ${cfgPath} with mqtt + mqtt-tools from ${profile ? "active" : "default"} preset.`);
-    console.log("Next: clanker bot mint <label>, then set channels.mqtt.botId / operatorId.");
-    console.log("See docs/operator-cli.md and SETUP.md.");
+    console.log(
+      wire.created
+        ? `Created ${wire.path} with mqtt + mqtt-tools from ${profile ? "active" : "default"} preset.`
+        : `Updated channels.mqtt in ${wire.path} (plugins mqtt + mqtt-tools ensured).`,
+    );
+    nextHint([
+      "clanker bot mint <label>",
+      "Then channels.mqtt.botId / operatorId / privateKeyFile update automatically",
+      "See docs/operator-cli.md and docs/closed-beta-invite.md",
+    ]);
     process.exit(0);
   }
 
