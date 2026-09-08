@@ -78,6 +78,6 @@ Decide these against a shared Sepolia hub, not against LAN smoke. Sequence: [`pu
 
 ## CLI
 
-`clanker chain mint-operator` and `clanker chain mint-bot` read `operatorFee` / `botFee` from the deployed registry and send the exact `msg.value` required. Works with zero-fee and nonzero-fee deploys.
+Prefer profile-aware commands ([`operator-cli.md`](operator-cli.md)): `clanker operator mint` / `clanker bot mint`. Low-level aliases `clanker chain mint-operator` / `mint-bot` remain. All of them read `operatorFee` / `botFee` from the deployed registry and send the exact `msg.value` required. Works with zero-fee and nonzero-fee deploys. On non-local RPCs the CLI refuses Anvil account #0 as the operator key.
 
 See also: [`chain/README.md`](../chain/README.md), [`archive/blockchain-identity-plan.md`](archive/blockchain-identity-plan.md) (historical).

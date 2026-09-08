@@ -1,13 +1,22 @@
 {
   "name": "@clanker-chain/clanker-cli",
-  "version": "2026.5.23",
+  "version": "2026.9.7",
   "description": "CLI for wiring clanker-chain identity and MQTT into OpenClaw and other agentic stacks.",
   "type": "module",
   "bin": {
     "clanker": "./bin/clanker.mjs"
   },
+  "files": [
+    "bin",
+    "lib",
+    ".env.example"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "lint": "node ./bin/clanker.mjs --help",
+    "test": "node --test test/*.test.mjs",
     "mint-operator": "node ./bin/clanker.mjs chain mint-operator",
     "mint-bot": "node ./bin/clanker.mjs chain mint-bot",
     "mint-operator:sepolia": "bash ./scripts/with-sepolia-env.sh mint-operator",
