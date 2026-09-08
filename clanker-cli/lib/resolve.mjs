@@ -3,6 +3,7 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import { getAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import {
   ANVIL_DEFAULT_PRIVATE_KEY,
@@ -174,8 +175,63 @@ export function resolveForRead(argv = [], opts = {}) {
   if (!network.registry || !/^0x[0-9a-fA-F]{40}$/.test(network.registry)) {
     throw new Error(
       "REGISTRY_ADDRESS or --registry is required (0x + 40 hex). " +
-        "Run `clanker init --preset sepolia` or set registry after `clanker chain deploy`.",
+        "Run `clanker init --preset sepolia` or `clanker setup`, or set registry after deploy.",
     );
   }
   return network;
+}
+
+/**
+ * Resolve address for read-only commands.
+ * Order: --address > signing key > operator.json owner > error (point at setup).
+ *
+ * @param {string[]} argv
+ * @param {{ home?: string, env?: NodeJS.ProcessEnv }} [opts]
+ * @returns {{ address: string, source: string, network: object }}
+ */
+export function resolveReadIdentity(argv = [], opts = {}) {
+  const network = resolveForRead(argv, opts);
+  const home = opts.home ?? network.home;
+
+  let addressFlag = null;
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === "--address" && argv[i + 1] && !argv[i + 1].startsWith("--")) {
+      addressFlag = argv[++i];
+    }
+  }
+  if (addressFlag) {
+    return {
+      address: getAddress(addressFlag),
+      source: "--address",
+      network,
+    };
+  }
+
+  try {
+    const resolved = resolveOperatorKey(argv, { ...opts, home });
+    return {
+      address: resolved.address,
+      source: resolved.source,
+      network: resolved.network,
+    };
+  } catch (err) {
+    const msg = err?.message ?? String(err);
+    if (!/private key required|Anvil account #0|Key file not found|Profile keyFile/i.test(msg)) {
+      throw err;
+    }
+  }
+
+  const operator = loadOperator(home);
+  if (operator?.owner && /^0x[0-9a-fA-F]{40}$/.test(operator.owner)) {
+    return {
+      address: getAddress(operator.owner),
+      source: "profile owner",
+      network,
+    };
+  }
+
+  throw new Error(
+    "No operator identity configured. Run `clanker setup`, pass --address 0x…, " +
+      "or set a signing key (OPERATOR_PRIVATE_KEY / --key-file / operator.json key pointer).",
+  );
 }

@@ -63,7 +63,7 @@ export function openclawKeysDir() {
 
 /**
  * @param {string} presetName
- * @param {{ force?: boolean, registryAddress?: string|null, home?: string }} [opts]
+ * @param {{ force?: boolean, registryAddress?: string|null, home?: string, fromBlock?: bigint|string|number }} [opts]
  */
 export function initProfile(presetName, opts = {}) {
   const name = String(presetName || "").toLowerCase();
@@ -79,13 +79,15 @@ export function initProfile(presetName, opts = {}) {
   }
   mkdirSync(home, { recursive: true });
   const preset = PRESETS[name];
+  const fromBlock =
+    opts.fromBlock != null ? BigInt(opts.fromBlock) : preset.fromBlock;
   const config = {
     preset: preset.preset,
     registryAddress: opts.registryAddress ?? preset.registryAddress,
     chainRpcUrl: preset.chainRpcUrl,
     brokerUrl: preset.brokerUrl,
     mqttAuthServiceUrl: preset.mqttAuthServiceUrl,
-    fromBlock: preset.fromBlock.toString(),
+    fromBlock: fromBlock.toString(),
   };
   if (name === "local" && !config.registryAddress) {
     // Placeholder until chain deploy; operator must set after forge deploy.
@@ -120,8 +122,9 @@ export function loadOperator(home = clankerHome()) {
 }
 
 /**
- * Write operator profile (label + owner + key pointer). Never stores hex keys.
- * @param {{ label: string, owner: string, key?: { type: 'env'|'keyFile', value?: string } }} op
+ * Write operator profile (label + owner + optional key pointer). Never stores hex keys.
+ * Omit `key` (or pass null) for a read-only profile; mint/revoke still need a pointer later.
+ * @param {{ label: string, owner: string, key?: { type: 'env'|'keyFile', value?: string }|null }} op
  * @param {string} [home]
  */
 export function writeOperator(op, home = clankerHome()) {
@@ -130,8 +133,10 @@ export function writeOperator(op, home = clankerHome()) {
   const out = {
     label: op.label,
     owner: op.owner,
-    key: op.key ?? { type: "env", value: "OPERATOR_PRIVATE_KEY" },
   };
+  if (op.key != null) {
+    out.key = op.key;
+  }
   writeFileSync(path, `${JSON.stringify(out, null, 2)}\n`, { mode: 0o600 });
   return { path, operator: out };
 }

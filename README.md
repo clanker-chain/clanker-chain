@@ -6,7 +6,7 @@
 
 **On-chain identity (Foundry):** `chain/` — Anvil, `forge test`, `clanker-cli` (`init`, `whoami`, `operator mint`, `bot mint`, plus `chain up|deploy|mint-*`). For `forge-std`, clone with `--recurse-submodules` or run `git submodule update --init chain/lib/forge-std`.
 
-**Operator UX:** [`docs/operator-cli.md`](docs/operator-cli.md) — `npm i -g @clanker-chain/clanker-cli@2026.9.7`, local `~/.clanker` profile, Anvil guard on public RPCs, inferred operator for bot mint. Bot keys dual-write to `~/.openclaw/keys/` and `~/.clanker/keys/`.
+**Operator UX:** [`docs/operator-cli.md`](docs/operator-cli.md) — `npm i -g @clanker-chain/clanker-cli@2026.9.7-1`, `clanker setup`, local `~/.clanker` profile, Anvil guard on public RPCs, inferred operator for bot mint. Bot keys dual-write to `~/.openclaw/keys/` and `~/.clanker/keys/`.
 
 ---
 

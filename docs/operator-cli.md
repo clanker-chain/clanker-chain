@@ -1,22 +1,31 @@
 # Operator CLI
 
-Profile-aware operator tooling for `ClankerIdentity`: mint, whoami, list bots, revoke/rotate, and transfer. Agents can drive these commands once a key pointer and `~/.clanker` profile exist. Beginners still need a wallet or an exported `OPERATOR_PRIVATE_KEY` — this increment does **not** include a join site or MQTT message monitoring.
+Profile-aware operator tooling for `ClankerIdentity`: mint, whoami, list bots, revoke/rotate, and transfer. Agents can drive these once `~/.clanker` exists. Prefer **`clanker setup`** for humans; use `clanker init --preset` for scripts.
 
-Low-level aliases (`clanker chain mint-*`) remain for scripts. Prefer the profile-aware commands below.
+Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include a join site or MQTT message monitoring.
 
 ## Quick start (Sepolia closed beta)
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.7
+npm install -g @clanker-chain/clanker-cli@2026.9.7-1
 
-clanker init --preset sepolia
+clanker setup
+# guided: preset, owner address, operator label, optional key pointer
+# detects Foundry account names + ~/.openclaw/keys (context only)
 
-export OPERATOR_PRIVATE_KEY=0x…   # real key — never Anvil #0 on Sepolia
-# Prefer --key-file for repeatable sessions (persisted in operator.json):
-#   clanker operator mint org.you --key-file ~/.clanker/op.key
-clanker operator mint org.you
-clanker whoami
+clanker whoami          # works from operator.json owner (read-only)
+clanker operator mint org.you --key-file ~/.clanker/op.key   # if not registered yet
 clanker bot mint you.laptop
+```
+
+Non-interactive (agents / CI):
+
+```bash
+clanker setup --preset sepolia \
+  --operator org.you \
+  --address 0x… \
+  --key-file ~/.clanker/op.key \
+  --yes --force
 ```
 
 From a monorepo checkout (dev / `chain up|deploy`): `node clanker-cli/bin/clanker.mjs …`. `chain up`, `chain deploy`, and `check *` require the git checkout; they are not available from the npm tarball alone.
@@ -25,12 +34,26 @@ From a monorepo checkout (dev / `chain up|deploy`): `node clanker-cli/bin/clanke
 
 Closed-beta hub values live in the **sepolia** preset (same numbers as [`public-testnet-hub.md`](public-testnet-hub.md)). Do not put those hostnames in plugin npm READMEs until hub step 4 (ACLs).
 
+## `clanker setup`
+
+Interactive (TTY) wizard that:
+
+1. Detects existing `config.json` / `operator.json`, `OPERATOR_PRIVATE_KEY` (address only), Foundry `cast wallet list` names, and OpenClaw bot key basenames.
+2. Chooses preset (`sepolia` / `local`). On Sepolia, offers `fromBlock` **46000000** for faster public-RPC scans (registry floor remains 35000000).
+3. Sets operator **owner address** + **label**.
+4. Verifies on-chain: refuses Anvil `#0` on public RPC; refuses saving if the label’s current owner ≠ chosen address.
+5. Optionally stores a signing **pointer** (`keyFile` or `OPERATOR_PRIVATE_KEY`). Omit for a read-only profile — `whoami` / `bots` still work; mint/revoke need a key later.
+
+Never stores raw hex keys. Foundry passwords are not unlocked or saved; paste the address (or unlock via `cast` yourself). Bot keys are not the operator owner.
+
+`clanker init --preset …` remains the non-interactive network-only writer.
+
 ## Profile layout
 
 | Path | Role |
 |------|------|
 | `~/.clanker/config.json` | Network: `preset`, `registryAddress`, `chainRpcUrl`, `brokerUrl`, `mqttAuthServiceUrl`, `fromBlock` |
-| `~/.clanker/operator.json` | `label`, `owner`, key **pointer** (`env` or `keyFile`) — never a raw hex key |
+| `~/.clanker/operator.json` | `label`, `owner`, optional key **pointer** (`env` or `keyFile`) — never a raw hex key |
 | `~/.clanker/keys/{bot}.key` | Bot signing key (symlink or copy) |
 | `~/.openclaw/keys/{bot}.key` | Same key — primary path for published OpenClaw plugins today |
 
@@ -58,6 +81,8 @@ Mutating commands (and `clanker chain deploy`) resolve the operator key as:
 
 On any other RPC, missing key or Anvil #0 → hard error. After mint / transfer accept, `operator.json` stores the pointer that matched (`keyFile` path or `OPERATOR_PRIVATE_KEY`). Raw `--key` cannot be re-read later — prefer `--key-file` or exporting `OPERATOR_PRIVATE_KEY`.
 
+**Reads** (`whoami`, `bots`): `--address` → signing key if present → `operator.json` `owner` → error pointing at `clanker setup`.
+
 ## Ownership discovery
 
 - **Preferred label** (`--operator` or `operator.json`): `operators(keccak(label))` storage read. Works after `OperatorTransferred`. Rejects wrong owner or revoked.
@@ -67,6 +92,7 @@ On any other RPC, missing key or Anvil #0 → hard error. After mint / transfer 
 
 | Command | Behavior |
 |---------|----------|
+| `clanker setup …` | Interactive or flagged profile wizard |
 | `clanker whoami [--json] [--operator <label>] [--address 0x…]` | Current operators for address (+ child bots) |
 | `clanker operator mint <label>` | `registerOperator`; writes `operator.json` after receipt |
 | `clanker bot mint <label> [operator]` | Infers operator from profile / sole active operator if omitted; dual-writes keys; prints harness stub |
@@ -80,7 +106,7 @@ Human output by default. Pass `--json` for agents/scripts. `clanker chain mint-*
 
 ## Key resolution for agents
 
-Once a human (or CI) has written `~/.clanker` and exported `OPERATOR_PRIVATE_KEY` (or a `keyFile` pointer):
+Once a human (or CI) has written `~/.clanker` and (for mutates) exported `OPERATOR_PRIVATE_KEY` or a `keyFile` pointer:
 
 ```bash
 clanker whoami --json
@@ -106,4 +132,4 @@ Do not ask the model to invent `--registry` / `--rpc` / operator labels if the p
 - Fees: [`registration-economics.md`](registration-economics.md)
 - Wire protocol: [`bot-comms.md`](../bot-comms.md)
 
-Env-file helper for power users: [`clanker-cli/scripts/with-sepolia-env.sh`](../clanker-cli/scripts/with-sepolia-env.sh). Prefer `clanker init --preset sepolia` + `OPERATOR_PRIVATE_KEY` for day-to-day use.
+Env-file helper for power users: [`clanker-cli/scripts/with-sepolia-env.sh`](../clanker-cli/scripts/with-sepolia-env.sh). Prefer `clanker setup` for day-to-day onboarding.
