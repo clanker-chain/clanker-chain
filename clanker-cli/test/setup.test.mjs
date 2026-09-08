@@ -25,6 +25,7 @@ import {
   detectSetupHints,
   listOpenclawBotKeys,
   parseCastWalletList,
+  formatSetupDetectTable,
 } from "../lib/setup-detect.mjs";
 import {
   applySetup,
@@ -32,6 +33,27 @@ import {
   buildKeyPointer,
   runSetupNonInteractive,
 } from "../lib/setup.mjs";
+
+describe("formatSetupDetectTable", () => {
+  it("renders aligned What/Value columns", () => {
+    const home = mkdtempSync(join(tmpdir(), "clanker-table-"));
+    initProfile("sepolia", { home });
+    const table = formatSetupDetectTable(
+      detectSetupHints({
+        home,
+        env: {},
+        spawn: () => ({ status: 0, stdout: "deployer (Local)\n", error: null }),
+        openclawDir: join(home, "no-oc"),
+      }),
+    );
+    assert.match(table, /What\s+Value/);
+    assert.match(table, /config\.json/);
+    assert.match(table, /operator\.json\s+missing/);
+    assert.match(table, /Foundry accounts/);
+    assert.match(table, /preset=sepolia/);
+    rmSync(home, { recursive: true, force: true });
+  });
+});
 
 describe("parseCastWalletList", () => {
   it("parses cast wallet list lines", () => {

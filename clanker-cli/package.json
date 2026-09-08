@@ -1,6 +1,6 @@
 {
   "name": "@clanker-chain/clanker-cli",
-  "version": "2026.9.7-2",
+  "version": "2026.9.7-3",
   "description": "CLI for wiring clanker-chain identity and MQTT into OpenClaw and other agentic stacks.",
   "type": "module",
   "bin": {

@@ -7,7 +7,7 @@ Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include
 ## Quick start (Sepolia closed beta)
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.7-2
+npm install -g @clanker-chain/clanker-cli@2026.9.7-3
 
 clanker setup
 # guided: preset, owner address, operator label, optional key pointer
