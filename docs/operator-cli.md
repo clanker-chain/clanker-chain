@@ -7,12 +7,12 @@ Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include
 ## Quick start (Sepolia closed beta)
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.7-4
+npm install -g @clanker-chain/clanker-cli@2026.9.8
 
 clanker setup
-# Clack-guided: network select, Foundry account picker, chain spinner, optional key
+# Clack-guided: network select, Foundry account picker (+ optional op.key export), chain spinner
 
-clanker doctor          # readiness table (whoami vs mint)
+clanker doctor          # readiness + mqtt-auth /health when configured
 clanker whoami          # fast; add --with-bots to enrich child bots
 clanker operator mint org.you --key-file ~/.clanker/op.key   # plan + confirm unless --yes
 clanker bot mint you.laptop --yes
@@ -26,11 +26,12 @@ clanker setup --preset sepolia \
   --address 0x… \
   --key-file ~/.clanker/op.key \
   --yes --force
+# or: --foundry-account <name> --export-key
 ```
 
 From a monorepo checkout (dev / `chain up|deploy`): `node clanker-cli/bin/clanker.mjs …`. `chain up`, `chain deploy`, and `check *` require the git checkout; they are not available from the npm tarball alone.
 
-`bot mint` prints a `channels.mqtt` stub filled from the preset (broker, auth, RPC, registry). Point OpenClaw (or a future MCP) at that stub and the key file path it reports.
+`bot mint` wires `~/.openclaw/openclaw.json` `channels.mqtt` from the preset (broker, auth, RPC, registry) and prints plugin + peer allowlist steps. Closed-beta stranger path: [`closed-beta-invite.md`](closed-beta-invite.md).
 
 Closed-beta hub values live in the **sepolia** preset (same numbers as [`public-testnet-hub.md`](public-testnet-hub.md)). Do not put those hostnames in plugin npm READMEs until hub step 4 (ACLs).
 
@@ -44,11 +45,11 @@ Interactive (TTY) wizard powered by **`@clack/prompts`** + **`picocolors`**:
 4. Verifies on-chain with a spinner: refuses Anvil `#0` on public RPC; refuses saving if the label’s current owner ≠ chosen address.
 5. Optionally stores a signing **pointer** (`keyFile` or `OPERATOR_PRIVATE_KEY`). Omit for a read-only profile.
 
-Never stores raw hex keys. Flag parity for agents: `--preset`, `--operator`, `--address`, `--key-file`, `--skip-key`, `--yes`, `--force`.
+Never stores raw hex keys. Flag parity for agents: `--preset`, `--operator`, `--address`, `--key-file`, `--foundry-account`, `--export-key`, `--skip-key`, `--yes`, `--force`.
 
 ## `clanker doctor`
 
-Prints the detection table plus pass/warn/fail checks. Exit `0` if ready for `whoami`. `--json` for agents. Suggests next commands (git-status habit).
+Prints the detection table plus pass/warn/fail checks (including `GET mqttAuthServiceUrl/health` when configured). Exit `0` if ready for `whoami`. `--json` for agents. Suggests next commands.
 
 ## Mutates (plan → confirm)
 

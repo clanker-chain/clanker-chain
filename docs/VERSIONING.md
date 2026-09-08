@@ -36,7 +36,7 @@ Git tags must match `package.json` exactly:
 | `@clanker-chain/mqtt-node-client` | `mqtt-node-client-v2026.5.25-2` |
 | `@clanker-chain/mqtt-channel-plugin` | `mqtt-channel-plugin-v2026.7.29` |
 | `@clanker-chain/mqtt-tools` | `mqtt-tools-plugin-v2026.7.29` |
-| `@clanker-chain/clanker-cli` | `clanker-cli-v2026.9.7-4` |
+| `@clanker-chain/clanker-cli` | `clanker-cli-v2026.9.8` |
 
 **Deprecated — do not tag for new publishes:** `@clanker-chain/mqtt-plugin`, `@clanker-chain/identity-plugin`. Use channel + tools + `identity-node-client` instead.
 
@@ -59,7 +59,7 @@ Pin **exact** CalVer (including micro when used):
 2. `@clanker-chain/mqtt-node-client` — **`2026.5.25-2`** (already published; republish only if the client changes)
 3. `@clanker-chain/mqtt-channel-plugin` — **`2026.7.29`** (pins `identity-node-client@2026.7.29`, `mqtt-node-client@2026.5.25-2`)
 4. `@clanker-chain/mqtt-tools` — **`2026.7.29`** (same pins; requires channel + `channels.mqtt`)
-5. `@clanker-chain/clanker-cli` — **`2026.9.7-4`** (Clack setup, doctor, plan/confirm mutates, fast whoami)
+5. `@clanker-chain/clanker-cli` — **`2026.9.8`** (Foundry key export, post-mint OpenClaw wire, doctor hub health, closed-beta invite)
 
 Wait for npm registry propagation between steps when installing published deps in CI.
 

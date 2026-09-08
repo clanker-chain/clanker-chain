@@ -121,16 +121,18 @@ France/tooter already use this preset. Some LAN resolvers (ATT `systemd-resolved
 
 One external operator, their own key, plugins from npm `2026.7.29`, CONNECT to the public hub, DM `openclaw.france.prod-1`.
 
-Invite path (operator CLI):
+Invite path: **[`closed-beta-invite.md`](closed-beta-invite.md)** (one-pager). Operator CLI:
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.7-4
+npm install -g @clanker-chain/clanker-cli@2026.9.8
 clanker setup
 # or non-interactive:
 # clanker setup --preset sepolia --operator org.their.name --address 0x… --key-file … --yes --force
+# or: --foundry-account <name> --export-key
+clanker doctor
 clanker operator mint org.their.name   # if needed; requires signing key
 clanker bot mint their.bot.prod-1
-# use printed channels.mqtt stub + key path; install mqtt + mqtt-tools @ 2026.7.29
+# wires openclaw.json channels.mqtt; install mqtt + mqtt-tools @ 2026.7.29; peer allowlist
 ```
 
 Prefer `whoami` / `bots` with `--operator <label>` (or `~/.clanker/operator.json`) so discovery is a storage read, not a multi-million-block log walk. Default Sepolia `fromBlock` (`35000000`) plus chunking works, but public `sepolia.base.org` is slow for full listing — use `--from-block` near deploy or an authenticated RPC if `whoami` without a preferred label times out.
