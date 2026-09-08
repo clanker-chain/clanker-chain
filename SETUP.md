@@ -16,7 +16,7 @@ Default hub for local smoke is **LAN / localhost**. A **public Sepolia TLS hub**
 | `@clanker-chain/identity-node-client` | Bot library (`RegistryClient` + SIWE + EIP-712) |
 | `@clanker-chain/mqtt-channel-plugin` | OpenClaw gateway channel (receive + reply) |
 | `@clanker-chain/mqtt-tools` | OpenClaw tool plugin (`mqtt_send` for agent-initiated send) |
-| `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.8-1`) |
+| `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.8-2`) |
 
 Minting stays on-chain via `clanker-cli`. The in-repo `identity-service` indexer is **deprecated** (optional local explorer only; not required for CONNECT or messaging).
 
@@ -25,7 +25,7 @@ Minting stays on-chain via `clanker-cli`. The in-repo `identity-service` indexer
 ### Sepolia (closed-beta hub)
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8-1
+npm install -g @clanker-chain/clanker-cli@2026.9.8-2
 clanker setup
 clanker doctor
 clanker whoami
@@ -34,7 +34,7 @@ clanker operator mint org.you --yes
 clanker bot mint you.laptop --yes
 ```
 
-`bot mint` dual-writes keys to `~/.openclaw/keys/` (OpenClaw plugins) and `~/.clanker/keys/`, wires `~/.openclaw/openclaw.json` `channels.mqtt`, and prints the hub/plugin checklist. Stranger invite: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md).
+`bot mint` dual-writes keys to `~/.openclaw/keys/` (what OpenClaw uses) and `~/.clanker/keys/` (backup), wires `~/.openclaw/openclaw.json` `channels.mqtt`, prints a **Bot identity** card (bot key ≠ `op.key`), and a hub/plugin checklist. Stranger invite: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md).
 
 ### Local Anvil
 
@@ -111,10 +111,12 @@ Prefer the stub printed by `clanker bot mint`. Example (public hub values — in
   "brokerUrl": "mqtts://mqtt.clanker-chain.com:8883",
   "chainRpcUrl": "https://sepolia.base.org",
   "registryAddress": "0xD650467f9D7A20f37E55ec23Ca1c711598f97958",
-  "mqttAuthServiceUrl": "https://mqtt-auth.clanker-chain.com"
+  "mqttAuthServiceUrl": "https://mqtt-auth.clanker-chain.com",
+  "privateKeyFile": "~/.openclaw/keys/openclaw.france.prod-1.key"
 }
 ```
 
+`privateKeyFile` is the **bot** key from `clanker bot mint` (also written under `~/.clanker/keys/` as a backup). Do not point this at `~/.clanker/op.key`.
 LAN smoke may still use `mqtt://192.168.x.x:1883` / `http://…:9090`.
 
 ### `mqtt_send` smoke prompt

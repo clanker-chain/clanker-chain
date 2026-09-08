@@ -9,7 +9,7 @@ Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include
 No wallet experience needed. Stranger invite one-pager: [`closed-beta-invite.md`](closed-beta-invite.md).
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8-1
+npm install -g @clanker-chain/clanker-cli@2026.9.8-2
 
 clanker setup
 # Choose: "Create a new operator key for me" → note the 0x address
@@ -32,7 +32,7 @@ clanker setup --preset sepolia \
 
 From a monorepo checkout (dev / `chain up|deploy`): `node clanker-cli/bin/clanker.mjs …`. `chain up`, `chain deploy`, and `check *` require the git checkout; they are not available from the npm tarball alone.
 
-`bot mint` wires `~/.openclaw/openclaw.json` `channels.mqtt` from the preset (broker, auth, RPC, registry) and prints plugin + peer allowlist steps.
+`bot mint` writes the **bot** key under `~/.openclaw/keys/`, wires `channels.mqtt` (including `privateKeyFile`), prints a **Bot identity** card (do not hand OpenClaw `op.key`), then plugin + peer allowlist steps.
 
 Closed-beta hub values live in the **sepolia** preset (same numbers as [`public-testnet-hub.md`](public-testnet-hub.md)). Do not put those hostnames in plugin npm READMEs until hub step 4 (ACLs).
 
@@ -122,7 +122,7 @@ On any other RPC, missing key or Anvil #0 → hard error. After mint / transfer 
 | `clanker doctor [--json]` | Local readiness checks |
 | `clanker whoami [--json] [--operator <label>] [--address 0x…] [--with-bots]` | Operators for address; bots only with `--with-bots` |
 | `clanker operator mint <label>` | `registerOperator`; writes `operator.json` after receipt |
-| `clanker bot mint <label> [operator]` | Infers operator from profile / sole active operator if omitted; dual-writes keys; prints harness stub |
+| `clanker bot mint <label> [operator]` | Infers operator; writes bot key + openclaw `channels.mqtt`; prints Bot identity card |
 | `clanker bots [--json] [--operator] [--address]` | Bots for the inferred (or preferred) label; `--address` is read-only |
 | `clanker bot status <label>` | Storage read of `bots(id)` |
 | `clanker bot revoke \| rotate` | Same txs as `chain revoke-bot` / `rotate-bot-key` |

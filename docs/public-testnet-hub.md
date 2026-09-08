@@ -124,14 +124,14 @@ One external operator, their own key, plugins from npm `2026.7.29`, CONNECT to t
 Invite path: **[`closed-beta-invite.md`](closed-beta-invite.md)** (one-pager). Operator CLI:
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8-1
+npm install -g @clanker-chain/clanker-cli@2026.9.8-2
 clanker setup
 # Create a new operator key → fund via Coinbase Base Sepolia faucet → mint
 # Advanced: --foundry-account <name> --export-key  or  --address / --key-file
 clanker doctor
 clanker operator mint org.their.name   # if needed
 clanker bot mint their.bot.prod-1
-# wires openclaw.json channels.mqtt; install mqtt + mqtt-tools @ 2026.7.29; peer allowlist
+# Bot identity card + openclaw.json; install mqtt + mqtt-tools @ 2026.7.29; peer allowlist
 ```
 
 Prefer `whoami` / `bots` with `--operator <label>` (or `~/.clanker/operator.json`) so discovery is a storage read, not a multi-million-block log walk. Default Sepolia `fromBlock` (`35000000`) plus chunking works, but public `sepolia.base.org` is slow for full listing — use `--from-block` near deploy or an authenticated RPC if `whoami` without a preferred label times out.

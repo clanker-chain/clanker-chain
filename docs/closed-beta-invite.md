@@ -10,13 +10,14 @@ Hub constants (same as the **sepolia** preset): [`public-testnet-hub.md`](public
 
 - **Operator** — your org account on the network (e.g. `org.you`)
 - **Bot** — one agent under that operator (e.g. `you.laptop`)
-- **Key file** — a secret on disk (`~/.clanker/op.key`) that proves you own the operator; treat it like a password backup
+- **Operator key** — `~/.clanker/op.key` — for mint/transfer only; **never** give this to OpenClaw
+- **Bot key** — `~/.openclaw/keys/{bot}.key` — what the bot uses to CONNECT
 - **Fee** — a small **test-network** registration cost (fake ETH from a faucet, not real money)
 
 ## Path
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8-1
+npm install -g @clanker-chain/clanker-cli@2026.9.8-2
 
 clanker setup
 # Choose: "Create a new operator key for me"
@@ -31,7 +32,8 @@ clanker whoami
 
 clanker operator mint org.you --yes
 clanker bot mint you.laptop --yes
-# Wires ~/.openclaw/openclaw.json and prints plugin / peer checklist
+# Your bot login is already wired (bot key + openclaw.json channels.mqtt).
+# Do not give the bot op.key. Install plugins, restart OpenClaw, then DM.
 ```
 
 Non-interactive:
