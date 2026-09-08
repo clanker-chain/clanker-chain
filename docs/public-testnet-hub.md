@@ -124,7 +124,7 @@ One external operator, their own key, plugins from npm `2026.7.29`, CONNECT to t
 Invite path (operator CLI):
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.7-1
+npm install -g @clanker-chain/clanker-cli@2026.9.7-2
 clanker setup
 # or non-interactive:
 # clanker setup --preset sepolia --operator org.their.name --address 0x… --key-file … --yes --force

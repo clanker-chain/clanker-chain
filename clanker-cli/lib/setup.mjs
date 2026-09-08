@@ -281,37 +281,92 @@ export async function runSetupInteractive(argv, opts = {}) {
   };
 
   try {
-    console.log("clanker setup — local profile wizard");
-    console.log(`home: ${home}`);
-    if (hints.hasConfig) console.log(`existing config: ${hints.configPath}`);
-    if (hints.hasOperator) console.log(`existing operator: ${hints.operatorPath}`);
+    console.log("");
+    console.log("clanker setup — create your local operator profile");
+    console.log("");
+    console.log(
+      "This writes ~/.clanker/config.json (network) and operator.json (who you are).",
+    );
+    console.log(
+      "Reads like `clanker whoami` can use the owner address without a private key;",
+    );
+    console.log("mint/revoke still need a key file or OPERATOR_PRIVATE_KEY later.");
+    console.log("");
+    console.log(`Profile directory: ${home}`);
+    console.log("");
+
+    // Detection summary
+    console.log("Detected on this machine:");
+    if (hints.hasConfig) {
+      const p = hints.config?.preset ?? "?";
+      const reg = hints.config?.registryAddress ?? "(none)";
+      console.log(`  • Network config already at config.json (preset=${p}, registry=${reg})`);
+    } else {
+      console.log("  • No config.json yet — will create one");
+    }
+    if (hints.hasOperator) {
+      console.log(
+        `  • Operator profile already at operator.json (label=${hints.operator?.label}, owner=${hints.operator?.owner})`,
+      );
+    } else {
+      console.log("  • No operator.json yet — that is what we need for bare `whoami`");
+    }
     if (hints.foundryAvailable && hints.foundryAccounts.length) {
-      console.log(`Foundry accounts: ${hints.foundryAccounts.join(", ")}`);
+      console.log(
+        `  • Foundry keystore accounts: ${hints.foundryAccounts.join(", ")} (names only; you paste the 0x address)`,
+      );
     } else if (!hints.foundryAvailable) {
-      console.log("Foundry cast: not found (optional)");
+      console.log("  • Foundry `cast` not on PATH (optional)");
     }
     if (hints.openclawBots.length) {
       console.log(
-        `OpenClaw bot keys: ${hints.openclawBots.join(", ")} (bot keys ≠ operator owner)`,
+        `  • OpenClaw bot key files: ${hints.openclawBots.join(", ")}`,
+      );
+      console.log(
+        "    (These are bot signing keys — not your operator wallet. Useful context only.)",
       );
     }
     if (hints.hasOperatorPrivateKeyEnv) {
-      console.log(`OPERATOR_PRIVATE_KEY: set → ${hints.envAddress ?? "(invalid)"}`);
+      console.log(
+        `  • OPERATOR_PRIVATE_KEY is set in this shell → ${hints.envAddress ?? "(invalid key)"}`,
+      );
     }
     console.log("");
 
     if ((hints.hasConfig || hints.hasOperator) && !flags.force) {
-      const overwrite = await askYesNo("Overwrite existing ~/.clanker profile?", false);
-      if (!overwrite) {
-        throw new Error("Aborted (profile exists). Re-run with --force to overwrite.");
+      if (hints.hasConfig && !hints.hasOperator) {
+        console.log(
+          "You already have network settings from `clanker init`, but no operator identity.",
+        );
+        console.log(
+          "Continuing will refresh config.json if needed and create operator.json.",
+        );
+        const cont = await askYesNo("Continue setup?", true);
+        if (!cont) {
+          throw new Error("Aborted. Re-run `clanker setup` when ready.");
+        }
+        flags.force = true;
+      } else {
+        console.log(
+          "A full profile already exists. Continuing will REPLACE config.json and/or operator.json",
+        );
+        console.log("with the answers you give next (same files, new contents).");
+        const overwrite = await askYesNo("Replace existing profile files?", false);
+        if (!overwrite) {
+          throw new Error(
+            "Aborted. Pass --force to replace, or edit ~/.clanker/*.json by hand.",
+          );
+        }
+        flags.force = true;
       }
-      flags.force = true;
+      console.log("");
     }
 
+    console.log("— Network —");
     let preset =
       flags.preset ||
       hints.config?.preset ||
-      (await ask("Preset (sepolia|local)", "sepolia"));
+      (await ask("Which network? sepolia (public hub) or local (Anvil)", "sepolia"));
     preset = String(preset).toLowerCase();
     if (!PRESETS[preset]) throw new Error(`Unknown preset "${preset}"`);
 
@@ -321,7 +376,7 @@ export async function runSetupInteractive(argv, opts = {}) {
         fromBlock != null
           ? false
           : await askYesNo(
-              `Use faster fromBlock ${SEPOLIA_FAST_FROM_BLOCK} for public RPC scans?`,
+              `Speed up chain scans? Use fromBlock ${SEPOLIA_FAST_FROM_BLOCK} (recommended on public RPC)`,
               true,
             );
       if (fromBlock == null) {
@@ -329,25 +384,41 @@ export async function runSetupInteractive(argv, opts = {}) {
       }
     }
 
+    console.log("");
+    console.log("— Operator identity —");
+    console.log(
+      "We need the wallet address that owns (or will own) your on-chain operator label.",
+    );
     let address = flags.address ?? null;
     if (!address && flags.keyFile) {
       address = addressFromKeyFile(flags.keyFile);
+      console.log(`Using address from --key-file: ${address}`);
     }
     if (!address && hints.envAddress) {
-      const useEnv = await askYesNo(`Use address from OPERATOR_PRIVATE_KEY (${hints.envAddress})?`, true);
+      const useEnv = await askYesNo(
+        `Use address from OPERATOR_PRIVATE_KEY (${hints.envAddress})?`,
+        true,
+      );
       if (useEnv) address = hints.envAddress;
     }
     if (!address && hints.operator?.owner) {
-      const useOp = await askYesNo(`Use existing operator.json owner (${hints.operator.owner})?`, true);
+      const useOp = await askYesNo(
+        `Keep existing operator.json owner (${hints.operator.owner})?`,
+        true,
+      );
       if (useOp) address = hints.operator.owner;
     }
     if (!address && hints.foundryAccounts.length) {
-      console.log("Foundry accounts (signing still needs --key-file or OPERATOR_PRIVATE_KEY):");
+      console.log("");
+      console.log("Foundry accounts on this machine (passwords are never stored here):");
       hints.foundryAccounts.forEach((n, i) => console.log(`  ${i + 1}. ${n}`));
-      const pick = await ask("Foundry account name to associate (or leave blank)", "");
+      const pick = await ask(
+        "Type a Foundry account name to use, or leave blank to paste an address",
+        hints.foundryAccounts[0] ?? "",
+      );
       if (pick) {
         address = await ask(
-          `Address for Foundry account "${pick}" (paste 0x…; unlock via cast if needed)`,
+          `Paste the 0x address for "${pick}" (cast wallet address ${pick} after unlock)`,
           "",
         );
       }
@@ -363,11 +434,13 @@ export async function runSetupInteractive(argv, opts = {}) {
     let label =
       flags.operator ||
       hints.operator?.label ||
-      (await ask("Operator label (e.g. org.you)", ""));
+      (await ask("Operator label on-chain (e.g. org.openclaw.pat or org.you)", ""));
     if (!label) throw new Error("Operator label is required");
 
     const presetCfg = PRESETS[preset];
-    console.log("Checking chain…");
+    console.log("");
+    console.log("— Chain check —");
+    console.log(`Looking up "${label}" on ${preset}…`);
     const check = await assertSetupIdentity({
       rpc: presetCfg.chainRpcUrl,
       registry: presetCfg.registryAddress,
@@ -376,22 +449,32 @@ export async function runSetupInteractive(argv, opts = {}) {
       skipChainCheck: flags.skipChainCheck || !presetCfg.registryAddress,
     });
     if (check.unregistered) {
-      console.log(`Note: "${label}" is not registered yet — run clanker operator mint after setup.`);
+      console.log(
+        `OK: "${label}" is not registered yet — after setup, run: clanker operator mint ${label}`,
+      );
     } else if (check.operator) {
-      console.log(`On-chain: ${label} active, owner matches.`);
+      console.log(`OK: "${label}" is active on-chain and owned by this address.`);
     }
 
+    console.log("");
+    console.log("— Signing key (optional) —");
+    console.log(
+      "Only needed for mint/revoke/transfer. Skip for read-only whoami/bots.",
+    );
     let keyFile = flags.keyFile;
     let keyEnv = flags.keyEnv;
     let skipKey = flags.skipKey;
     if (!skipKey && !keyFile && !keyEnv) {
       if (hints.hasOperatorPrivateKeyEnv) {
-        const use = await askYesNo("Store env pointer OPERATOR_PRIVATE_KEY for signing?", true);
+        const use = await askYesNo(
+          "Remember OPERATOR_PRIVATE_KEY as the signing pointer in operator.json?",
+          true,
+        );
         if (use) keyEnv = "OPERATOR_PRIVATE_KEY";
         else skipKey = true;
       } else {
         const path = await ask(
-          "Path to operator key file for signing (leave blank for read-only whoami)",
+          "Path to operator private-key file (blank = read-only profile)",
           "",
         );
         if (path) keyFile = path;
@@ -407,13 +490,16 @@ export async function runSetupInteractive(argv, opts = {}) {
       }
     }
 
-    console.log("\nWill write:");
-    console.log(`  preset:   ${preset}`);
+    console.log("");
+    console.log("— Summary (about to write) —");
+    console.log(`  network:  ${preset}`);
     console.log(`  fromBlock:${fromBlock ?? presetCfg.fromBlock}`);
     console.log(`  label:    ${label}`);
     console.log(`  owner:    ${address}`);
-    console.log(`  key:      ${key ? `${key.type}=${key.value}` : "(none — read-only)"}`);
-    const ok = flags.yes || (await askYesNo("Write profile?", true));
+    console.log(
+      `  signing:  ${key ? `${key.type}=${key.value}` : "none (read-only whoami/bots)"}`,
+    );
+    const ok = flags.yes || (await askYesNo("Write these files now?", true));
     if (!ok) throw new Error("Aborted");
 
     const result = applySetup(
@@ -429,12 +515,18 @@ export async function runSetupInteractive(argv, opts = {}) {
       { home, env },
     );
 
-    console.log(`\nWrote ${result.configPath}`);
+    console.log("");
+    console.log(`Wrote ${result.configPath}`);
     console.log(`Wrote ${result.operatorPath}`);
     if (!key) {
-      console.log("Read-only profile: `clanker whoami` works; mint/revoke need --key-file or OPERATOR_PRIVATE_KEY.");
+      console.log("");
+      console.log("Next: clanker whoami");
+      console.log(
+        "For mint/revoke later: re-run setup with a key file, or pass --key-file / OPERATOR_PRIVATE_KEY.",
+      );
     } else {
-      console.log("Try: clanker whoami");
+      console.log("");
+      console.log("Next: clanker whoami");
     }
     return result;
   } finally {

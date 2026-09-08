@@ -16,7 +16,7 @@ Default hub for local smoke is **LAN / localhost**. A **public Sepolia TLS hub**
 | `@clanker-chain/identity-node-client` | Bot library (`RegistryClient` + SIWE + EIP-712) |
 | `@clanker-chain/mqtt-channel-plugin` | OpenClaw gateway channel (receive + reply) |
 | `@clanker-chain/mqtt-tools` | OpenClaw tool plugin (`mqtt_send` for agent-initiated send) |
-| `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.7-1`) |
+| `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.7-2`) |
 
 Minting stays on-chain via `clanker-cli`. The in-repo `identity-service` indexer is **deprecated** (optional local explorer only; not required for CONNECT or messaging).
 
@@ -25,7 +25,7 @@ Minting stays on-chain via `clanker-cli`. The in-repo `identity-service` indexer
 ### Sepolia (closed-beta hub)
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.7-1
+npm install -g @clanker-chain/clanker-cli@2026.9.7-2
 clanker setup
 clanker whoami
 # if not registered yet:
