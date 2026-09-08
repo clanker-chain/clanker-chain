@@ -19,6 +19,8 @@ import {
 } from "../lib/foundry.mjs";
 import {
   OPENCLAW_PLUGIN_PIN,
+  botIdentityCard,
+  botIdentityJson,
   ensureMqttPlugins,
   hubConnectChecklist,
   wireOpenClawMqtt,
@@ -152,6 +154,29 @@ describe("openclaw wire", () => {
     });
     assert.ok(lines.some((l) => l.includes(`@${OPENCLAW_PLUGIN_PIN}`)));
     assert.ok(lines.some((l) => l.includes("you.laptop")));
+    assert.ok(lines[0].includes("already wired"));
+  });
+
+  it("botIdentityCard separates bot key from op.key", () => {
+    const lines = botIdentityCard({
+      botId: "you.laptop",
+      operatorId: "org.you",
+      keyPath: "/home/u/.openclaw/keys/you.laptop.key",
+      openclawPath: "/home/u/.openclaw/openclaw.json",
+      created: true,
+    });
+    assert.equal(lines[0], "Bot identity (what OpenClaw uses to CONNECT):");
+    assert.ok(lines.some((l) => l.includes("you.laptop")));
+    assert.ok(lines.some((l) => l.includes("/home/u/.openclaw/keys/you.laptop.key")));
+    assert.ok(lines.some((l) => l.includes("channels.mqtt created")));
+    assert.ok(lines.some((l) => l.includes("Do not give the bot ~/.clanker/op.key")));
+    const json = botIdentityJson({
+      botId: "you.laptop",
+      keyPath: "/tmp/bot.key",
+      openclawConfigPath: "/tmp/openclaw.json",
+    });
+    assert.equal(json.botId, "you.laptop");
+    assert.match(json.warnOperatorKey, /op\.key/);
   });
 });
 

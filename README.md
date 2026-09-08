@@ -6,7 +6,7 @@
 
 **On-chain identity (Foundry):** `chain/` — Anvil, `forge test`, `clanker-cli` (`init`, `whoami`, `operator mint`, `bot mint`, plus `chain up|deploy|mint-*`). For `forge-std`, clone with `--recurse-submodules` or run `git submodule update --init chain/lib/forge-std`.
 
-**Operator UX:** [`docs/operator-cli.md`](docs/operator-cli.md) — `npm i -g @clanker-chain/clanker-cli@2026.9.8-1`, `clanker setup` (can generate `op.key`), local `~/.clanker` profile, Anvil guard on public RPCs. Closed-beta invite: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md).
+**Operator UX:** [`docs/operator-cli.md`](docs/operator-cli.md) — `npm i -g @clanker-chain/clanker-cli@2026.9.8-2`, `clanker setup` (can generate `op.key`), local `~/.clanker` profile, Anvil guard on public RPCs. Closed-beta invite: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md).
 
 ---
 

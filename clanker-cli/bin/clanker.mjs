@@ -26,6 +26,8 @@ import { resolveForRead, resolveOperatorKey, resolveReadIdentity } from "../lib/
 import { runSetup } from "../lib/setup.mjs";
 import { runDoctor } from "../lib/doctor.mjs";
 import {
+  botIdentityCard,
+  botIdentityJson,
   hubConnectChecklist,
   wireOpenClawMqtt,
 } from "../lib/openclaw-wire.mjs";
@@ -615,18 +617,30 @@ async function main() {
         keyPath: result.key_path,
       });
       if (hasFlag(flags, "--json")) {
-        printJson({ ...result, openclaw: wire });
+        printJson({
+          ...result,
+          openclaw: wire,
+          bot_identity: botIdentityJson({
+            botId: botLabel,
+            keyPath: result.key_path,
+            openclawConfigPath: wire.path,
+          }),
+        });
       } else {
         console.log(c.green(`Minted bot ${botLabel} under ${operatorLabel}`));
         console.log(`botKey:   ${result.bot_key}`);
-        console.log(`key file: ${result.key_path}`);
-        console.log(`also:     ${result.clanker_key_path}`);
         console.log(`tx:       ${result.tx}`);
-        console.log(
-          wire.created
-            ? c.green(`Wrote ${wire.path}`)
-            : c.green(`Updated channels.mqtt in ${wire.path}`),
-        );
+        console.log(c.dim(`also:     ${result.clanker_key_path}`));
+        console.log("");
+        for (const line of botIdentityCard({
+          botId: botLabel,
+          operatorId: operatorLabel,
+          keyPath: result.key_path,
+          openclawPath: wire.path,
+          created: wire.created,
+        })) {
+          console.log(line);
+        }
         nextHint(
           hubConnectChecklist({
             botId: botLabel,
