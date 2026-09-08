@@ -25,6 +25,13 @@ import {
 } from "../lib/identity-query.mjs";
 import { resolveForRead, resolveOperatorKey, resolveReadIdentity } from "../lib/resolve.mjs";
 import { runSetup } from "../lib/setup.mjs";
+import { runDoctor } from "../lib/doctor.mjs";
+import {
+  c,
+  confirmPlan,
+  exitCliError,
+  nextHint,
+} from "../lib/ui.mjs";
 
 function resolveFoundryBinary(name) {
   const home = os.homedir();
@@ -146,16 +153,17 @@ function usage() {
 
 Usage:
   clanker setup [--preset sepolia|local] [--operator <label>] [--address 0x…] [--key-file path] [--force]
+  clanker doctor [--json]
   clanker init --preset sepolia|local [--force]
-  clanker whoami [--json] [--operator <label>] [--address 0x…]
-  clanker operator mint <label> [--json]
-  clanker operator transfer propose <label> <newOwner>
-  clanker operator transfer accept <label>
-  clanker bot mint <label> [operator] [--json]
+  clanker whoami [--json] [--operator <label>] [--address 0x…] [--with-bots]
+  clanker operator mint <label> [--json] [--yes]
+  clanker operator transfer propose <label> <newOwner> [--yes]
+  clanker operator transfer accept <label> [--yes]
+  clanker bot mint <label> [operator] [--json] [--yes]
   clanker bots [--json] [--operator <label>] [--address 0x…]
   clanker bot status <label> [--json]
-  clanker bot revoke <label> [--json]
-  clanker bot rotate <label> <newKeyAddress> [--json]
+  clanker bot revoke <label> [--json] [--yes]
+  clanker bot rotate <label> <newKeyAddress> [--json] [--yes]
   clanker init-openclaw
   clanker chain up|deploy|mint-operator|mint-bot|rotate-bot-key|revoke-bot ...
   clanker check mqtt <bot_id> <operator_id>
@@ -166,11 +174,9 @@ Profile:
   ~/.clanker/operator.json   label + owner + optional key pointer (never raw hex)
   ~/.clanker/keys/           bot keys (also written to ~/.openclaw/keys/)
 
-Humans: prefer \`clanker setup\` (detects Foundry/OpenClaw hints, writes profile).
-Key resolution (mutating commands):
-  --key > --key-file > OPERATOR_PRIVATE_KEY > profile keyFile > profile env
-  Anvil account #0 is allowed only on localhost RPC.
-  Reads (whoami/bots) can use profile owner without a signing key.
+Humans: \`clanker setup\` then \`clanker doctor\` / \`whoami\`.
+Mutates print a plan and confirm unless --yes or --json.
+whoami is fast by default; pass --with-bots to enrich child bots (or use \`clanker bots\`).
 
 See docs/operator-cli.md.
 `);
@@ -223,10 +229,14 @@ async function cmdWhoami(argv) {
     source = resolved.source;
     network = resolved.network;
   } catch (err) {
-    console.error(err.message);
-    process.exit(1);
+    exitCliError({
+      error: err.message,
+      because: "whoami needs an owner address from --address, a key, or operator.json",
+      try: ["clanker setup", "clanker doctor", "clanker whoami --address 0x…"],
+    });
   }
 
+  const withBots = hasFlag(argv, "--with-bots");
   const pub = await publicClientFromRpc(network.rpc);
   const preferred =
     flagValue(argv, "--operator") ?? loadOperator(network.home)?.label ?? null;
@@ -239,9 +249,14 @@ async function cmdWhoami(argv) {
       owner: getAddress(address),
     });
     if (resolved.error) {
-      const err = new Error(resolved.error);
-      err.candidates = resolved.candidates;
-      throw err;
+      exitCliError({
+        error: resolved.error,
+        because: "preferred operator label did not match this owner on-chain",
+        try: [
+          "clanker whoami --address 0x…",
+          "clanker setup --force   # fix label/owner",
+        ],
+      });
     }
     selected = [resolved.operator];
   } else {
@@ -252,12 +267,14 @@ async function cmdWhoami(argv) {
     });
   }
 
-  for (const op of selected) {
-    op.bots = await findBotsByOperator(pub, {
-      registry: network.registry,
-      operatorId: op.id,
-      fromBlock: network.fromBlock,
-    });
+  if (withBots) {
+    for (const op of selected) {
+      op.bots = await findBotsByOperator(pub, {
+        registry: network.registry,
+        operatorId: op.id,
+        fromBlock: network.fromBlock,
+      });
+    }
   }
 
   const data = {
@@ -273,18 +290,26 @@ async function cmdWhoami(argv) {
       active: o.active,
       registeredAt: o.registeredAt.toString(),
       revokedAt: o.revokedAt.toString(),
-      bots: (o.bots ?? []).map((b) => ({
-        label: b.label,
-        botKey: b.botKey,
-        active: b.active,
-        registeredAt: b.registeredAt.toString(),
-        revokedAt: b.revokedAt.toString(),
-      })),
+      bots: withBots
+        ? (o.bots ?? []).map((b) => ({
+            label: b.label,
+            botKey: b.botKey,
+            active: b.active,
+            registeredAt: b.registeredAt.toString(),
+            revokedAt: b.revokedAt.toString(),
+          }))
+        : [],
     })),
   };
 
   if (hasFlag(argv, "--json")) printJson(data);
-  else printHumanWhoami(data);
+  else {
+    printHumanWhoami(data);
+    if (!withBots && data.operators.length) {
+      console.log(c.dim("(bots omitted — pass --with-bots or run clanker bots)"));
+    }
+    nextHint(["clanker bots", "clanker doctor"]);
+  }
 }
 
 async function cmdBots(argv) {
@@ -362,10 +387,21 @@ async function main() {
     try {
       await runSetup(rest);
     } catch (err) {
-      console.error(err.message);
-      process.exit(1);
+      exitCliError({
+        error: err.message,
+        because: "setup could not write a valid local profile",
+        try: [
+          "clanker setup --preset sepolia --operator org.you --address 0x… --yes --force",
+          "clanker doctor",
+        ],
+      });
     }
     return;
+  }
+
+  if (cmd === "doctor") {
+    const { exitCode } = await runDoctor(rest);
+    process.exit(exitCode);
   }
 
   if (cmd === "init") {
@@ -414,13 +450,38 @@ async function main() {
         console.error("Usage: clanker operator mint <label>");
         process.exit(1);
       }
+      let planRows;
+      try {
+        const preview = resolveOperatorKey(flags);
+        planRows = [
+          ["action", "registerOperator"],
+          ["label", label],
+          ["owner", preview.address],
+          ["rpc", preview.network.rpc],
+          ["registry", preview.network.registry ?? "(none)"],
+          ["key", preview.source],
+        ];
+      } catch (err) {
+        exitCliError({
+          error: err.message,
+          because: "operator mint needs a signing key on this network",
+          try: [
+            "export OPERATOR_PRIVATE_KEY=0x…",
+            "clanker operator mint " + label + " --key-file ~/.clanker/op.key --yes",
+            "clanker doctor",
+          ],
+        });
+      }
+      const ok = await confirmPlan(flags, planRows, `Mint operator ${label}?`);
+      if (!ok) process.exit(0);
       const result = await chainMintOperator(label, flags);
       if (hasFlag(flags, "--json") || hasFlag(opArgv, "--json")) printJson(result);
       else {
-        console.log(`Minted operator ${label}`);
+        console.log(c.green(`Minted operator ${label}`));
         console.log(`owner: ${result.owner}`);
         console.log(`tx:    ${result.tx}`);
         console.log(`Wrote ~/.clanker/operator.json`);
+        nextHint([`clanker bot mint <bot_label>`, "clanker whoami"]);
       }
       return;
     }
@@ -432,9 +493,23 @@ async function main() {
           console.error("Usage: clanker operator transfer propose <label> <newOwner>");
           process.exit(1);
         }
+        const ok = await confirmPlan(
+          flags,
+          [
+            ["action", "proposeOperatorTransfer"],
+            ["label", label],
+            ["newOwner", getAddress(newOwner)],
+          ],
+          `Propose transfer of ${label}?`,
+        );
+        if (!ok) process.exit(0);
         const result = await chainProposeOperatorTransfer(label, getAddress(newOwner), flags);
         if (hasFlag(flags, "--json")) printJson(result);
-        else console.log(`Proposed transfer of ${label} → ${newOwner}\ntx: ${result.tx}`);
+        else {
+          console.log(c.green(`Proposed transfer of ${label} → ${newOwner}`));
+          console.log(`tx: ${result.tx}`);
+          nextHint([`clanker operator transfer accept ${label}   # as new owner`]);
+        }
         return;
       }
       if (action === "accept") {
@@ -442,9 +517,23 @@ async function main() {
           console.error("Usage: clanker operator transfer accept <label>");
           process.exit(1);
         }
+        const ok = await confirmPlan(
+          flags,
+          [
+            ["action", "acceptOperatorTransfer"],
+            ["label", label],
+          ],
+          `Accept transfer of ${label}?`,
+        );
+        if (!ok) process.exit(0);
         const result = await chainAcceptOperatorTransfer(label, flags);
         if (hasFlag(flags, "--json")) printJson(result);
-        else console.log(`Accepted transfer of ${label}\nowner: ${result.owner}\ntx: ${result.tx}`);
+        else {
+          console.log(c.green(`Accepted transfer of ${label}`));
+          console.log(`owner: ${result.owner}`);
+          console.log(`tx: ${result.tx}`);
+          nextHint(["clanker whoami", "clanker bots"]);
+        }
         return;
       }
       console.error("Usage: clanker operator transfer propose|accept ...");
@@ -484,20 +573,45 @@ async function main() {
       }
       let operatorLabel = operatorArg ?? flagValue(flags, "--operator") ?? null;
       if (!operatorLabel) {
-        const { address, network } = resolveOperatorKey(flags);
-        const inferred = await resolveOperatorLabel(flags, address, network);
-        operatorLabel = inferred.label;
+        try {
+          const { address, network } = resolveOperatorKey(flags);
+          const inferred = await resolveOperatorLabel(flags, address, network);
+          operatorLabel = inferred.label;
+        } catch (err) {
+          exitCliError({
+            error: err.message,
+            because: "bot mint needs an operator label or a resolvable signing key",
+            try: [
+              `clanker bot mint ${botLabel} <operator_label> --yes`,
+              "clanker setup",
+            ],
+          });
+        }
       }
+      const ok = await confirmPlan(
+        flags,
+        [
+          ["action", "registerBot"],
+          ["bot", botLabel],
+          ["operator", operatorLabel],
+        ],
+        `Mint bot ${botLabel} under ${operatorLabel}?`,
+      );
+      if (!ok) process.exit(0);
       const result = await chainMintBot(botLabel, operatorLabel, flags);
       if (hasFlag(flags, "--json")) printJson(result);
       else {
-        console.log(`Minted bot ${botLabel} under ${operatorLabel}`);
+        console.log(c.green(`Minted bot ${botLabel} under ${operatorLabel}`));
         console.log(`botKey:   ${result.bot_key}`);
         console.log(`key file: ${result.key_path}`);
         console.log(`also:     ${result.clanker_key_path}`);
         console.log(`tx:       ${result.tx}`);
         console.log("\nchannels.mqtt stub:");
         console.log(JSON.stringify(result.channels_mqtt, null, 2));
+        nextHint([
+          "Paste channels.mqtt into openclaw.json",
+          "openclaw plugins install @clanker-chain/mqtt-channel-plugin@…",
+        ]);
       }
       return;
     }
@@ -508,9 +622,22 @@ async function main() {
         console.error("Usage: clanker bot revoke <label>");
         process.exit(1);
       }
+      const ok = await confirmPlan(
+        flags,
+        [
+          ["action", "revokeBot"],
+          ["bot", botLabel],
+        ],
+        `Revoke bot ${botLabel}?`,
+      );
+      if (!ok) process.exit(0);
       const result = await chainRevokeBot(botLabel, flags);
       if (hasFlag(flags, "--json")) printJson(result);
-      else console.log(`Revoked ${botLabel}\ntx: ${result.tx}`);
+      else {
+        console.log(c.yellow(`Revoked ${botLabel}`));
+        console.log(`tx: ${result.tx}`);
+        nextHint(["clanker bots", "clanker bot status " + botLabel]);
+      }
       return;
     }
 
@@ -520,9 +647,23 @@ async function main() {
         console.error("Usage: clanker bot rotate <label> <newKeyAddress>");
         process.exit(1);
       }
+      const ok = await confirmPlan(
+        flags,
+        [
+          ["action", "rotateBotKey"],
+          ["bot", botLabel],
+          ["newKey", getAddress(newKey)],
+        ],
+        `Rotate key for ${botLabel}?`,
+      );
+      if (!ok) process.exit(0);
       const result = await chainRotateBotKey(botLabel, getAddress(newKey), flags);
       if (hasFlag(flags, "--json")) printJson(result);
-      else console.log(`Rotated ${botLabel} → ${newKey}\ntx: ${result.tx}`);
+      else {
+        console.log(c.green(`Rotated ${botLabel} → ${newKey}`));
+        console.log(`tx: ${result.tx}`);
+        nextHint(["Update ~/.openclaw/keys/" + botLabel + ".key", "clanker bot status " + botLabel]);
+      }
       return;
     }
 

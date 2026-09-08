@@ -17,10 +17,13 @@ export const ANVIL_DEFAULT_ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 export const SEPOLIA_REGISTRY = "0xD650467f9D7A20f37E55ec23Ca1c711598f97958";
 
 /**
- * Safe floor for Sepolia getLogs (before registry deploy). Documented so scans
- * stay cheap; bump only if you redeploy the registry earlier.
+ * Safe floor for Sepolia getLogs (before registry deploy). Use for full historical
+ * scans via --from-block; default preset uses the faster public-RPC floor below.
  */
 export const SEPOLIA_FROM_BLOCK = 35_000_000n;
+
+/** Default Sepolia fromBlock for public RPC (faster whoami/bots scans). */
+export const SEPOLIA_FAST_FROM_BLOCK = 46_000_000n;
 
 export const PRESETS = {
   local: {
@@ -37,7 +40,7 @@ export const PRESETS = {
     chainRpcUrl: "https://sepolia.base.org",
     brokerUrl: "mqtts://mqtt.clanker-chain.com:8883",
     mqttAuthServiceUrl: "https://mqtt-auth.clanker-chain.com",
-    fromBlock: SEPOLIA_FROM_BLOCK,
+    fromBlock: SEPOLIA_FAST_FROM_BLOCK,
   },
 };
 
@@ -187,7 +190,7 @@ export function resolveNetwork(argv = [], opts = {}) {
   }
 
   if (fromBlock == null) {
-    fromBlock = isLocalRpc(rpc) ? 0n : SEPOLIA_FROM_BLOCK;
+    fromBlock = isLocalRpc(rpc) ? 0n : SEPOLIA_FAST_FROM_BLOCK;
   }
 
   return {

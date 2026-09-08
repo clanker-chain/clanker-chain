@@ -12,11 +12,11 @@ import {
   loadConfig,
   loadOperator,
   openclawKeysDir,
+  SEPOLIA_FAST_FROM_BLOCK,
 } from "./profile.mjs";
 import { normalizePrivateKey } from "./resolve.mjs";
 
-/** Faster Sepolia log floor for public RPC (registry floor remains SEPOLIA_FROM_BLOCK). */
-export const SEPOLIA_FAST_FROM_BLOCK = 46_000_000n;
+export { SEPOLIA_FAST_FROM_BLOCK };
 
 /**
  * Parse `cast wallet list` stdout into account names.
