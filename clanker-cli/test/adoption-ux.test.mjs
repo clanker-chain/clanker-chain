@@ -28,6 +28,11 @@ import {
   writeOperator,
 } from "../lib/profile.mjs";
 import { runDoctorChecks } from "../lib/doctor.mjs";
+import {
+  BASE_SEPOLIA_FAUCET_URL,
+  consumerFundHints,
+  generateOperatorKeyFile,
+} from "../lib/operator-key.mjs";
 
 describe("foundry helpers", () => {
   it("lists accounts via mocked cast wallet list", () => {
@@ -195,5 +200,38 @@ describe("doctor mqtt-auth health", () => {
     assert.equal(health.level, "warn");
     assert.match(health.message, /ECONNREFUSED/);
     rmSync(home, { recursive: true, force: true });
+  });
+});
+
+describe("generateOperatorKeyFile", () => {
+  it("writes key and returns address", () => {
+    const home = mkdtempSync(join(tmpdir(), "clanker-gen-"));
+    const dest = defaultOperatorKeyPath(home);
+    const out = generateOperatorKeyFile(dest);
+    assert.equal(out.path, dest);
+    assert.match(out.address, /^0x[0-9a-fA-F]{40}$/);
+    const raw = readFileSync(dest, "utf8").trim();
+    assert.match(raw, /^0x[0-9a-fA-F]{64}$/);
+    assert.equal(privateKeyToAccount(raw).address, out.address);
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  it("refuses overwrite without force", () => {
+    const home = mkdtempSync(join(tmpdir(), "clanker-gen2-"));
+    const dest = defaultOperatorKeyPath(home);
+    generateOperatorKeyFile(dest);
+    assert.throws(() => generateOperatorKeyFile(dest), /already exists/);
+    const again = generateOperatorKeyFile(dest, { force: true });
+    assert.ok(again.address);
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  it("consumerFundHints include faucet", () => {
+    const lines = consumerFundHints({
+      address: "0x07e8CFD171E63915A441B0E8ff9E3CC2Cd27c4B4",
+      label: "org.you",
+    });
+    assert.ok(lines.some((l) => l.includes(BASE_SEPOLIA_FAUCET_URL)));
+    assert.ok(lines.some((l) => l.includes("operator mint org.you")));
   });
 });
