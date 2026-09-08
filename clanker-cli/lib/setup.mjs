@@ -26,6 +26,7 @@ import {
   addressFromEnv,
   addressFromKeyFile,
   detectSetupHints,
+  formatSetupDetectTable,
 } from "./setup-detect.mjs";
 
 /**
@@ -294,43 +295,7 @@ export async function runSetupInteractive(argv, opts = {}) {
     console.log("");
     console.log(`Profile directory: ${home}`);
     console.log("");
-
-    // Detection summary
-    console.log("Detected on this machine:");
-    if (hints.hasConfig) {
-      const p = hints.config?.preset ?? "?";
-      const reg = hints.config?.registryAddress ?? "(none)";
-      console.log(`  • Network config already at config.json (preset=${p}, registry=${reg})`);
-    } else {
-      console.log("  • No config.json yet — will create one");
-    }
-    if (hints.hasOperator) {
-      console.log(
-        `  • Operator profile already at operator.json (label=${hints.operator?.label}, owner=${hints.operator?.owner})`,
-      );
-    } else {
-      console.log("  • No operator.json yet — that is what we need for bare `whoami`");
-    }
-    if (hints.foundryAvailable && hints.foundryAccounts.length) {
-      console.log(
-        `  • Foundry keystore accounts: ${hints.foundryAccounts.join(", ")} (names only; you paste the 0x address)`,
-      );
-    } else if (!hints.foundryAvailable) {
-      console.log("  • Foundry `cast` not on PATH (optional)");
-    }
-    if (hints.openclawBots.length) {
-      console.log(
-        `  • OpenClaw bot key files: ${hints.openclawBots.join(", ")}`,
-      );
-      console.log(
-        "    (These are bot signing keys — not your operator wallet. Useful context only.)",
-      );
-    }
-    if (hints.hasOperatorPrivateKeyEnv) {
-      console.log(
-        `  • OPERATOR_PRIVATE_KEY is set in this shell → ${hints.envAddress ?? "(invalid key)"}`,
-      );
-    }
+    console.log(formatSetupDetectTable(hints));
     console.log("");
 
     if ((hints.hasConfig || hints.hasOperator) && !flags.force) {

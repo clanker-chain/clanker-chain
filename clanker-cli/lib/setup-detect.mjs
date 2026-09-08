@@ -134,3 +134,91 @@ export function detectSetupHints(opts = {}) {
     anvilDefaultAddress: ANVIL_DEFAULT_ADDRESS,
   };
 }
+
+/**
+ * Pad string to width (truncate with … if longer).
+ * @param {string} s
+ * @param {number} width
+ */
+function cell(s, width) {
+  const t = String(s ?? "");
+  if (t.length === width) return t;
+  if (t.length < width) return t + " ".repeat(width - t.length);
+  if (width <= 1) return "…";
+  return `${t.slice(0, width - 1)}…`;
+}
+
+/**
+ * Render detection hints as an aligned two-column table for the terminal.
+ * @param {ReturnType<typeof detectSetupHints>} hints
+ * @returns {string}
+ */
+export function formatSetupDetectTable(hints) {
+  /** @type {[string, string][]} */
+  const rows = [];
+  rows.push(["Profile dir", hints.home]);
+
+  if (hints.hasConfig) {
+    rows.push(["config.json", `present · preset=${hints.config?.preset ?? "?"}`]);
+    rows.push([
+      "registry",
+      hints.config?.registryAddress ? String(hints.config.registryAddress) : "(none)",
+    ]);
+  } else {
+    rows.push(["config.json", "missing · will create"]);
+  }
+
+  if (hints.hasOperator) {
+    rows.push([
+      "operator.json",
+      `present · ${hints.operator?.label ?? "?"} · ${hints.operator?.owner ?? "?"}`,
+    ]);
+  } else {
+    rows.push(["operator.json", "missing · needed for whoami"]);
+  }
+
+  if (hints.foundryAvailable && hints.foundryAccounts.length) {
+    rows.push([
+      "Foundry accounts",
+      `${hints.foundryAccounts.length}: ${hints.foundryAccounts.join(", ")}`,
+    ]);
+  } else if (hints.foundryAvailable) {
+    rows.push(["Foundry accounts", "none listed"]);
+  } else {
+    rows.push(["Foundry cast", "not on PATH"]);
+  }
+
+  if (hints.openclawBots.length) {
+    rows.push([
+      "OpenClaw bot keys",
+      `${hints.openclawBots.length} files (bot signing only)`,
+    ]);
+    for (const b of hints.openclawBots) {
+      rows.push(["  ·", b]);
+    }
+  } else {
+    rows.push(["OpenClaw bot keys", "none"]);
+  }
+
+  if (hints.hasOperatorPrivateKeyEnv) {
+    rows.push([
+      "OPERATOR_PRIVATE_KEY",
+      hints.envAddress ? `set · ${hints.envAddress}` : "set · (invalid)",
+    ]);
+  } else {
+    rows.push(["OPERATOR_PRIVATE_KEY", "unset"]);
+  }
+
+  const col0 = Math.min(
+    22,
+    Math.max(4, ...rows.map(([k]) => k.length)),
+  );
+  const lines = [
+    `${cell("What", col0)}  Value`,
+    `${"-".repeat(col0)}  ${"-".repeat(48)}`,
+  ];
+  for (const [k, v] of rows) {
+    lines.push(`${cell(k, col0)}  ${v}`);
+  }
+  return lines.join("\n");
+}
