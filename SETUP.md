@@ -2,7 +2,7 @@
 
 Blockchain identity cutover (CalVer `2026.7.29`+): bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
 
-**Operator path (preferred):** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker init --preset`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
+**Operator path (preferred):** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
 
 Default hub for local smoke is **LAN / localhost**. A **public Sepolia TLS hub** exists (closed beta) — see [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not treat a LAN IP as the public network; do not put hub hostnames in plugin npm READMEs until ACLs land.
 
@@ -16,7 +16,7 @@ Default hub for local smoke is **LAN / localhost**. A **public Sepolia TLS hub**
 | `@clanker-chain/identity-node-client` | Bot library (`RegistryClient` + SIWE + EIP-712) |
 | `@clanker-chain/mqtt-channel-plugin` | OpenClaw gateway channel (receive + reply) |
 | `@clanker-chain/mqtt-tools` | OpenClaw tool plugin (`mqtt_send` for agent-initiated send) |
-| `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.7`) |
+| `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.7-1`) |
 
 Minting stays on-chain via `clanker-cli`. The in-repo `identity-service` indexer is **deprecated** (optional local explorer only; not required for CONNECT or messaging).
 
@@ -25,12 +25,12 @@ Minting stays on-chain via `clanker-cli`. The in-repo `identity-service` indexer
 ### Sepolia (closed-beta hub)
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.7
-clanker init --preset sepolia
-export OPERATOR_PRIVATE_KEY=0x…   # real key — not Anvil #0
-clanker operator mint org.you
-clanker bot mint you.laptop
+npm install -g @clanker-chain/clanker-cli@2026.9.7-1
+clanker setup
 clanker whoami
+# if not registered yet:
+clanker operator mint org.you --key-file ~/.clanker/op.key
+clanker bot mint you.laptop
 ```
 
 `bot mint` dual-writes keys to `~/.openclaw/keys/` (OpenClaw plugins) and `~/.clanker/keys/`, and prints a `channels.mqtt` stub from the preset.

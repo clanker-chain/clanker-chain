@@ -124,10 +124,11 @@ One external operator, their own key, plugins from npm `2026.7.29`, CONNECT to t
 Invite path (operator CLI):
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.7
-clanker init --preset sepolia
-export OPERATOR_PRIVATE_KEY=0x…   # their key — not Anvil #0
-clanker operator mint org.their.name
+npm install -g @clanker-chain/clanker-cli@2026.9.7-1
+clanker setup
+# or non-interactive:
+# clanker setup --preset sepolia --operator org.their.name --address 0x… --key-file … --yes --force
+clanker operator mint org.their.name   # if needed; requires signing key
 clanker bot mint their.bot.prod-1
 # use printed channels.mqtt stub + key path; install mqtt + mqtt-tools @ 2026.7.29
 ```

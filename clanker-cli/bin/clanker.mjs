@@ -23,7 +23,8 @@ import {
   readBot,
   resolvePreferredOperator,
 } from "../lib/identity-query.mjs";
-import { resolveForRead, resolveOperatorKey } from "../lib/resolve.mjs";
+import { resolveForRead, resolveOperatorKey, resolveReadIdentity } from "../lib/resolve.mjs";
+import { runSetup } from "../lib/setup.mjs";
 
 function resolveFoundryBinary(name) {
   const home = os.homedir();
@@ -144,6 +145,7 @@ function usage() {
   console.log(`clanker - clanker-chain helper CLI
 
 Usage:
+  clanker setup [--preset sepolia|local] [--operator <label>] [--address 0x…] [--key-file path] [--force]
   clanker init --preset sepolia|local [--force]
   clanker whoami [--json] [--operator <label>] [--address 0x…]
   clanker operator mint <label> [--json]
@@ -161,12 +163,14 @@ Usage:
 
 Profile:
   ~/.clanker/config.json     network preset (registry, RPC, broker URLs)
-  ~/.clanker/operator.json   label + owner + key pointer (never raw hex)
+  ~/.clanker/operator.json   label + owner + optional key pointer (never raw hex)
   ~/.clanker/keys/           bot keys (also written to ~/.openclaw/keys/)
 
+Humans: prefer \`clanker setup\` (detects Foundry/OpenClaw hints, writes profile).
 Key resolution (mutating commands):
   --key > --key-file > OPERATOR_PRIVATE_KEY > profile keyFile > profile env
   Anvil account #0 is allowed only on localhost RPC.
+  Reads (whoami/bots) can use profile owner without a signing key.
 
 See docs/operator-cli.md.
 `);
@@ -213,16 +217,14 @@ async function cmdWhoami(argv) {
   let address;
   let source;
   let network;
-  const addressFlag = flagValue(argv, "--address");
-  if (addressFlag) {
-    network = resolveForRead(argv);
-    address = getAddress(addressFlag);
-    source = "--address";
-  } else {
-    const resolved = resolveOperatorKey(argv);
+  try {
+    const resolved = resolveReadIdentity(argv);
     address = resolved.address;
     source = resolved.source;
     network = resolved.network;
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
   }
 
   const pub = await publicClientFromRpc(network.rpc);
@@ -288,14 +290,13 @@ async function cmdWhoami(argv) {
 async function cmdBots(argv) {
   let address;
   let network;
-  const addressFlag = flagValue(argv, "--address");
-  if (addressFlag) {
-    network = resolveForRead(argv);
-    address = getAddress(addressFlag);
-  } else {
-    const resolved = resolveOperatorKey(argv);
+  try {
+    const resolved = resolveReadIdentity(argv);
     address = resolved.address;
     network = resolved.network;
+  } catch (err) {
+    console.error(err.message);
+    process.exit(1);
   }
   const { label, pub } = await resolveOperatorLabel(argv, address, network);
   const bots = await findBotsByOperator(pub, {
@@ -356,6 +357,16 @@ async function main() {
   }
 
   const repoRoot = findRepoRoot();
+
+  if (cmd === "setup") {
+    try {
+      await runSetup(rest);
+    } catch (err) {
+      console.error(err.message);
+      process.exit(1);
+    }
+    return;
+  }
 
   if (cmd === "init") {
     const preset = flagValue(rest, "--preset") ?? rest.find((a) => !a.startsWith("--"));
