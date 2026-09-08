@@ -6,15 +6,18 @@ Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include
 
 ## Quick start (Sepolia closed beta)
 
+No wallet experience needed. Stranger invite one-pager: [`closed-beta-invite.md`](closed-beta-invite.md).
+
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8
+npm install -g @clanker-chain/clanker-cli@2026.9.8-1
 
 clanker setup
-# Clack-guided: network select, Foundry account picker (+ optional op.key export), chain spinner
+# Choose: "Create a new operator key for me" → note the 0x address
+# Fund it: https://portal.cdp.coinbase.com/products/faucet (Base Sepolia → ETH)
 
-clanker doctor          # readiness + mqtt-auth /health when configured
-clanker whoami          # fast; add --with-bots to enrich child bots
-clanker operator mint org.you --key-file ~/.clanker/op.key   # plan + confirm unless --yes
+clanker doctor
+clanker whoami
+clanker operator mint org.you --yes
 clanker bot mint you.laptop --yes
 ```
 
@@ -23,15 +26,13 @@ Non-interactive (agents / CI):
 ```bash
 clanker setup --preset sepolia \
   --operator org.you \
-  --address 0x… \
-  --key-file ~/.clanker/op.key \
+  --generate-key \
   --yes --force
-# or: --foundry-account <name> --export-key
 ```
 
 From a monorepo checkout (dev / `chain up|deploy`): `node clanker-cli/bin/clanker.mjs …`. `chain up`, `chain deploy`, and `check *` require the git checkout; they are not available from the npm tarball alone.
 
-`bot mint` wires `~/.openclaw/openclaw.json` `channels.mqtt` from the preset (broker, auth, RPC, registry) and prints plugin + peer allowlist steps. Closed-beta stranger path: [`closed-beta-invite.md`](closed-beta-invite.md).
+`bot mint` wires `~/.openclaw/openclaw.json` `channels.mqtt` from the preset (broker, auth, RPC, registry) and prints plugin + peer allowlist steps.
 
 Closed-beta hub values live in the **sepolia** preset (same numbers as [`public-testnet-hub.md`](public-testnet-hub.md)). Do not put those hostnames in plugin npm READMEs until hub step 4 (ACLs).
 
@@ -39,13 +40,26 @@ Closed-beta hub values live in the **sepolia** preset (same numbers as [`public-
 
 Interactive (TTY) wizard powered by **`@clack/prompts`** + **`picocolors`**:
 
-1. Detects existing `config.json` / `operator.json`, `OPERATOR_PRIVATE_KEY` (address only), Foundry `cast wallet list` names, and OpenClaw bot key basenames (table).
-2. Chooses preset (`sepolia` / `local`). Sepolia defaults `fromBlock` to **46000000** (historical floor **35000000** still available via `--from-block`).
-3. Sets operator **owner address** + **label** (Foundry accounts are a select list; paste `0x` next).
-4. Verifies on-chain with a spinner: refuses Anvil `#0` on public RPC; refuses saving if the label’s current owner ≠ chosen address.
-5. Optionally stores a signing **pointer** (`keyFile` or `OPERATOR_PRIVATE_KEY`). Omit for a read-only profile.
+1. Detects existing `config.json` / `operator.json`, env key (address only), Foundry accounts, and OpenClaw bot key basenames (table).
+2. Chooses preset (`sepolia` / `local`). Sepolia defaults `fromBlock` to **46000000**.
+3. **Owner identity** — default: create `~/.clanker/op.key`. Also: existing key file, Foundry (advanced), or paste address (read-only).
+4. Operator **label** (e.g. `org.you`).
+5. Verifies on-chain: refuses Anvil `#0` on public RPC; refuses saving if the label’s current owner ≠ chosen address.
+6. Stores a signing **pointer** (`keyFile` or `OPERATOR_PRIVATE_KEY`) when a key was chosen.
 
-Never stores raw hex keys. Flag parity for agents: `--preset`, `--operator`, `--address`, `--key-file`, `--foundry-account`, `--export-key`, `--skip-key`, `--yes`, `--force`.
+Never stores raw hex keys inside JSON. Flag parity: `--preset`, `--operator`, `--generate-key`, `--address`, `--key-file`, `--foundry-account`, `--export-key`, `--skip-key`, `--yes`, `--force`.
+
+### Advanced: Foundry / existing wallet
+
+```bash
+clanker setup --preset sepolia --operator org.you \
+  --foundry-account YOUR_ACCOUNT --export-key --yes --force
+# or:
+clanker setup --preset sepolia --operator org.you \
+  --address 0x… --key-file ~/.clanker/op.key --yes --force
+```
+
+Optional GUI: import `op.key` into MetaMask/Rabby to view the address — not required for mint.
 
 ## `clanker doctor`
 

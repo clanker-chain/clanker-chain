@@ -228,6 +228,64 @@ describe("runSetupNonInteractive", () => {
     );
     rmSync(home, { recursive: true, force: true });
   });
+
+  it("writes profile with --generate-key", async () => {
+    const home = mkdtempSync(join(tmpdir(), "clanker-genkey-"));
+    const result = await runSetupNonInteractive(
+      [
+        "--preset",
+        "sepolia",
+        "--operator",
+        "org.you",
+        "--generate-key",
+        "--skip-chain-check",
+        "--yes",
+        "--force",
+      ],
+      { home, env: {} },
+    );
+    assert.ok(existsSync(result.configPath));
+    const op = loadOperator(home);
+    assert.equal(op.label, "org.you");
+    assert.equal(op.key?.type, "keyFile");
+    assert.ok(existsSync(op.key.value));
+    assert.match(op.owner, /^0x[0-9a-fA-F]{40}$/);
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  it("refuses --generate-key overwrite without --force", async () => {
+    const home = mkdtempSync(join(tmpdir(), "clanker-genkey2-"));
+    await runSetupNonInteractive(
+      [
+        "--preset",
+        "sepolia",
+        "--operator",
+        "org.you",
+        "--generate-key",
+        "--skip-chain-check",
+        "--yes",
+        "--force",
+      ],
+      { home, env: {} },
+    );
+    await assert.rejects(
+      () =>
+        runSetupNonInteractive(
+          [
+            "--preset",
+            "sepolia",
+            "--operator",
+            "org.you",
+            "--generate-key",
+            "--skip-chain-check",
+            "--yes",
+          ],
+          { home, env: {} },
+        ),
+      /already exists/,
+    );
+    rmSync(home, { recursive: true, force: true });
+  });
 });
 
 describe("resolveReadIdentity profile owner", () => {

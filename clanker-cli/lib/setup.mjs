@@ -33,6 +33,11 @@ import {
   exportFoundryKey,
   resolveFoundryAddress,
 } from "./foundry.mjs";
+import {
+  BASE_SEPOLIA_FAUCET_URL,
+  consumerFundHints,
+  generateOperatorKeyFile,
+} from "./operator-key.mjs";
 import { c, nextHint } from "./ui.mjs";
 import { join } from "node:path";
 
@@ -52,6 +57,7 @@ export function parseSetupFlags(argv) {
   let skipChainCheck = false;
   let foundryAccount = null;
   let exportKey = false;
+  let generateKey = false;
 
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
@@ -63,6 +69,7 @@ export function parseSetupFlags(argv) {
     else if (a === "--from-block" && argv[i + 1]) fromBlock = BigInt(argv[++i]);
     else if (a === "--foundry-account" && argv[i + 1]) foundryAccount = argv[++i];
     else if (a === "--export-key") exportKey = true;
+    else if (a === "--generate-key") generateKey = true;
     else if (a === "--force") force = true;
     else if (a === "--yes" || a === "-y") yes = true;
     else if (a === "--skip-key") skipKey = true;
@@ -82,6 +89,7 @@ export function parseSetupFlags(argv) {
     skipChainCheck,
     foundryAccount,
     exportKey,
+    generateKey,
   };
 }
 
@@ -203,7 +211,7 @@ export async function runSetupNonInteractive(argv, opts = {}) {
   if (!flags.preset || !PRESETS[flags.preset]) {
     throw new Error(
       "Non-interactive setup requires --preset sepolia|local (stdin is not a TTY). " +
-        "Also pass --operator <label> and --address 0x…",
+        "Also pass --operator <label> and --generate-key (or --address / --key-file)",
     );
   }
   if (!flags.operator) {
@@ -217,6 +225,23 @@ export async function runSetupNonInteractive(argv, opts = {}) {
     spawn: opts.spawn,
     inheritStdio: false,
   };
+
+  if (flags.generateKey) {
+    if (flags.skipKey) {
+      throw new Error("Cannot combine --generate-key with --skip-key");
+    }
+    const dest = keyFile || defaultOperatorKeyPath(home);
+    const created = generateOperatorKeyFile(dest, {
+      force: flags.force,
+    });
+    keyFile = created.path;
+    if (address && getAddress(address) !== getAddress(created.address)) {
+      throw new Error(
+        `Generated key address ${created.address} does not match --address ${getAddress(address)}`,
+      );
+    }
+    address = created.address;
+  }
 
   if (flags.foundryAccount) {
     if (!address) {
@@ -238,7 +263,7 @@ export async function runSetupNonInteractive(argv, opts = {}) {
   if (!address && env.OPERATOR_PRIVATE_KEY) address = addressFromEnv(env);
   if (!address) {
     throw new Error(
-      "Non-interactive setup requires --address 0x…, --key-file, OPERATOR_PRIVATE_KEY, or --foundry-account",
+      "Non-interactive setup requires --generate-key, --address 0x…, --key-file, OPERATOR_PRIVATE_KEY, or --foundry-account",
     );
   }
 
@@ -305,9 +330,13 @@ export async function runSetupInteractive(argv, opts = {}) {
   });
 
   clack.intro(c.bold("clanker setup"));
-  clack.log.step("Creates ~/.clanker/config.json (network) and operator.json (identity).");
+  clack.log.step(
+    "Sets up your operator identity (org account) and network for OpenClaw bots.",
+  );
   clack.log.message(
-    c.dim("whoami works from owner without a key; mint/revoke need a key pointer later."),
+    c.dim(
+      "New here? Create a key file — no wallet app or Foundry required. Mint needs a little test ETH later.",
+    ),
   );
   clack.log.message(c.dim(`Profile: ${home}`));
   console.log("");
@@ -366,6 +395,28 @@ export async function runSetupInteractive(argv, opts = {}) {
 
   let address = flags.address ?? null;
   let foundryAccountUsed = null;
+  let generatedKeyFile = null;
+  if (!address && flags.generateKey) {
+    const dest = flags.keyFile || defaultOperatorKeyPath(home);
+    let forceGen = flags.force;
+    if (existsSync(dest) && !forceGen) {
+      forceGen = cancelIf(
+        await clack.confirm({
+          message: `Overwrite existing ${dest}?`,
+          initialValue: false,
+        }),
+      );
+      if (!forceGen) {
+        clack.cancel("Aborted.");
+        process.exit(0);
+      }
+    }
+    const created = generateOperatorKeyFile(dest, { force: true });
+    generatedKeyFile = created.path;
+    address = created.address;
+    clack.log.success(`Created operator key at ${created.path}`);
+    clack.log.info(`Your operator address: ${created.address}`);
+  }
   if (!address && flags.keyFile) {
     address = addressFromKeyFile(flags.keyFile);
     clack.log.info(`Address from --key-file: ${address}`);
@@ -388,23 +439,95 @@ export async function runSetupInteractive(argv, opts = {}) {
     );
     if (useOp) address = hints.operator.owner;
   }
-  if (!address && hints.foundryAccounts.length) {
+  if (!address) {
     const options = [
-      ...hints.foundryAccounts.map((n) => ({
-        value: n,
-        label: n,
-        hint: "resolve via cast wallet address",
-      })),
-      { value: "__paste__", label: "Paste an address…", hint: "0x…" },
+      {
+        value: "__generate__",
+        label: "Create a new operator key for me",
+        hint: "writes ~/.clanker/op.key (recommended)",
+      },
+      {
+        value: "__keyfile__",
+        label: "Use an existing key file…",
+        hint: "path to a 0x private key file",
+      },
     ];
+    if (hints.foundryAccounts.length) {
+      for (const n of hints.foundryAccounts) {
+        options.push({
+          value: n,
+          label: `Foundry: ${n}`,
+          hint: "advanced — cast wallet",
+        });
+      }
+    } else {
+      options.push({
+        value: "__foundry_missing__",
+        label: "Foundry account…",
+        hint: "advanced — install Foundry first",
+      });
+    }
+    options.push({
+      value: "__paste__",
+      label: "Paste an address…",
+      hint: "read-only unless you add a key later",
+    });
+
     const pick = cancelIf(
       await clack.select({
-        message: "Operator owner source",
+        message: "How do you want to set your operator identity?",
         options,
-        initialValue: hints.foundryAccounts[0],
+        initialValue: "__generate__",
       }),
     );
-    if (pick === "__paste__") {
+
+    if (pick === "__generate__") {
+      const dest = defaultOperatorKeyPath(home);
+      let forceGen = flags.force;
+      if (existsSync(dest) && !forceGen) {
+        forceGen = cancelIf(
+          await clack.confirm({
+            message: `Overwrite existing ${dest}?`,
+            initialValue: false,
+          }),
+        );
+        if (!forceGen) {
+          clack.cancel("Aborted.");
+          process.exit(0);
+        }
+      }
+      const created = generateOperatorKeyFile(dest, { force: true });
+      generatedKeyFile = created.path;
+      address = created.address;
+      clack.log.success(`Created operator key at ${created.path}`);
+      clack.log.info(`Your operator address: ${created.address}`);
+    } else if (pick === "__keyfile__") {
+      const path = cancelIf(
+        await clack.text({
+          message: "Path to operator key file",
+          placeholder: join(home, "op.key"),
+          validate: (v) =>
+            v && String(v).trim() && existsSync(String(v).trim())
+              ? undefined
+              : "File not found",
+        }),
+      );
+      generatedKeyFile = String(path).trim();
+      address = addressFromKeyFile(generatedKeyFile);
+      clack.log.info(`Address from key file: ${address}`);
+    } else if (pick === "__foundry_missing__") {
+      clack.log.warn(
+        "Foundry (cast) is not available. Install https://book.getfoundry.sh/ or choose Create a new operator key.",
+      );
+      address = cancelIf(
+        await clack.text({
+          message: "Operator owner address",
+          placeholder: "0x…",
+          validate: (v) =>
+            /^0x[0-9a-fA-F]{40}$/.test(v || "") ? undefined : "Need 0x + 40 hex",
+        }),
+      );
+    } else if (pick === "__paste__") {
       address = cancelIf(
         await clack.text({
           message: "Operator owner address",
@@ -435,16 +558,6 @@ export async function runSetupInteractive(argv, opts = {}) {
         );
       }
     }
-  }
-  if (!address) {
-    address = cancelIf(
-      await clack.text({
-        message: "Operator owner address",
-        placeholder: "0x…",
-        validate: (v) =>
-          /^0x[0-9a-fA-F]{40}$/.test(v || "") ? undefined : "Need 0x + 40 hex",
-      }),
-    );
   }
   address = getAddress(address);
 
@@ -483,7 +596,7 @@ export async function runSetupInteractive(argv, opts = {}) {
     throw err;
   }
 
-  let keyFile = flags.keyFile;
+  let keyFile = flags.keyFile || generatedKeyFile;
   let keyEnv = flags.keyEnv;
   let skipKey = flags.skipKey;
   if (!skipKey && !keyFile && !keyEnv) {
@@ -579,7 +692,16 @@ export async function runSetupInteractive(argv, opts = {}) {
   if (!key) {
     nextHint([
       "clanker whoami",
-      "clanker setup --key-file ~/.clanker/op.key --force   # when you need mint",
+      "clanker setup — choose Create a new operator key when you need mint",
+    ]);
+  } else if (preset === "sepolia" && generatedKeyFile) {
+    nextHint(consumerFundHints({ address, label }));
+  } else if (preset === "sepolia") {
+    nextHint([
+      `If this address needs test ETH: ${BASE_SEPOLIA_FAUCET_URL}`,
+      "clanker doctor",
+      "clanker whoami",
+      `clanker bot mint <label>`,
     ]);
   } else {
     nextHint(["clanker whoami", `clanker bot mint <label>`]);
@@ -593,23 +715,20 @@ export async function runSetupInteractive(argv, opts = {}) {
 export async function runSetup(argv, opts = {}) {
   const flags = parseSetupFlags(argv);
   const isTTY = opts.isTTY ?? Boolean(input.isTTY);
+  const hasIdentitySource = Boolean(
+    flags.address ||
+      flags.keyFile ||
+      flags.generateKey ||
+      flags.foundryAccount ||
+      opts.env?.OPERATOR_PRIVATE_KEY ||
+      process.env.OPERATOR_PRIVATE_KEY,
+  );
 
-  if (
-    !isTTY ||
-    (flags.yes && flags.preset && flags.operator && (flags.address || flags.keyFile))
-  ) {
+  if (!isTTY || (flags.yes && flags.preset && flags.operator && hasIdentitySource)) {
     if (!isTTY && !(flags.preset && flags.operator)) {
       return runSetupNonInteractive(argv, opts);
     }
-    if (
-      flags.yes &&
-      flags.preset &&
-      flags.operator &&
-      (flags.address ||
-        flags.keyFile ||
-        opts.env?.OPERATOR_PRIVATE_KEY ||
-        process.env.OPERATOR_PRIVATE_KEY)
-    ) {
+    if (flags.yes && flags.preset && flags.operator && hasIdentitySource) {
       return runSetupNonInteractive(argv, opts);
     }
   }

@@ -124,13 +124,12 @@ One external operator, their own key, plugins from npm `2026.7.29`, CONNECT to t
 Invite path: **[`closed-beta-invite.md`](closed-beta-invite.md)** (one-pager). Operator CLI:
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8
+npm install -g @clanker-chain/clanker-cli@2026.9.8-1
 clanker setup
-# or non-interactive:
-# clanker setup --preset sepolia --operator org.their.name --address 0x… --key-file … --yes --force
-# or: --foundry-account <name> --export-key
+# Create a new operator key → fund via Coinbase Base Sepolia faucet → mint
+# Advanced: --foundry-account <name> --export-key  or  --address / --key-file
 clanker doctor
-clanker operator mint org.their.name   # if needed; requires signing key
+clanker operator mint org.their.name   # if needed
 clanker bot mint their.bot.prod-1
 # wires openclaw.json channels.mqtt; install mqtt + mqtt-tools @ 2026.7.29; peer allowlist
 ```
