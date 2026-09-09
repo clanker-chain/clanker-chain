@@ -25,11 +25,13 @@ Published packages use **CalVer** — see [`docs/VERSIONING.md`](docs/VERSIONING
 
 ## Docs
 
+Index: [`docs/README.md`](docs/README.md).
+
 - Operator path: [`docs/operator-cli.md`](docs/operator-cli.md), [`SETUP.md`](SETUP.md)
-- Protocol: [`bot-comms.md`](bot-comms.md)
+- Protocol: [`docs/bot-comms.md`](docs/bot-comms.md)
 - Experimental Sepolia hub: [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md)
 
-Keep private ops (SSH hosts, droplet IPs, personal wallets) out of the public tree.
+Keep private ops (SSH hosts, droplet IPs, personal wallets) out of the public tree. When GitHub and `website/` docs overlap, update GitHub first and sync the site.
 
 ## Code of conduct
 

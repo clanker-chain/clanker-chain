@@ -935,7 +935,7 @@ async function main() {
     nextHint([
       "clanker bot mint <label>",
       "Then channels.mqtt.botId / operatorId / privateKeyFile update automatically",
-      "See docs/operator-cli.md and docs/closed-beta-invite.md",
+      "See docs/operator-cli.md and docs/public-testnet-hub.md",
     ]);
     process.exit(0);
   }

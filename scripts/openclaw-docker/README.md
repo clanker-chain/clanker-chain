@@ -51,7 +51,7 @@ export OPENCLAW_ROOT=~/services/openclaw
 | `down.sh` | `docker compose down` |
 | `logs.sh` | `docker compose logs -f openclaw-gateway` (pass args to override, e.g. `./logs.sh --tail 100`) |
 
-Full plugin install + config: [`docs/openclaw-extensions-quickstart.md`](../../docs/openclaw-extensions-quickstart.md).
+Full plugin install + config: [`SETUP.md`](../../SETUP.md) §3 (OpenClaw install).
 
 ## Overrides
 

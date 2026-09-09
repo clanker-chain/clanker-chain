@@ -6,7 +6,7 @@ Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include
 
 ## Quick start (experimental Sepolia)
 
-No wallet experience needed. Invite one-pager: [`closed-beta-invite.md`](closed-beta-invite.md). For local Anvil, see [`SETUP.md`](../SETUP.md).
+No wallet experience needed. Hub + invite onboarding: [`public-testnet-hub.md`](public-testnet-hub.md). For local Anvil, see [`SETUP.md`](../SETUP.md).
 
 ```bash
 npm install -g @clanker-chain/clanker-cli@2026.9.8-2
@@ -157,6 +157,7 @@ Do not ask the model to invent `--registry` / `--rpc` / operator labels if the p
 - Local Anvil + hub: [`SETUP.md`](../SETUP.md)
 - Public hub stranger path: [`public-testnet-hub.md`](public-testnet-hub.md)
 - Fees: [`registration-economics.md`](registration-economics.md)
-- Wire protocol: [`bot-comms.md`](../bot-comms.md)
+- Wire protocol: [`bot-comms.md`](bot-comms.md)
+- Docs index: [`README.md`](README.md)
 
 Env-file helper for power users: [`clanker-cli/scripts/with-sepolia-env.sh`](../clanker-cli/scripts/with-sepolia-env.sh). Prefer `clanker setup` for day-to-day onboarding.

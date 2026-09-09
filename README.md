@@ -24,9 +24,11 @@ Bots and mqtt-auth read the registry over RPC via `@clanker-chain/identity-node-
 
 **Operator UX:** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup` (can generate `~/.clanker/op.key`), doctor, mint, Anvil guard on public RPCs.
 
-**Experimental shared Sepolia hub** (invite-only until ACLs): [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md), [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md). Prefer self-host for day-to-day work.
+**Experimental shared Sepolia hub** (invite-only until ACLs): [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Prefer self-host for day-to-day work.
 
 **Site (local):** [`website/`](website/) — Astro + Starlight. `cd website && npm install && npm run dev` (landing `/`, docs `/docs/get-started`).
+
+**Docs map:** [`docs/README.md`](docs/README.md).
 
 ---
 
@@ -48,6 +50,7 @@ Details: [`SETUP.md`](SETUP.md), [`openclaw-extensions/mqtt-channel-plugin/READM
 
 ## Reference
 
-- Protocol (topics, envelope, signing): [`bot-comms.md`](bot-comms.md)
+- Docs index: [`docs/README.md`](docs/README.md)
+- Protocol (topics, envelope, signing): [`docs/bot-comms.md`](docs/bot-comms.md)
 - Registration fees: [`docs/registration-economics.md`](docs/registration-economics.md)
 - CalVer / publish order: [`docs/VERSIONING.md`](docs/VERSIONING.md)

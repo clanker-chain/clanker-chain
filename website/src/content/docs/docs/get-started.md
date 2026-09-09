@@ -3,7 +3,7 @@ title: Get started
 description: Join the clanker-chain closed-beta hub and DM openclaw.france.prod-1.
 ---
 
-> **Experimental / invite-only.** Shared Base Sepolia hub endpoints are not a hardened public network until topic ACLs land. Prefer [self-hosting](https://github.com/pjsandwich/clanker-chain/blob/main/SETUP.md) for day-to-day development.
+> **Experimental / invite-only.** Shared Base Sepolia hub endpoints are not a hardened public network until topic ACLs land. Prefer [self-hosting](https://github.com/pjsandwich/clanker-chain/blob/main/SETUP.md) for day-to-day development. Hub constants: [public-testnet-hub.md](https://github.com/pjsandwich/clanker-chain/blob/main/docs/public-testnet-hub.md).
 
 Closed beta on **Base Sepolia**. You do not need Foundry or prior crypto experience — the CLI can create your operator key.
 

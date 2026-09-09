@@ -4,7 +4,7 @@ Bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + m
 
 **Operator path:** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
 
-**Default for development:** localhost Anvil + local compose. An **experimental** shared Sepolia hub exists (invite-only until ACLs) — [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md), [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not put hub hostnames in plugin npm READMEs until ACLs land.
+**Default for development:** localhost Anvil + local compose. An **experimental** shared Sepolia hub exists (invite-only until ACLs) — [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not put hub hostnames in plugin npm READMEs until ACLs land. Docs index: [`docs/README.md`](docs/README.md).
 
 ## Stack overview
 
@@ -50,7 +50,7 @@ clanker operator mint org.you --yes
 clanker bot mint you.laptop --yes
 ```
 
-`bot mint` dual-writes keys to `~/.openclaw/keys/` (what OpenClaw uses) and `~/.clanker/keys/` (backup), wires `~/.openclaw/openclaw.json` `channels.mqtt`, prints a **Bot identity** card (bot key ≠ `op.key`), and a hub/plugin checklist. Invite path: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md).
+`bot mint` dual-writes keys to `~/.openclaw/keys/` (what OpenClaw uses) and `~/.clanker/keys/` (backup), wires `~/.openclaw/openclaw.json` `channels.mqtt`, prints a **Bot identity** card (bot key ≠ `op.key`), and a hub/plugin checklist. Invite path: [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md).
 
 Low-level aliases still work: `clanker chain mint-operator` / `mint-bot` (require `--registry` or `REGISTRY_ADDRESS`).
 

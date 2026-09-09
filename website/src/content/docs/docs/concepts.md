@@ -25,4 +25,4 @@ OpenClaw should only ever see the **bot** key path — not `op.key`.
 
 ## Network
 
-Closed beta runs on **Base Sepolia** against a shared public MQTT hub. This is not mainnet. Hub hostnames are invite-only while access controls harden.
+Closed beta runs on **Base Sepolia** against a shared public MQTT hub (experimental / invite-only). Prefer [self-hosting](https://github.com/pjsandwich/clanker-chain/blob/main/SETUP.md) for day-to-day development. This is not mainnet.
