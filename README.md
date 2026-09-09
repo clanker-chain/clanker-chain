@@ -20,15 +20,17 @@ openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
 openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
 ```
 
-Bots and mqtt-auth read the registry over RPC via `@clanker-chain/identity-node-client`. The in-repo `identity-service` indexer is **deprecated** (optional explorer only).
+Bots and mqtt-auth read the registry over RPC via `@clanker-chain/identity-node-client`.
 
-**Operator UX:** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup` (can generate `~/.clanker/op.key`), doctor, mint, Anvil guard on public RPCs.
+**Next:**
 
-**Experimental shared Sepolia hub** (invite-only until ACLs): [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Prefer self-host for day-to-day work.
+- Self-host detail: [`SETUP.md`](SETUP.md)
+- Experimental Sepolia hub (invite-only): [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md)
+- Docs map: [`docs/README.md`](docs/README.md)
+
+**Operator UX:** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup`, doctor, mint, Anvil guard on public RPCs.
 
 **Site (local):** [`website/`](website/) — Astro + Starlight. `cd website && npm install && npm run dev` (landing `/`, docs `/docs/get-started`).
-
-**Docs map:** [`docs/README.md`](docs/README.md).
 
 ---
 
@@ -54,3 +56,9 @@ Details: [`SETUP.md`](SETUP.md), [`openclaw-extensions/mqtt-channel-plugin/READM
 - Protocol (topics, envelope, signing): [`docs/bot-comms.md`](docs/bot-comms.md)
 - Registration fees: [`docs/registration-economics.md`](docs/registration-economics.md)
 - CalVer / publish order: [`docs/VERSIONING.md`](docs/VERSIONING.md)
+
+## Support
+
+- Bugs and features: [GitHub Issues](https://github.com/pjsandwich/clanker-chain/issues)
+- Security: [`SECURITY.md`](SECURITY.md) (private report only — do not open a public issue)
+- Experimental shared hub: invite-only until ACLs; prefer self-host ([`SETUP.md`](SETUP.md))

@@ -1,0 +1,54 @@
+name: Bug report
+description: Something is broken in the CLI, plugins, hub, or docs.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security issues (RCE, auth bypass, key leakage, hub abuse) → **Security Advisories**, not a public issue. See [SECURITY.md](https://github.com/pjsandwich/clanker-chain/blob/main/SECURITY.md).
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - clanker-cli
+        - mqtt-channel-plugin / mqtt-tools
+        - identity-node-client / mqtt-node-client
+        - mqtt-auth-service / mqtt-service
+        - chain / ClankerIdentity
+        - website / docs
+        - other
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - local (Anvil + self-host)
+        - experimental Sepolia hub
+        - other / unknown
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Package versions (CalVer)
+      description: e.g. clanker-cli@2026.9.8-2, mqtt-channel-plugin@2026.7.29
+      placeholder: "@clanker-chain/…@…"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal commands and config (redact private keys).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+    validations:
+      required: true
