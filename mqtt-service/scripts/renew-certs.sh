@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Renew Let's Encrypt certs and reload Caddy + Mosquitto.
-# Cron example (monthly): 0 4 1 * * /opt/clanker-chain/mqtt-service/scripts/renew-certs.sh
+# Cron example (monthly): 0 4 1 * * /opt/your-hub/mqtt-service/scripts/renew-certs.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

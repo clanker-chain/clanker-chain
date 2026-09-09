@@ -22,9 +22,6 @@ logs/
 *.swp
 *~
 
-# Optional: uncomment to stop tracking the materialized dev snapshot (Anvil test addresses).
-# identity/bot-identity-ledger.json
-
 # Foundry build artifacts (chain/)
 chain/cache/
 chain/out/
@@ -36,3 +33,6 @@ chain/.anvil-state.json
 /mqtt-node-client/mqtt-node-client
 
 identity/bot-identity-ledger.json
+
+# Astro local cache
+website/.astro/
