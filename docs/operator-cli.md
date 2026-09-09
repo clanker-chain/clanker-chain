@@ -4,9 +4,9 @@ Profile-aware operator tooling for `ClankerIdentity`: mint, whoami, list bots, r
 
 Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include a join site or MQTT message monitoring.
 
-## Quick start (Sepolia closed beta)
+## Quick start (experimental Sepolia)
 
-No wallet experience needed. Stranger invite one-pager: [`closed-beta-invite.md`](closed-beta-invite.md).
+No wallet experience needed. Invite one-pager: [`closed-beta-invite.md`](closed-beta-invite.md). For local Anvil, see [`SETUP.md`](../SETUP.md).
 
 ```bash
 npm install -g @clanker-chain/clanker-cli@2026.9.8-2
