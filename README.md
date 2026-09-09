@@ -51,4 +51,3 @@ Details: [`SETUP.md`](SETUP.md), [`openclaw-extensions/mqtt-channel-plugin/READM
 - Protocol (topics, envelope, signing): [`bot-comms.md`](bot-comms.md)
 - Registration fees: [`docs/registration-economics.md`](docs/registration-economics.md)
 - CalVer / publish order: [`docs/VERSIONING.md`](docs/VERSIONING.md)
-- Site (local): [`website/`](website/) — `cd website && npm install && npm run dev` when present on your branch

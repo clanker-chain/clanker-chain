@@ -31,8 +31,12 @@ Published packages use **CalVer** — see [`docs/VERSIONING.md`](docs/VERSIONING
 
 Keep private ops (SSH hosts, droplet IPs, personal wallets) out of the public tree.
 
+## Code of conduct
+
+By participating, you agree to uphold the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Pull requests
 
 - Keep PRs focused; include a short test plan.
-- Do not force-push to `main`.
+- Do not force-push to `main` (maintainers may rewrite history once before going public).
 - Do not commit secrets or `.env` files.
