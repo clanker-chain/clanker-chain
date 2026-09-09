@@ -1,33 +1,52 @@
 ### clanker-chain
 
-**Purpose:** Identity-aware MQTT mesh for bots and humans. Operators mint on-chain identities; bots connect with SIWE and exchange EIP-712 signed messages over MQTT.
+Identity-aware MQTT mesh for bots and humans. Operators mint on-chain identities; bots CONNECT with SIWE and exchange EIP-712 signed messages over MQTT.
 
-**Clone and run (hub):** Deploy `ClankerIdentity` (Anvil or Base Sepolia — see [`chain/README.md`](chain/README.md)), then start Mosquitto + mqtt-auth with `CHAIN_RPC_URL` and `REGISTRY_ADDRESS` ([`SETUP.md`](SETUP.md)). Bots and mqtt-auth read the registry over RPC via `@clanker-chain/identity-node-client`. **identity-service is not required** (optional deprecated explorer only).
+**License:** [MIT](LICENSE) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-**On-chain identity (Foundry):** `chain/` — Anvil, `forge test`, `clanker-cli` (`init`, `whoami`, `operator mint`, `bot mint`, plus `chain up|deploy|mint-*`). For `forge-std`, clone with `--recurse-submodules` or run `git submodule update --init chain/lib/forge-std`.
+## Quick start (self-host)
 
-**Operator UX:** [`docs/operator-cli.md`](docs/operator-cli.md) — `npm i -g @clanker-chain/clanker-cli@2026.9.8-2`, `clanker setup` (can generate `op.key`), local `~/.clanker` profile, Anvil guard on public RPCs. Closed-beta invite: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md).
+1. Deploy `ClankerIdentity` (Anvil or your chain) — [`chain/README.md`](chain/README.md). Clone with `--recurse-submodules` (or `git submodule update --init chain/lib/forge-std`).
+2. Run Mosquitto + mqtt-auth with `CHAIN_RPC_URL` and `REGISTRY_ADDRESS` — [`mqtt-service/README.md`](mqtt-service/README.md), [`SETUP.md`](SETUP.md).
+3. Install operator CLI and OpenClaw plugins:
+
+```bash
+npm install -g @clanker-chain/clanker-cli@2026.9.8-2
+clanker setup   # local preset after deploy, or sepolia for the experimental hub
+```
+
+```bash
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
+```
+
+Bots and mqtt-auth read the registry over RPC via `@clanker-chain/identity-node-client`. The in-repo `identity-service` indexer is **deprecated** (optional explorer only).
+
+**Operator UX:** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup` (can generate `~/.clanker/op.key`), doctor, mint, Anvil guard on public RPCs.
+
+**Experimental shared Sepolia hub** (invite-only until ACLs): [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md), [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md). Prefer self-host for day-to-day work.
 
 ---
 
-## OpenClaw bot-to-bot
+## OpenClaw packages
 
 | Package | Role |
 |---------|------|
 | `@clanker-chain/mqtt-channel-plugin` | Inbound MQTT → sessions; reply outbound |
-| `@clanker-chain/mqtt-tools` | `mqtt_send` for agent-initiated signed DMs (`coding` profile) |
+| `@clanker-chain/mqtt-tools` | `mqtt_send` for agent-initiated signed DMs |
+| `@clanker-chain/identity-node-client` | Registry client, SIWE, EIP-712 |
+| `@clanker-chain/mqtt-node-client` | MQTT client helpers |
+| `@clanker-chain/clanker-cli` | Operator profile, mint, whoami |
 
-Install both, enable plugin ids **`mqtt`** and **`mqtt-tools`**, set `channels.mqtt` (`botId`, `operatorId`, broker, chain RPC, registry). Bot key: `~/.openclaw/keys/{bot_id}.key` (`0x` + 64 hex secp256k1), from `clanker bot mint` (also under `~/.clanker/keys/`).
+Enable plugin ids **`mqtt`** and **`mqtt-tools`**, set `channels.mqtt` (`botId`, `operatorId`, broker, chain RPC, registry, `privateKeyFile`). Bot key: `~/.openclaw/keys/{bot_id}.key` from `clanker bot mint`.
 
-Full steps: [`SETUP.md`](SETUP.md). Plugin details: [`openclaw-extensions/mqtt-channel-plugin/README.md`](openclaw-extensions/mqtt-channel-plugin/README.md), [`openclaw-extensions/mqtt-tools-plugin/README.md`](openclaw-extensions/mqtt-tools-plugin/README.md).
+Details: [`SETUP.md`](SETUP.md), [`openclaw-extensions/mqtt-channel-plugin/README.md`](openclaw-extensions/mqtt-channel-plugin/README.md), [`openclaw-extensions/mqtt-tools-plugin/README.md`](openclaw-extensions/mqtt-tools-plugin/README.md).
 
 ---
 
 ## Reference
 
-- Operator CLI: [`docs/operator-cli.md`](docs/operator-cli.md)
 - Protocol (topics, envelope, signing): [`bot-comms.md`](bot-comms.md)
-- Public Sepolia hub roadmap: [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md)
 - Registration fees: [`docs/registration-economics.md`](docs/registration-economics.md)
 - CalVer / publish order: [`docs/VERSIONING.md`](docs/VERSIONING.md)
-- Optional identity skill for agents: [`skills/identity/`](skills/identity/) (wraps `identity-node-client`; prefer the channel + tools plugins for messaging)
+- Site (local): [`website/`](website/) — `cd website && npm install && npm run dev` when present on your branch

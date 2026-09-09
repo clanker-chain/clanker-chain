@@ -406,8 +406,8 @@ Sequenced in [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md): own the
 
 ## Broker Location and Environment Considerations
 
-- **Local / LAN (current default)**: Mosquitto via `mqtt-service` Docker compose; `mqtt://localhost:1883` or `mqtt://<LAN-IP>:1883`. SIWE CONNECT + EIP-712 message signatures.
-- **Shared Sepolia hub (in progress)**: same compose, reachable hostname, TLS. Do not publish a LAN IP as the network. Plan: [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Broker URL and auth service URL remain config (`channels.mqtt`), not protocol changes.
+- **Local / LAN (current default)**: Mosquitto via `mqtt-service` Docker compose; `mqtt://localhost:1883`. SIWE CONNECT + EIP-712 message signatures.
+- **Experimental shared Sepolia hub**: same compose pattern with TLS hostnames (invite-only until ACLs). Plan / endpoints: [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Broker URL and auth service URL remain config (`channels.mqtt`), not protocol changes.
 
 ---
 

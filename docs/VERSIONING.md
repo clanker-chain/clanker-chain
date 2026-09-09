@@ -38,7 +38,7 @@ Git tags must match `package.json` exactly:
 | `@clanker-chain/mqtt-tools` | `mqtt-tools-plugin-v2026.7.29` |
 | `@clanker-chain/clanker-cli` | `clanker-cli-v2026.9.8-2` |
 
-**Deprecated — do not tag for new publishes:** `@clanker-chain/mqtt-plugin`, `@clanker-chain/identity-plugin`. Use channel + tools + `identity-node-client` instead.
+**Deprecated — do not tag for new publishes:** `@clanker-chain/mqtt-plugin`, `@clanker-chain/identity-plugin`, `@clanker-chain/mqtt-client-plugin`, `@clanker-chain/identity-client-plugin`. Use channel + tools + `identity-node-client` instead. Release workflows for the deprecated client plugins have been removed.
 
 ## Inter-package dependencies
 
