@@ -1,0 +1,260 @@
+:root {
+  --ink: #0c1210;
+  --ink-soft: #1a2420;
+  --sand: #e8e2d6;
+  --sand-dim: #b8b0a0;
+  --copper: #c4783a;
+  --copper-hot: #e09455;
+  --line: rgba(232, 226, 214, 0.12);
+  --font-display: "Fraunces", "Iowan Old Style", Palatino, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  line-height: 1.55;
+  color: var(--sand);
+  background: var(--ink);
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse 90% 60% at 10% -10%, rgba(196, 120, 58, 0.18), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 20%, rgba(26, 60, 48, 0.45), transparent 50%),
+    linear-gradient(165deg, var(--ink) 0%, var(--ink-soft) 55%, #0a100e 100%);
+}
+
+.top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 1.25rem 1.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--sand);
+  text-decoration: none;
+}
+
+.nav {
+  display: flex;
+  gap: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.nav a {
+  color: var(--sand-dim);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.nav a:hover {
+  color: var(--copper-hot);
+}
+
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(3rem, 12vh, 6rem) clamp(1.5rem, 6vw, 4rem);
+  max-width: 42rem;
+}
+
+.eyebrow {
+  margin: 0 0 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--copper);
+}
+
+.brand-hero {
+  margin: 0;
+  font-size: clamp(2.75rem, 9vw, 4.75rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--sand);
+}
+
+.lede {
+  margin: 1.25rem 0 0;
+  max-width: 28rem;
+  font-size: clamp(1.05rem, 2.2vw, 1.25rem);
+  font-weight: 400;
+  color: var(--sand-dim);
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 2rem;
+}
+
+.btn {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  padding: 0.7rem 1.15rem;
+  border: 1px solid transparent;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.25s ease;
+}
+
+.btn.primary {
+  background: var(--copper);
+  color: var(--ink);
+}
+
+.btn.primary:hover {
+  background: var(--copper-hot);
+  box-shadow: 0 0 0 1px rgba(232, 176, 122, 0.35);
+}
+
+.btn.ghost {
+  color: var(--sand);
+  border-color: var(--line);
+  background: transparent;
+  position: relative;
+}
+
+.btn.ghost::after {
+  content: "";
+  position: absolute;
+  left: 1.15rem;
+  right: 1.15rem;
+  bottom: 0.45rem;
+  height: 1px;
+  background: var(--copper);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.28s ease;
+}
+
+.btn.ghost:hover::after {
+  transform: scaleX(1);
+}
+
+.about {
+  padding: 2.5rem clamp(1.5rem, 6vw, 4rem) 3.5rem;
+  border-top: 1px solid var(--line);
+  max-width: 36rem;
+}
+
+.about h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.about p {
+  margin: 0;
+  color: var(--sand-dim);
+  font-size: 1rem;
+}
+
+.about strong {
+  color: var(--sand);
+  font-weight: 600;
+}
+
+.more {
+  margin-top: 1.25rem !important;
+  font-family: var(--font-mono);
+  font-size: 0.8rem !important;
+}
+
+.more a {
+  color: var(--copper-hot);
+  text-decoration: none;
+}
+
+.more a:hover {
+  text-decoration: underline;
+}
+
+.foot {
+  padding: 1rem 1.75rem 1.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.foot p {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--sand-dim);
+  opacity: 0.85;
+}
+
+.anim {
+  opacity: 0;
+  transform: translateY(0.6rem);
+  animation: rise 0.7s ease forwards;
+}
+
+.anim-1 {
+  animation-delay: 0.05s;
+}
+.anim-2 {
+  animation-delay: 0.16s;
+}
+.anim-3 {
+  animation-delay: 0.28s;
+}
+.anim-4 {
+  animation-delay: 0.4s;
+}
+
+@keyframes rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anim {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+
+  .btn.ghost::after {
+    display: none;
+  }
+}
