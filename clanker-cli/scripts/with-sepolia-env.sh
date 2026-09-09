@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# Load Sepolia / registry env then run clanker chain commands.
+# Load Sepolia / registry env then run clanker chain commands (power-user path).
+# Preferred day-to-day: `clanker init --preset sepolia` + OPERATOR_PRIVATE_KEY
+# and profile-aware commands (`clanker operator mint`, `clanker bot mint`).
+# See docs/operator-cli.md.
+#
 # Usage (from clanker-cli/):
 #   ./scripts/with-sepolia-env.sh mint-operator org.openclaw.pat
 #   ./scripts/with-sepolia-env.sh mint-bot openclaw.france.prod-1 org.openclaw.pat
 #
 # Env sources (later wins): chain/.env, clanker-cli/.env, process env.
 # Requires REGISTRY_ADDRESS. Uses BASE_SEPOLIA_RPC_URL or CHAIN_RPC_URL for RPC.
+# Do not use Anvil account #0 as OPERATOR_PRIVATE_KEY against Sepolia.
 set -euo pipefail
 
 CLI_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
