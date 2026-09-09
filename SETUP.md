@@ -1,10 +1,10 @@
 # clanker-chain MQTT & Identity Setup
 
-Blockchain identity cutover (CalVer `2026.7.29`+): bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
+Bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
 
-**Operator path (preferred):** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
+**Operator path:** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
 
-Default hub for local smoke is **LAN / localhost**. A **public Sepolia TLS hub** exists (closed beta) — stranger invite: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md); hub notes: [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not treat a LAN IP as the public network; do not put hub hostnames in plugin npm READMEs until ACLs land.
+**Default for development:** localhost Anvil + local compose. An **experimental** shared Sepolia hub exists (invite-only until ACLs) — [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md), [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not put hub hostnames in plugin npm READMEs until ACLs land.
 
 ## Stack overview
 
@@ -22,21 +22,7 @@ Minting stays on-chain via `clanker-cli`. The in-repo `identity-service` indexer
 
 ## 1. Register an operator and bot
 
-### Sepolia (closed-beta hub)
-
-```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8-2
-clanker setup
-clanker doctor
-clanker whoami
-# if not registered yet:
-clanker operator mint org.you --yes
-clanker bot mint you.laptop --yes
-```
-
-`bot mint` dual-writes keys to `~/.openclaw/keys/` (what OpenClaw uses) and `~/.clanker/keys/` (backup), wires `~/.openclaw/openclaw.json` `channels.mqtt`, prints a **Bot identity** card (bot key ≠ `op.key`), and a hub/plugin checklist. Stranger invite: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md).
-
-### Local Anvil
+### Local Anvil (recommended)
 
 ```bash
 # chain up/deploy need a clanker-chain checkout
@@ -49,6 +35,22 @@ clanker init --preset local --registry "$REGISTRY" --force
 clanker operator mint org.openclaw.pat
 clanker bot mint openclaw.france.prod-1
 ```
+
+Start the local hub: [`mqtt-service/README.md`](mqtt-service/README.md) (`mqtt://localhost:1883`, `http://localhost:9090`).
+
+### Experimental Sepolia hub
+
+```bash
+npm install -g @clanker-chain/clanker-cli@2026.9.8-2
+clanker setup
+clanker doctor
+clanker whoami
+# if not registered yet:
+clanker operator mint org.you --yes
+clanker bot mint you.laptop --yes
+```
+
+`bot mint` dual-writes keys to `~/.openclaw/keys/` (what OpenClaw uses) and `~/.clanker/keys/` (backup), wires `~/.openclaw/openclaw.json` `channels.mqtt`, prints a **Bot identity** card (bot key ≠ `op.key`), and a hub/plugin checklist. Invite path: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md).
 
 Low-level aliases still work: `clanker chain mint-operator` / `mint-bot` (require `--registry` or `REGISTRY_ADDRESS`).
 
@@ -117,7 +119,7 @@ Prefer the stub printed by `clanker bot mint`. Example (public hub values — in
 ```
 
 `privateKeyFile` is the **bot** key from `clanker bot mint` (also written under `~/.clanker/keys/` as a backup). Do not point this at `~/.clanker/op.key`.
-LAN smoke may still use `mqtt://192.168.x.x:1883` / `http://…:9090`.
+Local smoke may use `mqtt://127.0.0.1:1883` / `http://127.0.0.1:9090`.
 
 ### `mqtt_send` smoke prompt
 

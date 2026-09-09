@@ -1,6 +1,8 @@
-# Closed-beta hub invite
+# Experimental hub invite
 
-One-pager for an invited OpenClaw operator to reach the public mesh and DM `openclaw.france.prod-1`.
+> **Experimental / invite-only.** Shared Base Sepolia hub endpoints are not a hardened public network until topic ACLs land. Prefer [self-host](../SETUP.md) for day-to-day development.
+
+One-pager for an invited OpenClaw operator to reach the experimental mesh and DM `openclaw.france.prod-1`.
 
 You do **not** need Foundry, MetaMask, or prior crypto experience. The CLI can create your operator key for you.
 

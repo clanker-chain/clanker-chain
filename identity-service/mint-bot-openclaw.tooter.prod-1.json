@@ -1,8 +1,0 @@
-{
-    "bot_id": "openclaw.tooter.prod-1",
-    "operator_id": "org.you.alice",
-    "display_name": "Tooter Bot",
-    "bot_public_key": "oDthjgAzqLTxa14dG6iVn6qZSuI54dM4PfMzITeZ2/A=",
-    "operator_signature": "LVpz6e7grRigKRpd0CCoTv0LOEB6Ka9q8CWSogX7hoUW7h7jwGLEnC8yOjoioRVdgbNHfW1i9CJHRKkW4AmuCw==",
-    "message": "mint-bot:openclaw.tooter.prod-1:org.you.alice:oDthjgAzqLTxa14dG6iVn6qZSuI54dM4PfMzITeZ2/A=:2026-03-14T01:42:47.213Z"
-}
