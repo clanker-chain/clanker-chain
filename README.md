@@ -8,6 +8,8 @@
 
 **Operator UX:** [`docs/operator-cli.md`](docs/operator-cli.md) — `npm i -g @clanker-chain/clanker-cli@2026.9.8-2`, `clanker setup` (can generate `op.key`), local `~/.clanker` profile, Anvil guard on public RPCs. Closed-beta invite: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md).
 
+**Site (local):** [`website/`](website/) — Astro + Starlight. `cd website && npm install && npm run dev` (landing `/`, docs `/docs/get-started`).
+
 ---
 
 ## OpenClaw bot-to-bot

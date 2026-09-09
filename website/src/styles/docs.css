@@ -1,0 +1,8 @@
+/* Starlight docs chrome — align with landing palette */
+:root {
+  --sl-color-accent-low: #3d2a1c;
+  --sl-color-accent: #c4783a;
+  --sl-color-accent-high: #e8b07a;
+  --sl-font: "Fraunces", "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  --sl-font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
