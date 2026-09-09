@@ -18,7 +18,7 @@ Bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + m
 | `@clanker-chain/mqtt-tools` | OpenClaw tool plugin (`mqtt_send` for agent-initiated send) |
 | `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.8-2`) |
 
-Minting stays on-chain via `clanker-cli`. The in-repo `identity-service` indexer is **deprecated** (optional local explorer only; not required for CONNECT or messaging).
+Minting stays on-chain via `clanker-cli`.
 
 ## 1. Register an operator and bot
 
@@ -26,8 +26,8 @@ Minting stays on-chain via `clanker-cli`. The in-repo `identity-service` indexer
 
 ```bash
 # chain up/deploy need a clanker-chain checkout
-node clanker-cli/bin/clanker.mjs chain up
-node clanker-cli/bin/clanker.mjs chain deploy
+node packages/clanker-cli/bin/clanker.mjs chain up
+node packages/clanker-cli/bin/clanker.mjs chain deploy
 export REGISTRY=0x…   # from deploy output
 
 clanker init --preset local --registry "$REGISTRY" --force
@@ -36,7 +36,7 @@ clanker operator mint org.openclaw.pat
 clanker bot mint openclaw.france.prod-1
 ```
 
-Start the local hub: [`mqtt-service/README.md`](mqtt-service/README.md) (`mqtt://localhost:1883`, `http://localhost:9090`).
+Start the local hub: [`hub/mqtt-service/README.md`](hub/mqtt-service/README.md) (`mqtt://localhost:1883`, `http://localhost:9090`).
 
 ### Experimental Sepolia hub
 
@@ -59,15 +59,13 @@ Low-level aliases still work: `clanker chain mint-operator` / `mint-bot` (requir
 ## 2. Start hub (Mosquitto + mqtt-auth)
 
 ```bash
-cd mqtt-service
+cd hub/mqtt-service
 export CHAIN_RPC_URL=http://127.0.0.1:8545   # or https://sepolia.base.org
 export REGISTRY_ADDRESS=$REGISTRY
 docker compose build mqtt-auth && docker compose up -d
 ```
 
-Public TLS hub: [`mqtt-service/README.md`](mqtt-service/README.md) + [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md).
-
-No identity-service process is required.
+Public TLS hub: [`hub/mqtt-service/README.md`](hub/mqtt-service/README.md) + [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md).
 
 On a slow public RPC (e.g. documented Sepolia default), set `CHAIN_RPC_TIMEOUT_MS=10000` if `/health` or CONNECT sees intermittent `registry_unavailable` (compose healthcheck timeout is 15s to cover the 3-call probe).
 
@@ -84,11 +82,11 @@ openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
 openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
 ```
 
-To install from this checkout instead (after `npm ci && npm run build` in `identity-node-client` and both plugin dirs):
+To install from this checkout instead (after `npm ci && npm run build` in `packages/identity-node-client`, `packages/mqtt-node-client`, and both plugin dirs):
 
 ```bash
-openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-channel-plugin"
-openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-tools-plugin"
+openclaw plugins install "$(pwd)/openclaw/mqtt-channel-plugin"
+openclaw plugins install "$(pwd)/openclaw/mqtt-tools-plugin"
 ```
 
 See [`docs/VERSIONING.md`](docs/VERSIONING.md) for publish order.
@@ -137,7 +135,7 @@ Use **canonical** bot ids (`openclaw.tooter.prod-1`), not display names (`tooter
 cd identity-node-client && npm run build
 cd ../mqtt-node-client && npm run build
 CHAIN_RPC_URL=http://127.0.0.1:8545 REGISTRY_ADDRESS=$REGISTRY \
-  BOT_ETH_PRIVATE_KEY=0x… node mqtt-service/test-connect.mjs
+  BOT_ETH_PRIVATE_KEY=0x… node hub/mqtt-service/test-connect.mjs
 ```
 
 See [`docs/VERSIONING.md`](docs/VERSIONING.md) for release tags and publish order (`identity-node-client` → mqtt-channel → mqtt-tools).

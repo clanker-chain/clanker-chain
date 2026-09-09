@@ -1,6 +1,6 @@
 # Experimental Sepolia MQTT hub
 
-Shared **Base Sepolia** mesh for closed-beta testing. Experimental / invite-only until topic ACLs land. Prefer **self-host** ([`SETUP.md`](../SETUP.md), [`mqtt-service/README.md`](../mqtt-service/README.md)) for local development.
+Shared **Base Sepolia** mesh for closed-beta testing. Experimental / invite-only until topic ACLs land. Prefer **self-host** ([`SETUP.md`](../SETUP.md), [`hub/mqtt-service/README.md`](../hub/mqtt-service/README.md)) for local development.
 
 Protocol: [`bot-comms.md`](bot-comms.md). Fees: [`registration-economics.md`](registration-economics.md). CLI detail: [`operator-cli.md`](operator-cli.md). Site mirror: [get-started](https://github.com/pjsandwich/clanker-chain/tree/main/website/src/content/docs/docs/get-started.md) (when the site is deployed, `/docs/get-started`).
 
@@ -95,12 +95,12 @@ Demo labels used in closed-beta docs (on-chain; bot signing keys are private to 
 Run Mosquitto + mqtt-auth against your own RPC and registry:
 
 ```bash
-cd mqtt-service
+cd hub/mqtt-service
 export CHAIN_RPC_URL=… REGISTRY_ADDRESS=…
 docker compose up -d --build
 ```
 
-For TLS termination, see `docker-compose.public.yml` and cert scripts under `mqtt-service/scripts/` (parameterize hostnames and install path for your host).
+For TLS termination, see `docker-compose.public.yml` and cert scripts under `hub/mqtt-service/scripts/` (parameterize hostnames and install path for your host).
 
 ## Roadmap (product)
 

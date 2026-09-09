@@ -4,7 +4,7 @@
 
 Package detail:
 
-- [`../openclaw-extensions/mqtt-channel-plugin/README.md`](../openclaw-extensions/mqtt-channel-plugin/README.md)
-- [`../openclaw-extensions/mqtt-tools-plugin/README.md`](../openclaw-extensions/mqtt-tools-plugin/README.md)
+- [`../openclaw/mqtt-channel-plugin/README.md`](../openclaw/mqtt-channel-plugin/README.md)
+- [`../openclaw/mqtt-tools-plugin/README.md`](../openclaw/mqtt-tools-plugin/README.md)
 
 CalVer / publish order: [`VERSIONING.md`](VERSIONING.md). Hub endpoints: [`public-testnet-hub.md`](public-testnet-hub.md).

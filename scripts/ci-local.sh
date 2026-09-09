@@ -154,42 +154,36 @@ run_npm_package() {
 main() {
   log "Running local CI checks"
 
-  # identity-node-client types live in dist/. mqtt-auth-service `tsc` resolves
+  # identity-node-client types live in dist/. mqtt-auth-service resolves
   # `@clanker-chain/identity-node-client` via package.json `types`, so this
   # package must be built before the hub auth typecheck.
-  run_npm_package "${ROOT_DIR}/identity-node-client"
-
-  # Deprecated indexer (optional package): unit lane only — not part of hub runtime.
-  log "identity-service (deprecated; unit tests only)"
-  run_bun_package "${ROOT_DIR}/identity-service"
+  run_npm_package "${ROOT_DIR}/packages/identity-node-client"
 
   # Hub auth (chain-direct RegistryClient)
-  run_bun_package "${ROOT_DIR}/mqtt-auth-service"
+  run_bun_package "${ROOT_DIR}/hub/mqtt-auth-service"
 
   # Shipped npm libs
-  run_npm_package "${ROOT_DIR}/mqtt-node-client"
+  run_npm_package "${ROOT_DIR}/packages/mqtt-node-client"
 
   # Operator CLI (published)
   log "clanker-cli unit tests"
-  (cd "${ROOT_DIR}/clanker-cli" && npm ci && npm test)
+  (cd "${ROOT_DIR}/packages/clanker-cli" && npm ci && npm test)
 
-  # mqtt-channel-plugin uses workspace:* dependencies and doesn't ship a lockfile,
-  # so we avoid npm install here. Instead, we symlink the local node clients and
-  # run TypeScript against that compile graph.
+  # mqtt-channel-plugin: symlink local node clients and run TypeScript.
   log "TS check/build for mqtt-channel-plugin (OpenClaw channel SDK plugin)"
-  mkdir -p "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain"
-  ln -sfn "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/identity-node-client"
-  ln -sfn "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin/node_modules/@clanker-chain/mqtt-node-client"
-  (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun x tsc -p tsconfig.json)
-  (cd "${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin" && bun test test/)
+  mkdir -p "${ROOT_DIR}/openclaw/mqtt-channel-plugin/node_modules/@clanker-chain"
+  ln -sfn "${ROOT_DIR}/packages/identity-node-client" "${ROOT_DIR}/openclaw/mqtt-channel-plugin/node_modules/@clanker-chain/identity-node-client"
+  ln -sfn "${ROOT_DIR}/packages/mqtt-node-client" "${ROOT_DIR}/openclaw/mqtt-channel-plugin/node_modules/@clanker-chain/mqtt-node-client"
+  (cd "${ROOT_DIR}/openclaw/mqtt-channel-plugin" && bun x tsc -p tsconfig.json)
+  (cd "${ROOT_DIR}/openclaw/mqtt-channel-plugin" && bun test test/)
 
   log "TS check/build for mqtt-tools-plugin (OpenClaw tool plugin)"
-  MQTT_TOOLS_DIR="${ROOT_DIR}/openclaw-extensions/mqtt-tools-plugin"
+  MQTT_TOOLS_DIR="${ROOT_DIR}/openclaw/mqtt-tools-plugin"
   mkdir -p "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain"
-  ln -sfn "${ROOT_DIR}/identity-node-client" "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain/identity-node-client"
-  ln -sfn "${ROOT_DIR}/mqtt-node-client" "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain/mqtt-node-client"
+  ln -sfn "${ROOT_DIR}/packages/identity-node-client" "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain/identity-node-client"
+  ln -sfn "${ROOT_DIR}/packages/mqtt-node-client" "${MQTT_TOOLS_DIR}/node_modules/@clanker-chain/mqtt-node-client"
   # typebox is a runtime dep; do not run `npm install` in this package — it would fetch
-  # @clanker-chain/mqtt-node-client@2026.5.25 from npm before that CalVer is published.
+  # @clanker-chain/mqtt-node-client from npm instead of the workspace symlink.
   if [ ! -d "${MQTT_TOOLS_DIR}/node_modules/typebox" ]; then
     MQTT_TOOLS_TYPEBOX_TMP="$(mktemp -d)"
     (cd "${MQTT_TOOLS_TYPEBOX_TMP}" && npm pack typebox@1.1.38 --silent && tar -xzf typebox-*.tgz)
@@ -199,13 +193,9 @@ main() {
   (cd "${MQTT_TOOLS_DIR}" && bun x tsc -p tsconfig.json)
   (cd "${MQTT_TOOLS_DIR}" && bun test test/)
 
-  # Deprecated OpenClaw plugins (identity-client-plugin, mqtt-client-plugin) are
-  # no longer built or tarball-validated here — use mqtt-channel + mqtt-tools.
-
   run_foundry_chain
 
   # ABI drift guard: the committed TS/JS ABIs must match the compiled contract.
-  # run_foundry_chain builds artifacts (and guarantees forge in --ci mode).
   if have_cmd forge; then
     log "ABI drift check (generated vs committed)"
     node "${ROOT_DIR}/scripts/gen-abi.mjs" --check
@@ -216,10 +206,10 @@ main() {
     log "forge not on PATH — skipping ABI drift check."
   fi
 
-  # Anvil-backed integration lane (mqtt-auth SIWE against chain; no identity-service).
+  # Anvil-backed integration lane (mqtt-auth SIWE against chain).
   if have_cmd forge && have_cmd anvil; then
     log "Running anvil-backed integration suites"
-    run_bun_integration "${ROOT_DIR}/mqtt-auth-service"
+    run_bun_integration "${ROOT_DIR}/hub/mqtt-auth-service"
   elif [ "$CI_MODE" = "1" ]; then
     echo "ERROR: --ci requires Foundry (anvil + forge) for integration tests." >&2
     exit 1

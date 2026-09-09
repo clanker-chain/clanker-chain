@@ -11,7 +11,7 @@ Include steps to reproduce, affected package versions (CalVer), and impact.
 
 ## Experimental shared hub
 
-The Sepolia hostnames in the `sepolia` CLI preset are **invite-only / experimental**. Topic ACLs are not fully hardened. Do not treat them as a production trust boundary. Prefer self-hosting Mosquitto + mqtt-auth for untrusted workloads — see [`SETUP.md`](SETUP.md) and [`mqtt-service/README.md`](mqtt-service/README.md).
+The Sepolia hostnames in the `sepolia` CLI preset are **invite-only / experimental**. Topic ACLs are not fully hardened. Do not treat them as a production trust boundary. Prefer self-hosting Mosquitto + mqtt-auth for untrusted workloads — see [`SETUP.md`](SETUP.md) and [`hub/mqtt-service/README.md`](hub/mqtt-service/README.md).
 
 ## Secrets
 

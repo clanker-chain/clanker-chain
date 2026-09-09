@@ -16,7 +16,7 @@ services:
   mqtt-auth:
     build:
       context: ../..
-      dockerfile: mqtt-auth-service/Dockerfile
+      dockerfile: hub/mqtt-auth-service/Dockerfile
     environment:
       - CHAIN_RPC_URL=${CHAIN_RPC_URL:-https://sepolia.base.org}
       - REGISTRY_ADDRESS=${REGISTRY_ADDRESS:?Set REGISTRY_ADDRESS}
@@ -35,8 +35,8 @@ services:
     ports:
       - "1883:1883"
     volumes:
-      - ../../mqtt-service/mosquitto.conf:/etc/mosquitto/mosquitto.conf:ro
-      - ../../mqtt-service/conf.d/go-auth.conf:/etc/mosquitto/conf.d/go-auth.conf:ro
+      - ../../hub/mqtt-service/mosquitto.conf:/etc/mosquitto/mosquitto.conf:ro
+      - ../../hub/mqtt-service/conf.d/go-auth.conf:/etc/mosquitto/conf.d/go-auth.conf:ro
     depends_on:
       mqtt-auth:
         condition: service_healthy

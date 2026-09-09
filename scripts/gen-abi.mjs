@@ -5,8 +5,8 @@
  * Reads the compiled Foundry artifact and (re)writes the hand-consumed ABI
  * copies used by the TS/JS packages, so they can never drift from the deployed
  * contract:
- *   - identity-service/src/abi/clanker-identity.ts   (full ABI, `as const`)
- *   - clanker-cli/lib/clanker-identity-abi.mjs        (full ABI, plain ESM)
+ *   - packages/clanker-cli/lib/clanker-identity-abi.mjs
+ *   - packages/identity-node-client/src/abi/clanker-identity.ts
  *
  * Usage:
  *   node scripts/gen-abi.mjs           # regenerate the ABI files
@@ -23,10 +23,10 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const CHAIN_DIR = join(ROOT, "chain");
 const ARTIFACT = join(CHAIN_DIR, "out", "ClankerIdentity.sol", "ClankerIdentity.json");
 
-const TS_OUT = join(ROOT, "identity-service", "src", "abi", "clanker-identity.ts");
-const MJS_OUT = join(ROOT, "clanker-cli", "lib", "clanker-identity-abi.mjs");
+const MJS_OUT = join(ROOT, "packages", "clanker-cli", "lib", "clanker-identity-abi.mjs");
 const NODE_CLIENT_TS_OUT = join(
   ROOT,
+  "packages",
   "identity-node-client",
   "src",
   "abi",
@@ -81,12 +81,10 @@ function renderMjs(abi) {
 
 function main() {
   if (!ensureArtifact()) {
-    // Nothing we can do without an artifact; treat as non-fatal skip.
     process.exit(0);
   }
   const abi = loadAbi();
   const targets = [
-    { path: TS_OUT, content: renderTs(abi), label: "identity-service ABI (.ts)" },
     { path: MJS_OUT, content: renderMjs(abi), label: "clanker-cli ABI (.mjs)" },
     {
       path: NODE_CLIENT_TS_OUT,

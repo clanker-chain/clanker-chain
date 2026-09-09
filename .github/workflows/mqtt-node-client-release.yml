@@ -32,7 +32,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Verify tag matches package version
-        working-directory: mqtt-node-client
+        working-directory: packages/mqtt-node-client
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#mqtt-node-client-v}"
           PKG_VERSION="$(node -e "console.log(require('./package.json').version)")"
@@ -42,13 +42,13 @@ jobs:
           fi
 
       - name: Install and build
-        working-directory: mqtt-node-client
+        working-directory: packages/mqtt-node-client
         run: |
           npm ci
           npm run build
 
       - name: Check npm version availability
-        working-directory: mqtt-node-client
+        working-directory: packages/mqtt-node-client
         run: |
           PKG_NAME="$(node -e "console.log(require('./package.json').name)")"
           PKG_VERSION="$(node -e "console.log(require('./package.json').version)")"
@@ -58,7 +58,7 @@ jobs:
           fi
 
       - name: Publish package to npm
-        working-directory: mqtt-node-client
+        working-directory: packages/mqtt-node-client
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

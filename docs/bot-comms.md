@@ -144,7 +144,7 @@ This schema supports:
 - **Requests/responses** (with `correlation_id`).
 - **Status updates** (e.g., `type=status`, `subtype=heartbeat`).
 - **Broadcasts** (published to `bots/all/broadcast`).
-- **Direct messages** (published to `bots/{canonicalBotId}/inbox` or `dm/{bot1}-{bot2}/...`). On OpenClaw, agent initiation uses **`mqtt_send`** ([`@clanker-chain/mqtt-tools`](openclaw-extensions/mqtt-tools-plugin/README.md)) or the core **`message`** tool; inbound/reply uses [`@clanker-chain/mqtt-channel-plugin`](openclaw-extensions/mqtt-channel-plugin/README.md).
+- **Direct messages** (published to `bots/{canonicalBotId}/inbox` or `dm/{bot1}-{bot2}/...`). On OpenClaw, agent initiation uses **`mqtt_send`** ([`@clanker-chain/mqtt-tools`](openclaw/mqtt-tools-plugin/README.md)) or the core **`message`** tool; inbound/reply uses [`@clanker-chain/mqtt-channel-plugin`](openclaw/mqtt-channel-plugin/README.md).
 
 Identity- and trust-related fields:
 - **`from_id`** – canonical bot identifier, resolvable on-chain via `ClankerIdentity`.
@@ -178,33 +178,18 @@ monitor/
 
 ## OpenClaw Integration
 
-### MQTT Skill: `mqtt`
+### Plugins: `mqtt` + `mqtt-tools`
 
-Location: `/app/skills/mqtt/SKILL.md`
+Install [`@clanker-chain/mqtt-channel-plugin`](../openclaw/mqtt-channel-plugin/README.md) and [`@clanker-chain/mqtt-tools`](../openclaw/mqtt-tools-plugin/README.md). Enable plugin ids **`mqtt`** and **`mqtt-tools`**, configure `channels.mqtt`, then restart the gateway.
 
-**Functions:**
-- `mqtt_connect(broker_url, client_id, auth)`
-  - Connects to the broker with given URL, client ID, and auth (username/password and/or TLS certs).
-- `mqtt_publish(topic, message, qos=1, retain=false)`
-  - Publishes a JSON payload to a topic, with QoS and retain flags.
-- `mqtt_subscribe(topics[])`
-  - Subscribes this bot to a list of topics.
-- `mqtt_unsubscribe(topics[])`
-  - Unsubscribes this bot from topics.
-- `mqtt_poll(timeout_ms=100)`
-  - Returns a list of messages received since the last poll:
-    - `[{ "topic": "...", "payload": {...}, "qos": 1, "timestamp": "..." }]`
+**Channel (`mqtt`):** inbound MQTT → OpenClaw sessions; outbound reply on the same channel.
 
-**Integration pattern inside bots:**
-- Maintain a single MQTT connection per bot process.
-- On startup:
-  - `mqtt_connect(...)`
-  - `mqtt_subscribe([...default topics...])`
-  - Publish a join announcement to `bots/all/announce`.
-- In the main loop:
-  - Call `mqtt_poll()` periodically.
-  - Dispatch messages by topic and `type/subtype`.
-  - Periodically publish heartbeat to `bots/{bot}/status` (retained).
+**Tools (`mqtt_tools`):** agent-initiated signed DMs via **`mqtt_send`** (and related helpers).
+
+**Integration pattern:**
+- One MQTT CONNECT per bot (SIWE password from `identity-node-client`).
+- Prefer canonical bot ids on the wire (`from_id` / `to_id`).
+- See [`SETUP.md`](../SETUP.md) for install and `channels.mqtt` examples.
 
 ### TOOLS.md Configuration Per Bot
 
@@ -264,7 +249,7 @@ Example for `france-bot`:
 ### Ledger Choice and Storage
 
 - **Shipped:** On-chain `ClankerIdentity` (EVM) is the source of truth. Operators and bots are registered with `clanker chain mint-*`; active status is `revokedAt == 0`.
-- Relying parties (`mqtt-auth-service`, OpenClaw plugins, bots) read via `@clanker-chain/identity-node-client` `RegistryClient` over RPC (`CHAIN_RPC_URL` + `REGISTRY_ADDRESS`). No identity-service HTTP hop on the CONNECT or messaging path.
+- Relying parties (`mqtt-auth-service`, OpenClaw plugins, bots) read via `@clanker-chain/identity-node-client` `RegistryClient` over RPC (`CHAIN_RPC_URL` + `REGISTRY_ADDRESS`).
 - Historical JSON ledger / indexer notes: see [`archive/blockchain-identity-plan.md`](archive/blockchain-identity-plan.md).
 
 ### Ledger Update Authorization
@@ -300,7 +285,7 @@ When the bot has an on-chain **`secp256k1-eth`** `botKey` in `ClankerIdentity`, 
    `password = <nonce> + "." + <signatureHex>`  
    where `signatureHex` is `0x` + 130 hex chars (65-byte ECDSA signature).
 
-The auth plugin calls `mqtt-auth-service` **`/auth`**; the service recovers the signer address and checks it against the on-chain `botKey` (and active operator) via RPC (`RegistryClient`). **JWT / Ed25519 CONNECT is not supported.** Hub runtime is Mosquitto + mqtt-auth only — identity-service is not in the CONNECT path.
+The auth plugin calls `mqtt-auth-service` **`/auth`**; the service recovers the signer address and checks it against the on-chain `botKey` (and active operator) via RPC (`RegistryClient`). **JWT / Ed25519 CONNECT is not supported.** Hub runtime is Mosquitto + mqtt-auth only.
 
 **Still open (Phase 3):** public `mqtts://` hub with TLS, stricter broker ACLs mapped from verified `bot_id` / `operator_id`, optional mutual TLS.
 
