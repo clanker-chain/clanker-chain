@@ -13,7 +13,7 @@
 bash ./scripts/ci-local.sh
 
 # Operator CLI
-cd clanker-cli && npm ci && npm test
+cd packages/clanker-cli && npm ci && npm test
 
 # Docs site (if present)
 cd website && npm ci && npm run build

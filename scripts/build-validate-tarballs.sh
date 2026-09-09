@@ -77,13 +77,13 @@ build_mqtt_channel_plugin() {
   log "Building mqtt-channel-plugin tarball (bundle)"
   local tarball_path="${WORK_DIR}/mqtt-channel-plugin.tgz"
 
-  (cd "${ROOT_DIR}/identity-node-client" && npm ci 1>&2 && npm run build 1>&2)
-  (cd "${ROOT_DIR}/mqtt-node-client" && npm ci 1>&2 && npm run build 1>&2)
+  (cd "${ROOT_DIR}/packages/identity-node-client" && npm ci 1>&2 && npm run build 1>&2)
+  (cd "${ROOT_DIR}/packages/mqtt-node-client" && npm ci 1>&2 && npm run build 1>&2)
 
-  local plugin_dir="${ROOT_DIR}/openclaw-extensions/mqtt-channel-plugin"
+  local plugin_dir="${ROOT_DIR}/openclaw/mqtt-channel-plugin"
   mkdir -p "${plugin_dir}/node_modules/@clanker-chain"
-  ln -sfn "${ROOT_DIR}/identity-node-client" "${plugin_dir}/node_modules/@clanker-chain/identity-node-client"
-  ln -sfn "${ROOT_DIR}/mqtt-node-client" "${plugin_dir}/node_modules/@clanker-chain/mqtt-node-client"
+  ln -sfn "${ROOT_DIR}/packages/identity-node-client" "${plugin_dir}/node_modules/@clanker-chain/identity-node-client"
+  ln -sfn "${ROOT_DIR}/packages/mqtt-node-client" "${plugin_dir}/node_modules/@clanker-chain/mqtt-node-client"
   (cd "$plugin_dir" && npm install 1>&2 && npm run build 1>&2)
 
   local bundle_dir="${WORK_DIR}/bundle/mqtt-channel-plugin"
@@ -96,8 +96,8 @@ build_mqtt_channel_plugin() {
     "$bundle_dir/"
   cp -R "${plugin_dir}/dist" "$bundle_dir/"
   mkdir -p "$bundle_dir/node_modules/@clanker-chain"
-  cp -RL "${ROOT_DIR}/identity-node-client" "$bundle_dir/node_modules/@clanker-chain/identity-node-client"
-  cp -RL "${ROOT_DIR}/mqtt-node-client" "$bundle_dir/node_modules/@clanker-chain/mqtt-node-client"
+  cp -RL "${ROOT_DIR}/packages/identity-node-client" "$bundle_dir/node_modules/@clanker-chain/identity-node-client"
+  cp -RL "${ROOT_DIR}/packages/mqtt-node-client" "$bundle_dir/node_modules/@clanker-chain/mqtt-node-client"
 
   tar -czf "$tarball_path" -C "${WORK_DIR}/bundle" "mqtt-channel-plugin"
 
@@ -108,13 +108,13 @@ build_mqtt_tools_plugin() {
   log "Building mqtt-tools-plugin tarball (bundle)"
   local tarball_path="${WORK_DIR}/mqtt-tools-plugin.tgz"
 
-  (cd "${ROOT_DIR}/identity-node-client" && npm ci 1>&2 && npm run build 1>&2)
-  (cd "${ROOT_DIR}/mqtt-node-client" && npm ci 1>&2 && npm run build 1>&2)
+  (cd "${ROOT_DIR}/packages/identity-node-client" && npm ci 1>&2 && npm run build 1>&2)
+  (cd "${ROOT_DIR}/packages/mqtt-node-client" && npm ci 1>&2 && npm run build 1>&2)
 
-  local plugin_dir="${ROOT_DIR}/openclaw-extensions/mqtt-tools-plugin"
+  local plugin_dir="${ROOT_DIR}/openclaw/mqtt-tools-plugin"
   mkdir -p "${plugin_dir}/node_modules/@clanker-chain"
-  ln -sfn "${ROOT_DIR}/identity-node-client" "${plugin_dir}/node_modules/@clanker-chain/identity-node-client"
-  ln -sfn "${ROOT_DIR}/mqtt-node-client" "${plugin_dir}/node_modules/@clanker-chain/mqtt-node-client"
+  ln -sfn "${ROOT_DIR}/packages/identity-node-client" "${plugin_dir}/node_modules/@clanker-chain/identity-node-client"
+  ln -sfn "${ROOT_DIR}/packages/mqtt-node-client" "${plugin_dir}/node_modules/@clanker-chain/mqtt-node-client"
   (cd "$plugin_dir" && npm install 1>&2 && npm run build 1>&2)
 
   local bundle_dir="${WORK_DIR}/bundle/mqtt-tools-plugin"
@@ -127,8 +127,8 @@ build_mqtt_tools_plugin() {
     "$bundle_dir/"
   cp -R "${plugin_dir}/dist" "$bundle_dir/"
   mkdir -p "$bundle_dir/node_modules/@clanker-chain"
-  cp -RL "${ROOT_DIR}/identity-node-client" "$bundle_dir/node_modules/@clanker-chain/identity-node-client"
-  cp -RL "${ROOT_DIR}/mqtt-node-client" "$bundle_dir/node_modules/@clanker-chain/mqtt-node-client"
+  cp -RL "${ROOT_DIR}/packages/identity-node-client" "$bundle_dir/node_modules/@clanker-chain/identity-node-client"
+  cp -RL "${ROOT_DIR}/packages/mqtt-node-client" "$bundle_dir/node_modules/@clanker-chain/mqtt-node-client"
 
   tar -czf "$tarball_path" -C "${WORK_DIR}/bundle" "mqtt-tools-plugin"
 

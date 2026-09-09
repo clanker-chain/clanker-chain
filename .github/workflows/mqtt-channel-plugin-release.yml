@@ -32,7 +32,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Verify tag matches package version
-        working-directory: openclaw-extensions/mqtt-channel-plugin
+        working-directory: openclaw/mqtt-channel-plugin
         run: |
           TAG_VERSION="${GITHUB_REF_NAME#mqtt-channel-plugin-v}"
           PKG_VERSION="$(node -e "console.log(require('./package.json').version)")"
@@ -43,20 +43,20 @@ jobs:
 
       - name: Build node-client dependencies
         run: |
-          (cd identity-node-client && npm ci && npm run build)
-          (cd mqtt-node-client && npm ci && npm run build)
+          (cd packages/identity-node-client && npm ci && npm run build)
+          (cd packages/mqtt-node-client && npm ci && npm run build)
 
       - name: Install and build mqtt-channel-plugin
-        working-directory: openclaw-extensions/mqtt-channel-plugin
+        working-directory: openclaw/mqtt-channel-plugin
         run: |
           mkdir -p node_modules/@clanker-chain
-          ln -sfn "${GITHUB_WORKSPACE}/identity-node-client" node_modules/@clanker-chain/identity-node-client
-          ln -sfn "${GITHUB_WORKSPACE}/mqtt-node-client" node_modules/@clanker-chain/mqtt-node-client
+          ln -sfn "${GITHUB_WORKSPACE}/packages/identity-node-client" node_modules/@clanker-chain/identity-node-client
+          ln -sfn "${GITHUB_WORKSPACE}/packages/mqtt-node-client" node_modules/@clanker-chain/mqtt-node-client
           npm install
           npm run build
 
       - name: Validate pack output has extension entry
-        working-directory: openclaw-extensions/mqtt-channel-plugin
+        working-directory: openclaw/mqtt-channel-plugin
         run: |
           npm pack --dry-run --json > /tmp/mqtt-channel-pack.json
           node - <<'NODE'
@@ -84,7 +84,7 @@ jobs:
           NODE
 
       - name: Check npm version availability
-        working-directory: openclaw-extensions/mqtt-channel-plugin
+        working-directory: openclaw/mqtt-channel-plugin
         run: |
           PKG_NAME="$(node -e "console.log(require('./package.json').name)")"
           PKG_VERSION="$(node -e "console.log(require('./package.json').version)")"
@@ -94,13 +94,13 @@ jobs:
           fi
 
       - name: Publish package to npm
-        working-directory: openclaw-extensions/mqtt-channel-plugin
+        working-directory: openclaw/mqtt-channel-plugin
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create bundle tarball
-        working-directory: openclaw-extensions/mqtt-channel-plugin
+        working-directory: openclaw/mqtt-channel-plugin
         run: |
           PLUGIN_NAME="mqtt-channel-plugin"
           BUNDLE_DIR="bundle"
@@ -110,8 +110,8 @@ jobs:
           cp package.json openclaw.plugin.json README.md "$BUNDLE_DIR/$PLUGIN_NAME"/
           cp -R dist "$BUNDLE_DIR/$PLUGIN_NAME"/
           mkdir -p "$BUNDLE_DIR/$PLUGIN_NAME/node_modules/@clanker-chain"
-          cp -R "${GITHUB_WORKSPACE}/identity-node-client" "$BUNDLE_DIR/$PLUGIN_NAME/node_modules/@clanker-chain/identity-node-client"
-          cp -R "${GITHUB_WORKSPACE}/mqtt-node-client" "$BUNDLE_DIR/$PLUGIN_NAME/node_modules/@clanker-chain/mqtt-node-client"
+          cp -R "${GITHUB_WORKSPACE}/packages/identity-node-client" "$BUNDLE_DIR/$PLUGIN_NAME/node_modules/@clanker-chain/identity-node-client"
+          cp -R "${GITHUB_WORKSPACE}/packages/mqtt-node-client" "$BUNDLE_DIR/$PLUGIN_NAME/node_modules/@clanker-chain/mqtt-node-client"
 
           TAR_NAME="$PLUGIN_NAME-${GITHUB_REF_NAME}.tgz"
           tar -czf "$TAR_NAME" -C "$BUNDLE_DIR" "$PLUGIN_NAME"
@@ -142,6 +142,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: openclaw-extensions/mqtt-channel-plugin/${{ env.ASSET_PATH }}
+          asset_path: openclaw/mqtt-channel-plugin/${{ env.ASSET_PATH }}
           asset_name: mqtt-channel-plugin-${{ github.ref_name }}.tgz
           asset_content_type: application/gzip

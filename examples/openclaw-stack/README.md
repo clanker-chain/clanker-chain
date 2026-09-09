@@ -1,6 +1,6 @@
 # OpenClaw + SIWE MQTT hub example
 
-Compose stack that mirrors the production hub wiring in [`mqtt-service/`](../../mqtt-service/): Mosquitto with go-auth → `mqtt-auth` → `ClankerIdentity` over RPC.
+Compose stack that mirrors the production hub wiring in [`hub/mqtt-service/`](../../hub/mqtt-service/): Mosquitto with go-auth → `mqtt-auth` → `ClankerIdentity` over RPC.
 
 ```bash
 export REGISTRY_ADDRESS=0xD650467f9D7A20f37E55ec23Ca1c711598f97958   # or your deploy

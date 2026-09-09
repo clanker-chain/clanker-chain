@@ -38,7 +38,7 @@ Git tags must match `package.json` exactly:
 | `@clanker-chain/mqtt-tools` | `mqtt-tools-plugin-v2026.7.29` |
 | `@clanker-chain/clanker-cli` | `clanker-cli-v2026.9.8-2` |
 
-**Deprecated — do not tag for new publishes:** `@clanker-chain/mqtt-plugin`, `@clanker-chain/identity-plugin`, `@clanker-chain/mqtt-client-plugin`, `@clanker-chain/identity-client-plugin`. Use channel + tools + `identity-node-client` instead. Release workflows for the deprecated client plugins have been removed.
+**Deprecated packages (npm only — source removed):** `@clanker-chain/mqtt-plugin`, `@clanker-chain/identity-plugin`. Use channel + tools + `identity-node-client` instead.
 
 ## Inter-package dependencies
 
@@ -65,7 +65,7 @@ Wait for npm registry propagation between steps when installing published deps i
 
 ## Non-npm services
 
-`identity-service` (deprecated) and `mqtt-auth-service` use the same CalVer string in their `package.json` for traceability; they are deployed from the repo or Docker, not published to npm.
+`hub/mqtt-auth-service` uses a CalVer string in `package.json` for traceability; it is deployed from the repo or Docker, not published to npm.
 
 ## Release notes
 

@@ -14,9 +14,6 @@
 #   { "ok": true, "operator_id": "...", "owner": "0x...", "registered_at": "...", "revoked_at": "0", "status": "active" }
 #
 # Failure: { "ok": false, "error": "..." } and exit 1
-#
-# Historical note: this used to hit identity-service HTTP. That indexer is deprecated;
-# see identity-service/DEPRECATED.md.
 
 set -euo pipefail
 

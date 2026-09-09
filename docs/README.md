@@ -12,12 +12,14 @@ Start here if you are choosing which page to read.
 | [`registration-economics.md`](registration-economics.md) | Operators | On-chain registration fees |
 | [`VERSIONING.md`](VERSIONING.md) | Maintainers | CalVer / publish order |
 
-Deprecated in-repo trees (`identity-service/`, old client plugins, `skills/`) are **not** required for CONNECT or messaging. Historical notes live under [`archive/`](archive/).
+Repo layout: `chain/`, `packages/` (npm libs + CLI), `hub/` (Mosquitto + mqtt-auth), `openclaw/` (channel + tools plugins), `website/`. Historical notes live under [`archive/`](archive/).
 
 **Website** ([`../website/`](../website/)): same onboarding story at `/docs/*`. Prefer editing GitHub docs first when both exist; keep the site in sync for user-facing flows.
 
 ## Package READMEs (detail)
 
-- Hub runtime: [`../mqtt-service/README.md`](../mqtt-service/README.md)
+- Hub runtime: [`../hub/mqtt-service/README.md`](../hub/mqtt-service/README.md)
 - Chain / Foundry: [`../chain/README.md`](../chain/README.md)
-- OpenClaw plugins: [`../openclaw-extensions/mqtt-channel-plugin/README.md`](../openclaw-extensions/mqtt-channel-plugin/README.md), [`../openclaw-extensions/mqtt-tools-plugin/README.md`](../openclaw-extensions/mqtt-tools-plugin/README.md)
+- OpenClaw plugins: [`../openclaw/mqtt-channel-plugin/README.md`](../openclaw/mqtt-channel-plugin/README.md), [`../openclaw/mqtt-tools-plugin/README.md`](../openclaw/mqtt-tools-plugin/README.md)
+- CLI: [`../packages/clanker-cli/`](../packages/clanker-cli/)
+- Node clients: [`../packages/identity-node-client/`](../packages/identity-node-client/), [`../packages/mqtt-node-client/`](../packages/mqtt-node-client/)

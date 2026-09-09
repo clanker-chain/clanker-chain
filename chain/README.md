@@ -41,7 +41,7 @@ anvil --host 0.0.0.0 --port 8545 --state ./.anvil-state.json
 Or use the repo CLI from the **repository root** (no global install required):
 
 ```bash
-node clanker-cli/bin/clanker.mjs chain up --host 0.0.0.0 --port 8545
+node packages/clanker-cli/bin/clanker.mjs chain up --host 0.0.0.0 --port 8545
 ```
 
 To use the bare `clanker` command, either install the package globally from this repo (`npm install -g ./clanker-cli`) or link it once (`cd clanker-cli && npm link`), then ensure the directory that contains the `clanker` shim is on your `PATH`.
@@ -78,7 +78,7 @@ forge script script/Deploy.s.sol:Deploy \
 From repo root via CLI (export the three fee env vars first):
 
 ```bash
-node clanker-cli/bin/clanker.mjs chain deploy --rpc http://127.0.0.1:8545
+node packages/clanker-cli/bin/clanker.mjs chain deploy --rpc http://127.0.0.1:8545
 ```
 
 The script logs: `ClankerIdentity deployed at: 0x…`, plus `operatorFee`, `botFee`, and `feeRecipient`.
@@ -120,8 +120,8 @@ Until `clanker chain mint-operator` / `mint-bot` exist, use **`cast send`**. Or 
 export REGISTRY=0x5FbDB2315678afecb367f032d93F642f64180aa3
 export CHAIN_RPC_URL=http://127.0.0.1:8545
 
-node clanker-cli/bin/clanker.mjs chain mint-operator org.openclaw.pat --registry "$REGISTRY"
-node clanker-cli/bin/clanker.mjs chain mint-bot openclaw.france.prod-1 org.openclaw.pat --registry "$REGISTRY"
+node packages/clanker-cli/bin/clanker.mjs chain mint-operator org.openclaw.pat --registry "$REGISTRY"
+node packages/clanker-cli/bin/clanker.mjs chain mint-bot openclaw.france.prod-1 org.openclaw.pat --registry "$REGISTRY"
 ```
 
 **Note:** `registerOperator` / `registerBot` require `msg.value` matching on-chain fees. The CLI reads fees from the contract automatically; for manual `cast send`, use `--value` as shown below.
@@ -176,16 +176,14 @@ cast call "$REGISTRY" "bots(bytes32)(bytes32,address,uint64,uint64)" "$BOT_ID" -
 
 ### Wired to MQTT auth (chain-direct)
 
-**mqtt-auth-service** and OpenClaw bots read `ClankerIdentity` over RPC (`CHAIN_RPC_URL` + `REGISTRY_ADDRESS`) via `@clanker-chain/identity-node-client` `RegistryClient`. No identity-service HTTP hop.
+**mqtt-auth-service** and OpenClaw bots read `ClankerIdentity` over RPC (`CHAIN_RPC_URL` + `REGISTRY_ADDRESS`) via `@clanker-chain/identity-node-client` `RegistryClient`.
 
 ```bash
-cd mqtt-service
+cd hub/mqtt-service
 export CHAIN_RPC_URL=http://127.0.0.1:8545
 export REGISTRY_ADDRESS=$REGISTRY
 docker compose build mqtt-auth && docker compose up -d
 ```
-
-The in-repo `identity-service` indexer is **deprecated** (optional local explorer). See [`SETUP.md`](../SETUP.md) and [`identity-service/DEPRECATED.md`](../identity-service/DEPRECATED.md).
 
 See [`docs/archive/blockchain-identity-plan.md`](../docs/archive/blockchain-identity-plan.md) for historical migration notes.
 

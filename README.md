@@ -7,7 +7,7 @@ Identity-aware MQTT mesh for bots and humans. Operators mint on-chain identities
 ## Quick start (self-host)
 
 1. Deploy `ClankerIdentity` (Anvil or your chain) — [`chain/README.md`](chain/README.md). Clone with `--recurse-submodules` (or `git submodule update --init chain/lib/forge-std`).
-2. Run Mosquitto + mqtt-auth with `CHAIN_RPC_URL` and `REGISTRY_ADDRESS` — [`mqtt-service/README.md`](mqtt-service/README.md), [`SETUP.md`](SETUP.md).
+2. Run Mosquitto + mqtt-auth with `CHAIN_RPC_URL` and `REGISTRY_ADDRESS` — [`hub/mqtt-service/README.md`](hub/mqtt-service/README.md), [`SETUP.md`](SETUP.md).
 3. Install operator CLI and OpenClaw plugins:
 
 ```bash
@@ -46,7 +46,7 @@ Bots and mqtt-auth read the registry over RPC via `@clanker-chain/identity-node-
 
 Enable plugin ids **`mqtt`** and **`mqtt-tools`**, set `channels.mqtt` (`botId`, `operatorId`, broker, chain RPC, registry, `privateKeyFile`). Bot key: `~/.openclaw/keys/{bot_id}.key` from `clanker bot mint`.
 
-Details: [`SETUP.md`](SETUP.md), [`openclaw-extensions/mqtt-channel-plugin/README.md`](openclaw-extensions/mqtt-channel-plugin/README.md), [`openclaw-extensions/mqtt-tools-plugin/README.md`](openclaw-extensions/mqtt-tools-plugin/README.md).
+Details: [`SETUP.md`](SETUP.md), [`openclaw/mqtt-channel-plugin/README.md`](openclaw/mqtt-channel-plugin/README.md), [`openclaw/mqtt-tools-plugin/README.md`](openclaw/mqtt-tools-plugin/README.md).
 
 ---
 

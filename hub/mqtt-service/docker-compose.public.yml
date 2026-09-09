@@ -1,0 +1,67 @@
+# Public Sepolia hub: mqtts://mqtt.clanker-chain.com:8883 + https://mqtt-auth.clanker-chain.com
+# LAN/dev remains docker-compose.yml (plain mqtt://:1883).
+#
+# First-time certs (nothing else on :80):
+#   ./scripts/issue-certs.sh
+# Then:
+#   docker compose -f docker-compose.public.yml --env-file .env up -d --build
+
+services:
+  mqtt-auth:
+    build:
+      context: ../..
+      dockerfile: hub/mqtt-auth-service/Dockerfile
+    environment:
+      CHAIN_RPC_URL: ${CHAIN_RPC_URL:-https://sepolia.base.org}
+      REGISTRY_ADDRESS: ${REGISTRY_ADDRESS:?Set REGISTRY_ADDRESS}
+      MQTT_AUTH_PORT: "9090"
+      CHAIN_RPC_TIMEOUT_MS: ${CHAIN_RPC_TIMEOUT_MS:-10000}
+    # No host ports — only Docker network (Caddy + Mosquitto).
+    expose:
+      - "9090"
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:9090/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 15s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  mosquitto:
+    image: iegomez/mosquitto-go-auth:3.0.0-mosquitto_2.0.18
+    ports:
+      - "8883:8883"
+    volumes:
+      - ./mosquitto-public.conf:/etc/mosquitto/mosquitto.conf:ro
+      - ./conf.d/go-auth.conf:/etc/mosquitto/conf.d/go-auth.conf:ro
+      - letsencrypt:/etc/letsencrypt:ro
+      - mosquitto_data:/mosquitto/data
+    depends_on:
+      mqtt-auth:
+        condition: service_healthy
+      caddy:
+        condition: service_started
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - letsencrypt:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      mqtt-auth:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  letsencrypt:
+  certbot_www:
+  caddy_data:
+  caddy_config:
+  mosquitto_data:

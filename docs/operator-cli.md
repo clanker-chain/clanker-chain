@@ -30,7 +30,7 @@ clanker setup --preset sepolia \
   --yes --force
 ```
 
-From a monorepo checkout (dev / `chain up|deploy`): `node clanker-cli/bin/clanker.mjs …`. `chain up`, `chain deploy`, and `check *` require the git checkout; they are not available from the npm tarball alone.
+From a monorepo checkout (dev / `chain up|deploy`): `node packages/clanker-cli/bin/clanker.mjs …`. `chain up`, `chain deploy`, and `check *` require the git checkout; they are not available from the npm tarball alone.
 
 `bot mint` writes the **bot** key under `~/.openclaw/keys/`, wires `channels.mqtt` (including `privateKeyFile`), prints a **Bot identity** card (do not hand OpenClaw `op.key`), then plugin + peer allowlist steps.
 
@@ -112,7 +112,7 @@ On any other RPC, missing key or Anvil #0 → hard error. After mint / transfer 
 ## Ownership discovery
 
 - **Preferred label** (`--operator` or `operator.json`): `operators(keccak(label))` storage read. Works after `OperatorTransferred`. Rejects wrong owner or revoked.
-- **Full list** (`whoami` without preferred): chunked `eth_getLogs` (2000-block windows, same idea as `identity-service`) for `OperatorRegistered` (by owner) and `OperatorTransferred` (by `newOwner`), then storage refresh so only the **current** owner is listed. `fromBlock` is a scan floor, not a substitute for chunking.
+- **Full list** (`whoami` without preferred): chunked `eth_getLogs` (2000-block windows) for `OperatorRegistered` (by owner) and `OperatorTransferred` (by `newOwner`), then storage refresh so only the **current** owner is listed. `fromBlock` is a scan floor, not a substitute for chunking.
 
 ## Commands
 
@@ -160,4 +160,4 @@ Do not ask the model to invent `--registry` / `--rpc` / operator labels if the p
 - Wire protocol: [`bot-comms.md`](bot-comms.md)
 - Docs index: [`README.md`](README.md)
 
-Env-file helper for power users: [`clanker-cli/scripts/with-sepolia-env.sh`](../clanker-cli/scripts/with-sepolia-env.sh). Prefer `clanker setup` for day-to-day onboarding.
+Env-file helper for power users: [`packages/clanker-cli/scripts/with-sepolia-env.sh`](../packages/clanker-cli/scripts/with-sepolia-env.sh). Prefer `clanker setup` for day-to-day onboarding.
