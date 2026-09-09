@@ -12,44 +12,38 @@ Runs the MQTT broker (Mosquitto with HTTP auth plugin) and the mqtt-auth-service
 - **CHAIN_RPC_URL** — EVM RPC for mqtt-auth registry reads (e.g. `https://sepolia.base.org` or Anvil).
 - **REGISTRY_ADDRESS** — `ClankerIdentity` address (required).
 
-## Run (local / LAN)
+## Run (local)
 
 ```bash
 cd mqtt-service
-export CHAIN_RPC_URL=https://sepolia.base.org
-export REGISTRY_ADDRESS=0xD650467f9D7A20f37E55ec23Ca1c711598f97958
+export CHAIN_RPC_URL=http://127.0.0.1:8545
+export REGISTRY_ADDRESS=0x…   # from clanker chain deploy
 docker compose build mqtt-auth && docker compose up -d
 ```
 
-- Broker: `mqtt://localhost:1883` (LAN / local default)
+- Broker: `mqtt://localhost:1883`
 - Auth service: `http://localhost:9090`
 
-## Public hub (TLS)
+## TLS / public-facing compose (self-host)
 
-Closed-beta hostnames: `mqtts://mqtt.clanker-chain.com:8883`, `https://mqtt-auth.clanker-chain.com` (`/nonce` + `/health` only). Droplet: `mqtt-hub-sepolia` @ `134.209.218.50`. See [`docs/public-testnet-hub.md`](../docs/public-testnet-hub.md).
-
-On the hub VM (Docker installed, DNS A records for `mqtt` + `mqtt-auth` pointed at the host):
+Use [`docker-compose.public.yml`](docker-compose.public.yml) when you want mqtts + HTTPS for `/nonce` and `/health` (Caddy). Parameterize DNS and paths for **your** host:
 
 ```bash
-cd /opt/clanker-chain/mqtt-service
-cp .env.public.example .env   # edit if needed; keep .env off git
-./scripts/issue-certs.sh      # Let's Encrypt; needs :80 free (dual-SAN)
+cd mqtt-service   # or /opt/your-hub/mqtt-service on the server
+cp .env.public.example .env   # edit hostnames, registry, RPC; keep .env off git
+./scripts/issue-certs.sh      # Let's Encrypt; needs :80 free (update SANs for your domains)
 docker compose -f docker-compose.public.yml --env-file .env up -d --build
 ```
 
-Smoke:
+Typical public ports: **8883** (mqtts), **80/443** (Caddy). Do **not** expose plain `1883` / `9090` on the internet. Mosquitto should call `/auth` and `/acl` only on the internal Docker network.
 
-```bash
-curl -fsS https://mqtt-auth.clanker-chain.com/health
-curl -sS -o /dev/null -w '%{http_code}\n' https://mqtt-auth.clanker-chain.com/auth   # expect 404
-```
+Renew certs with `./scripts/renew-certs.sh` (e.g. monthly cron). After first boot, ensure the `mosquitto_data` volume is writable by Mosquitto if persistence logs `Permission denied`.
 
-- Publishes **8883** (mqtts) and **80/443** (Caddy). Does **not** publish plain `1883` or `9090`.
-- Mosquitto calls `/auth` and `/acl` on the internal Docker network only.
-- Renew: `./scripts/renew-certs.sh` (cron monthly).
-- After first boot, ensure the `mosquitto_data` volume is writable by the Mosquitto process (compose may create it as root; `chmod`/`chown` once if persistence logs `Permission denied`).
+Experimental shared Sepolia endpoints (invite-only): see [`docs/public-testnet-hub.md`](../docs/public-testnet-hub.md).
 
 ## Test connect
+
+Anvil account **#1** private key below is a well-known Foundry test key — local Anvil only, never on a public RPC.
 
 ```bash
 cd identity-node-client && npm run build

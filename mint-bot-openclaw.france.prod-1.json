@@ -1,8 +1,0 @@
-{
-    "bot_id": "openclaw.france.prod-1",
-    "operator_id": "org.openclaw.pat",
-    "display_name": "france-bot",
-    "bot_public_key": "ykzPXr0XDoUkxQJOsenSONO9jLbFt81erHvUlcq5D7w=",
-    "operator_signature": "+rfTyGi0LIUMoW9kKFhCHqG1YUbw/N2wTmT8NVaWjwQH/O3eSB+zIed4+KolpQvkNvUr7zf27GF8oFowk8U4Dw==",
-    "message": "mint-bot:openclaw.france.prod-1:org.openclaw.pat:ykzPXr0XDoUkxQJOsenSONO9jLbFt81erHvUlcq5D7w=:2026-03-10T02:56:35.382Z"
-  }

@@ -61,10 +61,10 @@ test("resolveMqttToolsConfig reads flat channels.mqtt", () => {
         enabled: true,
         botId: "openclaw.france.prod-1",
         operatorId: "org.openclaw.pat",
-        brokerUrl: "mqtt://192.168.1.197:1883",
+        brokerUrl: "mqtt://127.0.0.1:1883",
         chainRpcUrl: "http://127.0.0.1:8545",
         registryAddress: "0x1234567890123456789012345678901234567890",
-        mqttAuthServiceUrl: "http://192.168.1.197:9090",
+        mqttAuthServiceUrl: "http://127.0.0.1:9090",
       },
     },
   };
@@ -73,7 +73,7 @@ test("resolveMqttToolsConfig reads flat channels.mqtt", () => {
   expect(mqtt.configured).toBe(true);
   expect(mqtt.userEnabled).toBe(true);
   expect(mqtt.botId).toBe("openclaw.france.prod-1");
-  expect(mqtt.mqttAuthServiceUrl).toBe("http://192.168.1.197:9090");
+  expect(mqtt.mqttAuthServiceUrl).toBe("http://127.0.0.1:9090");
 });
 
 test("resolveMqttToolsConfig reads accounts slice", () => {
@@ -184,7 +184,7 @@ test("resolveGatewayConfigFromToolContext reads api.config", () => {
         enabled: true,
         botId: "openclaw.france.prod-1",
         operatorId: "org.openclaw.pat",
-        brokerUrl: "mqtt://192.168.1.197:1883",
+        brokerUrl: "mqtt://127.0.0.1:1883",
         chainRpcUrl: "http://127.0.0.1:8545",
         registryAddress: "0x1234567890123456789012345678901234567890",
       },
@@ -217,7 +217,7 @@ test("sendSignedDm rejects unconfigured account", async () => {
 test("isLikelyMqttAuthError distinguishes auth from broker outages", () => {
   expect(isLikelyMqttAuthError(new Error("Connection refused: Not authorized"))).toBe(true);
   expect(isLikelyMqttAuthError(new Error("SIWE nonce expired"))).toBe(true);
-  expect(isLikelyMqttAuthError(new Error("ECONNREFUSED 192.168.1.197:1883"))).toBe(false);
+  expect(isLikelyMqttAuthError(new Error("ECONNREFUSED 127.0.0.1:1883"))).toBe(false);
   expect(isLikelyMqttAuthError(new Error("getaddrinfo ENOTFOUND broker"))).toBe(false);
 });
 

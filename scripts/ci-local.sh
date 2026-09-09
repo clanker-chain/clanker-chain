@@ -166,9 +166,12 @@ main() {
   # Hub auth (chain-direct RegistryClient)
   run_bun_package "${ROOT_DIR}/mqtt-auth-service"
 
-  # NPM/TS packages
-  run_npm_package "${ROOT_DIR}/identity-client-plugin"
+  # Shipped npm libs
   run_npm_package "${ROOT_DIR}/mqtt-node-client"
+
+  # Operator CLI (published)
+  log "clanker-cli unit tests"
+  (cd "${ROOT_DIR}/clanker-cli" && npm ci && npm test)
 
   # mqtt-channel-plugin uses workspace:* dependencies and doesn't ship a lockfile,
   # so we avoid npm install here. Instead, we symlink the local node clients and
@@ -196,19 +199,8 @@ main() {
   (cd "${MQTT_TOOLS_DIR}" && bun x tsc -p tsconfig.json)
   (cd "${MQTT_TOOLS_DIR}" && bun test test/)
 
-  # mqtt-client-plugin depends on @clanker-chain/mqtt-node-client and
-  # @clanker-chain/identity-node-client which are local packages (not yet on npm
-  # at dev time). Symlink them instead of running npm ci.
-  log "Linking mqtt-client-plugin deps from local sources"
-  mkdir -p "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain"
-  ln -sfn "${ROOT_DIR}/identity-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/identity-node-client"
-  ln -sfn "${ROOT_DIR}/mqtt-node-client" "${ROOT_DIR}/mqtt-client-plugin/node_modules/@clanker-chain/mqtt-node-client"
-
-  if [ -f "${ROOT_DIR}/mqtt-client-plugin/tsconfig.json" ]; then
-    (cd "${ROOT_DIR}/mqtt-client-plugin" && bun x tsc -p tsconfig.json)
-  else
-    log "No mqtt-client-plugin/tsconfig.json (skipping TS check for mqtt-client-plugin)."
-  fi
+  # Deprecated OpenClaw plugins (identity-client-plugin, mqtt-client-plugin) are
+  # no longer built or tarball-validated here — use mqtt-channel + mqtt-tools.
 
   run_foundry_chain
 

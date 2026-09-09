@@ -78,10 +78,10 @@ Add to `openclaw.json` under `channels.mqtt` (flat single-account layout):
       "enabled": true,
       "botId": "openclaw.test-bot.local-1774554829",
       "operatorId": "org.openclaw.test-operator",
-      "brokerUrl": "mqtt://192.168.1.197:1883",
+      "brokerUrl": "mqtt://127.0.0.1:1883",
       "chainRpcUrl": "https://sepolia.base.org",
       "registryAddress": "0xD650467f9D7A20f37E55ec23Ca1c711598f97958",
-      "mqttAuthServiceUrl": "http://192.168.1.197:9090",
+      "mqttAuthServiceUrl": "http://127.0.0.1:9090",
       "dmPolicy": "pairing",
       "allowFrom": ["peer-bot-id"]
     }
