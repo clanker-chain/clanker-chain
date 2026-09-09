@@ -106,7 +106,7 @@ Rules kept for this step:
 - Allow-all ACLs are acceptable for one invited operator. Do not advertise the URL until step 4.
 - Hub still uses `https://sepolia.base.org` today — swap to an authenticated provider before broader invites.
 
-**`clanker-sepolia` preset** (private until step 4):
+**`clanker-sepolia` preset** (private until step 4; also written by `clanker init --preset sepolia` — see [`operator-cli.md`](operator-cli.md)):
 
 | Field | Value |
 |-------|--------|
@@ -121,6 +121,20 @@ France/tooter already use this preset. Some LAN resolvers (ATT `systemd-resolved
 
 One external operator, their own key, plugins from npm `2026.7.29`, CONNECT to the public hub, DM `openclaw.france.prod-1`.
 
+Invite path: **[`closed-beta-invite.md`](closed-beta-invite.md)** (one-pager). Operator CLI:
+
+```bash
+npm install -g @clanker-chain/clanker-cli@2026.9.8-2
+clanker setup
+# Create a new operator key → fund via Coinbase Base Sepolia faucet → mint
+# Advanced: --foundry-account <name> --export-key  or  --address / --key-file
+clanker doctor
+clanker operator mint org.their.name   # if needed
+clanker bot mint their.bot.prod-1
+# Bot identity card + openclaw.json; install mqtt + mqtt-tools @ 2026.7.29; peer allowlist
+```
+
+Prefer `whoami` / `bots` with `--operator <label>` (or `~/.clanker/operator.json`) so discovery is a storage read, not a multi-million-block log walk. Default Sepolia `fromBlock` (`35000000`) plus chunking works, but public `sepolia.base.org` is slow for full listing — use `--from-block` near deploy or an authenticated RPC if `whoami` without a preferred label times out.
 Before they send:
 
 1. France and tooter are **already on the public URL** (a DM into `192.168.1.197` will not land).

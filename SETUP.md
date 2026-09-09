@@ -2,7 +2,9 @@
 
 Blockchain identity cutover (CalVer `2026.7.29`+): bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
 
-Default hub is **local / LAN**. A shared Sepolia hostname is planned — see [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not treat a LAN IP as the public network.
+**Operator path (preferred):** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
+
+Default hub for local smoke is **LAN / localhost**. A **public Sepolia TLS hub** exists (closed beta) — stranger invite: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md); hub notes: [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not treat a LAN IP as the public network; do not put hub hostnames in plugin npm READMEs until ACLs land.
 
 ## Stack overview
 
@@ -14,23 +16,43 @@ Default hub is **local / LAN**. A shared Sepolia hostname is planned — see [`d
 | `@clanker-chain/identity-node-client` | Bot library (`RegistryClient` + SIWE + EIP-712) |
 | `@clanker-chain/mqtt-channel-plugin` | OpenClaw gateway channel (receive + reply) |
 | `@clanker-chain/mqtt-tools` | OpenClaw tool plugin (`mqtt_send` for agent-initiated send) |
+| `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.8-2`) |
 
 Minting stays on-chain via `clanker-cli`. The in-repo `identity-service` indexer is **deprecated** (optional local explorer only; not required for CONNECT or messaging).
 
-## 1. Start chain and register bots
+## 1. Register an operator and bot
+
+### Sepolia (closed-beta hub)
 
 ```bash
+npm install -g @clanker-chain/clanker-cli@2026.9.8-2
+clanker setup
+clanker doctor
+clanker whoami
+# if not registered yet:
+clanker operator mint org.you --yes
+clanker bot mint you.laptop --yes
+```
+
+`bot mint` dual-writes keys to `~/.openclaw/keys/` (what OpenClaw uses) and `~/.clanker/keys/` (backup), wires `~/.openclaw/openclaw.json` `channels.mqtt`, prints a **Bot identity** card (bot key ≠ `op.key`), and a hub/plugin checklist. Stranger invite: [`docs/closed-beta-invite.md`](docs/closed-beta-invite.md).
+
+### Local Anvil
+
+```bash
+# chain up/deploy need a clanker-chain checkout
 node clanker-cli/bin/clanker.mjs chain up
 node clanker-cli/bin/clanker.mjs chain deploy
 export REGISTRY=0x…   # from deploy output
 
-node clanker-cli/bin/clanker.mjs chain mint-operator org.openclaw.pat --registry "$REGISTRY"
-node clanker-cli/bin/clanker.mjs chain mint-bot openclaw.france.prod-1 org.openclaw.pat --registry "$REGISTRY"
+clanker init --preset local --registry "$REGISTRY" --force
+# Anvil #0 is OK on localhost only
+clanker operator mint org.openclaw.pat
+clanker bot mint openclaw.france.prod-1
 ```
 
-Bot private key is written to `~/.openclaw/keys/openclaw.france.prod-1.key` (`0x` + 64 hex).
+Low-level aliases still work: `clanker chain mint-operator` / `mint-bot` (require `--registry` or `REGISTRY_ADDRESS`).
 
-**Base Sepolia example registry:** `0xD650467f9D7A20f37E55ec23Ca1c711598f97958` (use your deployed address if different).
+**Base Sepolia example registry:** `0xD650467f9D7A20f37E55ec23Ca1c711598f97958`.
 
 ## 2. Start hub (Mosquitto + mqtt-auth)
 
@@ -40,6 +62,8 @@ export CHAIN_RPC_URL=http://127.0.0.1:8545   # or https://sepolia.base.org
 export REGISTRY_ADDRESS=$REGISTRY
 docker compose build mqtt-auth && docker compose up -d
 ```
+
+Public TLS hub: [`mqtt-service/README.md`](mqtt-service/README.md) + [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md).
 
 No identity-service process is required.
 
@@ -67,6 +91,8 @@ openclaw plugins install "$(pwd)/openclaw-extensions/mqtt-tools-plugin"
 
 See [`docs/VERSIONING.md`](docs/VERSIONING.md) for publish order.
 
+Optional: `clanker init-openclaw` writes a starter `~/.openclaw/openclaw.json` using the active `~/.clanker` preset when present.
+
 Enable plugin entries **`mqtt`** and **`mqtt-tools`** in gateway config. Restart:
 
 ```bash
@@ -75,19 +101,23 @@ systemctl --user restart openclaw-gateway
 
 ### `channels.mqtt` config
 
-Example (dev: France host → LAN broker, Base Sepolia registry). Replace the broker/auth host with your hub when you have a public MQTT URL:
+Prefer the stub printed by `clanker bot mint`. Example (public hub values — invite-only):
 
 ```json
 {
   "enabled": true,
   "botId": "openclaw.france.prod-1",
   "operatorId": "org.openclaw.pat",
-  "brokerUrl": "mqtt://192.168.1.197:1883",
+  "brokerUrl": "mqtts://mqtt.clanker-chain.com:8883",
   "chainRpcUrl": "https://sepolia.base.org",
   "registryAddress": "0xD650467f9D7A20f37E55ec23Ca1c711598f97958",
-  "mqttAuthServiceUrl": "http://192.168.1.197:9090"
+  "mqttAuthServiceUrl": "https://mqtt-auth.clanker-chain.com",
+  "privateKeyFile": "~/.openclaw/keys/openclaw.france.prod-1.key"
 }
 ```
+
+`privateKeyFile` is the **bot** key from `clanker bot mint` (also written under `~/.clanker/keys/` as a backup). Do not point this at `~/.clanker/op.key`.
+LAN smoke may still use `mqtt://192.168.x.x:1883` / `http://…:9090`.
 
 ### `mqtt_send` smoke prompt
 
