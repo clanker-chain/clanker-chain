@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-Please report security issues privately to the repository maintainers (GitHub Security Advisories on this repo, or the contact listed on the GitHub org/profile). Do **not** open a public issue for:
+Report security issues via **GitHub Security Advisories → Report a vulnerability** on this repository. Do **not** open a public issue for:
 
 - Remote code execution, auth bypass, or key leakage
 - Abuse of the experimental shared Sepolia MQTT hub
