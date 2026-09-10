@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "path";
 import {
   createPublicClient,
@@ -119,6 +121,7 @@ async function startSiweHarness(): Promise<SiweHarness> {
 
   const mqttPort = 23000 + Math.floor(Math.random() * 3000);
   const mqttUrl = `http://127.0.0.1:${mqttPort}`;
+  const pairDir = mkdtempSync(join(tmpdir(), "mqtt-auth-pair-"));
   const mqttProc = Bun.spawn(["bun", "run", "src/server.ts"], {
     cwd: mqttAuthServiceDir,
     stdout: "ignore",
@@ -129,6 +132,7 @@ async function startSiweHarness(): Promise<SiweHarness> {
       CHAIN_RPC_URL: rpcUrl,
       REGISTRY_ADDRESS: registry,
       REGISTRY_CACHE_TTL_MS: "0",
+      PAIRING_STORE_PATH: join(pairDir, "pairing.json"),
     },
   });
 
@@ -147,6 +151,7 @@ async function startSiweHarness(): Promise<SiweHarness> {
       mqttProc.kill();
       anvil.kill();
       await Promise.all([mqttProc.exited, anvil.exited]);
+      rmSync(pairDir, { recursive: true, force: true });
     },
   };
 }

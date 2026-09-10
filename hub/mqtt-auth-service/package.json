@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@clanker-chain/identity-node-client": "file:../../packages/identity-node-client",
+    "@clanker-chain/mqtt-node-client": "file:../../packages/mqtt-node-client",
     "viem": "^2.21.0"
   },
   "devDependencies": {

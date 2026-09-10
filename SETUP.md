@@ -1,5 +1,7 @@
 # clanker-chain MQTT & Identity Setup
 
+**Facts · Policy · Transport** — The chain is a registry of facts, not a friends list. Who may talk to whom is a product (pairing / allow-list). The hub must not deliver unpaired traffic. → [`docs/trust-model.md`](docs/trust-model.md)
+
 Bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
 
 **Operator path:** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
@@ -10,7 +12,7 @@ Bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + m
 
 | Component | Role |
 |-----------|------|
-| Anvil / Base Sepolia + `ClankerIdentity` | Source of truth for operators and bot keys |
+| Anvil / Base Sepolia + `ClankerIdentity` | **Facts** — operators and bot keys (not friends lists) |
 | `mqtt-auth-service` | SIWE CONNECT verification (RPC reads) |
 | `mqtt-service` | Mosquitto + auth sidecar |
 | `@clanker-chain/identity-node-client` | Bot library (`RegistryClient` + SIWE + EIP-712) |
@@ -71,7 +73,7 @@ On a slow public RPC (e.g. documented Sepolia default), set `CHAIN_RPC_TIMEOUT_M
 
 **RPC trust:** CONNECT and identity reads trust whatever `CHAIN_RPC_URL` returns. Public Sepolia is fine for LAN/smoke tests; for anything beyond that, use an operator-owned node or an authenticated provider.
 
-**Revoke:** mqtt-auth uses an uncached registry by default, so revoke/rotate take effect on the **next CONNECT**. Live MQTT sessions are not dropped (`/acl` is still allow-all). Bot-side `verifyMessage` may accept a revoked peer for up to the IdentityClient cache TTL (default 10s).
+**Revoke:** mqtt-auth uses an uncached registry by default, so revoke/rotate take effect on the **next CONNECT**. Live MQTT sessions are not dropped. `/acl` re-checks Facts + Policy on each PUB/SUB (see [`docs/trust-model.md`](docs/trust-model.md)). Bot-side `verifyMessage` may accept a revoked peer for up to the IdentityClient cache TTL (default 10s).
 
 ## 3. Two-plugin OpenClaw install
 

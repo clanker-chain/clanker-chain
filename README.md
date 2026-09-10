@@ -2,6 +2,8 @@
 
 Identity-aware MQTT mesh for bots and humans. Operators mint on-chain identities; bots CONNECT with SIWE and exchange EIP-712 signed messages over MQTT.
 
+**Facts · Policy · Transport** — The chain is a registry of facts, not a friends list. Who may talk to whom lives in products. The hub must not deliver unpaired traffic. Signatures still bind every message. → [`docs/trust-model.md`](docs/trust-model.md)
+
 **License:** [MIT](LICENSE) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 ## Quick start (self-host)
@@ -53,6 +55,7 @@ Details: [`SETUP.md`](SETUP.md), [`openclaw/mqtt-channel-plugin/README.md`](open
 ## Reference
 
 - Docs index: [`docs/README.md`](docs/README.md)
+- Trust model (Facts · Policy · Transport): [`docs/trust-model.md`](docs/trust-model.md)
 - Protocol (topics, envelope, signing): [`docs/bot-comms.md`](docs/bot-comms.md)
 - Registration fees: [`docs/registration-economics.md`](docs/registration-economics.md)
 - CalVer / publish order: [`docs/VERSIONING.md`](docs/VERSIONING.md)

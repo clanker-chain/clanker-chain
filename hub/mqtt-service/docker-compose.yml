@@ -9,6 +9,9 @@ services:
       CHAIN_RPC_URL: ${CHAIN_RPC_URL:-https://sepolia.base.org}
       REGISTRY_ADDRESS: ${REGISTRY_ADDRESS:?Set REGISTRY_ADDRESS}
       MQTT_AUTH_PORT: "9090"
+      PAIRING_STORE_PATH: /data/pairing.json
+    volumes:
+      - mqtt_auth_pairing:/data
     healthcheck:
       test: ["CMD", "bun", "-e", "fetch('http://localhost:9090/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 5s
@@ -26,3 +29,6 @@ services:
     depends_on:
       mqtt-auth:
         condition: service_healthy
+
+volumes:
+  mqtt_auth_pairing:

@@ -53,3 +53,11 @@ test("resolveMqttAccount not configured when registryAddress is not 0x+40 hex", 
     expect(isMqttAccountConfigured(account)).toBe(false);
   }
 });
+
+test("resolveMqttAccount reads allowOperators", () => {
+  const account = resolveMqttAccount(
+    baseMqtt({ allowOperators: ["org.peer"], dmPolicy: "pairing" }),
+  );
+  expect(account.allowOperators).toEqual(["org.peer"]);
+  expect(account.dmPolicy).toBe("pairing");
+});

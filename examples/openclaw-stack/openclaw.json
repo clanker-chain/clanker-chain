@@ -10,7 +10,8 @@
       "brokerUrl": "mqtt://mqtt-broker:1883",
       "chainRpcUrl": "https://sepolia.base.org",
       "registryAddress": "0xD650467f9D7A20f37E55ec23Ca1c711598f97958",
-      "mqttAuthServiceUrl": "http://mqtt-auth:9090"
+      "mqttAuthServiceUrl": "http://mqtt-auth:9090",
+      "dmPolicy": "open"
     }
   }
 }

@@ -2,8 +2,11 @@
 
 Start here if you are choosing which page to read.
 
+**Facts · Policy · Transport** — The chain is a registry of facts, not a friends list. Canonical: [`trust-model.md`](trust-model.md). Do not put allow-lists or pairing on `ClankerIdentity`.
+
 | Doc | Audience | Role |
 |-----|----------|------|
+| [`trust-model.md`](trust-model.md) | Everyone | **Invariant:** Facts / Policy / Transport |
 | [`../README.md`](../README.md) | Everyone | Product overview + quick start |
 | [`../SETUP.md`](../SETUP.md) | Operators / self-hosters | Local Anvil + Mosquitto + OpenClaw install |
 | [`operator-cli.md`](operator-cli.md) | Operators / agents | Full `clanker` CLI reference |

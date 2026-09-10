@@ -50,7 +50,7 @@ function emitBrokerMessage(topic: string, payload: unknown): void {
 }
 
 describe("MqttClient.poll", () => {
-  let client: MqttClient;
+  let client: InstanceType<typeof MqttClient>;
 
   beforeEach(async () => {
     client = new MqttClient();

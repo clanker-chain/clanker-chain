@@ -16,6 +16,9 @@ services:
       REGISTRY_ADDRESS: ${REGISTRY_ADDRESS:?Set REGISTRY_ADDRESS}
       MQTT_AUTH_PORT: "9090"
       CHAIN_RPC_TIMEOUT_MS: ${CHAIN_RPC_TIMEOUT_MS:-10000}
+      PAIRING_STORE_PATH: /data/pairing.json
+    volumes:
+      - mqtt_auth_pairing:/data
     # No host ports — only Docker network (Caddy + Mosquitto).
     expose:
       - "9090"
@@ -65,3 +68,4 @@ volumes:
   caddy_data:
   caddy_config:
   mosquitto_data:
+  mqtt_auth_pairing:

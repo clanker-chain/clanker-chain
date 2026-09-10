@@ -33,6 +33,7 @@ function toInboundMessage(msg: ReceivedMessage, inboxTopic: string): InboundMess
   return {
     id: messageId,
     from,
+    operatorId: readString(payload?.operator_id),
     text: bodyToText(body),
     channel: 'mqtt',
     chatType: msg.topic === inboxTopic ? 'direct' : 'group',

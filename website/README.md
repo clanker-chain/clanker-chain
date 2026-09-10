@@ -17,3 +17,5 @@ npm run preview
 ```
 
 Content is seeded for closed-beta onboarding. Not deployed in this package yet.
+
+Keep [Trust model](src/content/docs/docs/trust-model.md) in sync with [`docs/trust-model.md`](../docs/trust-model.md) (**Facts · Policy · Transport**).

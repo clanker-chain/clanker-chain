@@ -22,6 +22,7 @@ export default defineConfig({
           label: "Docs",
           items: [
             { label: "Get started", slug: "docs/get-started" },
+            { label: "Trust model", slug: "docs/trust-model" },
             { label: "Concepts", slug: "docs/concepts" },
             { label: "CLI", slug: "docs/cli" },
             { label: "OpenClaw plugins", slug: "docs/plugins" },

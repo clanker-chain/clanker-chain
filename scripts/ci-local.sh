@@ -154,16 +154,13 @@ run_npm_package() {
 main() {
   log "Running local CI checks"
 
-  # identity-node-client types live in dist/. mqtt-auth-service resolves
-  # `@clanker-chain/identity-node-client` via package.json `types`, so this
-  # package must be built before the hub auth typecheck.
+  # identity-node-client and mqtt-node-client types live in dist/. mqtt-auth-service
+  # resolves both via package.json `types`/`main`, so build them before hub tsc/tests.
   run_npm_package "${ROOT_DIR}/packages/identity-node-client"
-
-  # Hub auth (chain-direct RegistryClient)
-  run_bun_package "${ROOT_DIR}/hub/mqtt-auth-service"
-
-  # Shipped npm libs
   run_npm_package "${ROOT_DIR}/packages/mqtt-node-client"
+
+  # Hub auth (chain-direct RegistryClient; imports mqtt-node-client dm-topics)
+  run_bun_package "${ROOT_DIR}/hub/mqtt-auth-service"
 
   # Operator CLI (published)
   log "clanker-cli unit tests"

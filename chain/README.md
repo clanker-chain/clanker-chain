@@ -2,6 +2,8 @@
 
 Solidity registry for operator and bot identities. Used with **Anvil** locally and (later) Base for public-good deployment.
 
+**Facts · Policy · Transport** — `ClankerIdentity` is **Facts** only (owner, `botKey`, revoke). Do not add allow-lists, pairing, metadata, or reputation here. Those belong in products and hub ACLs. → [`docs/trust-model.md`](../docs/trust-model.md)
+
 ## Prerequisites
 
 Install [Foundry](https://book.getfoundry.sh/getting-started/installation):

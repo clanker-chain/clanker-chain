@@ -28,6 +28,8 @@ Fees are **forwarded to `feeRecipient`** on each successful register. There is n
 
 ## Trust model
 
+**Facts · Policy · Transport** — Fees buy a **Facts** record (this label exists and cost something to create). They do **not** buy trust, reserved names, or the right to message anyone. Friends lists stay in products. → [`trust-model.md`](trust-model.md)
+
 - **Canonical registry:** publish `REGISTRY_ADDRESS` per network (Base Sepolia, Base mainnet). All relying parties (`mqtt-auth-service`, OpenClaw bots via `IdentityClient` / `RegistryClient`) use that address as EIP-712 `verifyingContract`.
 - **Clones at other addresses** are separate namespaces; they do not affect the canonical registry.
 

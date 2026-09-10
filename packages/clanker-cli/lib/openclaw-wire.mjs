@@ -99,7 +99,7 @@ export function hubConnectChecklist(opts) {
     `openclaw plugins install @clanker-chain/mqtt-tools@${pin}`,
     "Enable plugin ids mqtt + mqtt-tools (already set in openclaw.json if we wired it)",
     `CONNECT broker: ${opts.channelsMqtt?.brokerUrl ?? "mqtts://mqtt.clanker-chain.com:8883"}`,
-    `Ask hub operator to allow bot_id "${opts.botId}" in france dmPolicy / allowFrom`,
+    "Both operators: clanker pair add <peer-operator>  (Policy — required before DMs deliver)",
     "DM openclaw.france.prod-1 to smoke the mesh",
   ];
 }

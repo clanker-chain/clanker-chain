@@ -2,6 +2,8 @@
 
 Node/TypeScript client for on-chain ClankerIdentity (bots + shared `RegistryClient` for mqtt-auth).
 
+**Facts · Policy · Transport** — This package reads **Facts** and signs/verifies envelopes. It is not a friends list. Pairing is Policy; hub `/acl` is Transport. → [`docs/trust-model.md`](../../docs/trust-model.md)
+
 ## Purpose
 
 - Bot keys under `~/.openclaw/keys/{bot_id}.key`: **secp256k1-eth** only (`0x` + 64 hex), or `BOT_ETH_PRIVATE_KEY` env.

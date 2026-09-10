@@ -21,6 +21,9 @@ services:
       - CHAIN_RPC_URL=${CHAIN_RPC_URL:-https://sepolia.base.org}
       - REGISTRY_ADDRESS=${REGISTRY_ADDRESS:?Set REGISTRY_ADDRESS}
       - MQTT_AUTH_PORT=9090
+      - PAIRING_STORE_PATH=/data/pairing.json
+    volumes:
+      - mqtt_auth_pairing:/data
     ports:
       - "9090:9090"
     healthcheck:
@@ -40,3 +43,6 @@ services:
     depends_on:
       mqtt-auth:
         condition: service_healthy
+
+volumes:
+  mqtt_auth_pairing:

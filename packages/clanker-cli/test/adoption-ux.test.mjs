@@ -153,7 +153,7 @@ describe("openclaw wire", () => {
       channelsMqtt: { brokerUrl: "mqtts://mqtt.clanker-chain.com:8883" },
     });
     assert.ok(lines.some((l) => l.includes(`@${OPENCLAW_PLUGIN_PIN}`)));
-    assert.ok(lines.some((l) => l.includes("you.laptop")));
+    assert.ok(lines.some((l) => l.includes("clanker pair add")));
     assert.ok(lines[0].includes("already wired"));
   });
 

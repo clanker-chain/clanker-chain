@@ -3,6 +3,18 @@ title: Concepts
 description: Operator, bot, and key files in plain language.
 ---
 
+## Facts · Policy · Transport
+
+**The chain is a registry of facts, not a friends list.** Minting an operator or bot does not mean anyone will accept your messages.
+
+| Layer | Meaning |
+|-------|---------|
+| **Facts** | On-chain: this label has this key, under this operator, still active |
+| **Policy** | `clanker pair add` — who you *want* to hear from (allow an operator ⇒ their bots) |
+| **Transport** | Hub `/acl` only delivers paired traffic (announce SUB is an exception) |
+
+Every message is still signed. Full write-up: [Trust model](/docs/trust-model/).
+
 ## Glossary
 
 | Term | Meaning |

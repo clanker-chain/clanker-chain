@@ -12,6 +12,7 @@ import {
   resolveMqttAccount,
   type ResolvedMqttAccount,
 } from './accounts.js';
+import { isSenderAllowed } from './allow-policy.js';
 import { MqttChannelProvider } from './MqttChannelProvider.js';
 import { resolveDeliverDecision } from './deliver-policy.js';
 import type { InboundMessage } from './types.js';
@@ -35,6 +36,23 @@ async function dispatchDirectInbound(params: {
   const rt = ctx.channelRuntime;
   if (!rt) {
     ctx.log?.warn?.('[mqtt-channel] channelRuntime missing; cannot dispatch inbound (upgrade OpenClaw)');
+    return;
+  }
+
+  // Policy (defense in depth): drop before OpenClaw if peer is not allow-listed.
+  // Hub /acl is Transport. dmPolicy=open skips local allow lists (still signed).
+  const allowed = isSenderAllowed({
+    senderBotId: inbound.from,
+    senderOperatorLabel: inbound.operatorId ?? '',
+    selfOperatorLabel: ctx.account.operatorId,
+    dmPolicy: ctx.account.dmPolicy,
+    allowFrom: ctx.account.allowFrom,
+    allowOperators: ctx.account.allowOperators,
+  });
+  if (!allowed) {
+    ctx.log?.info?.(
+      `[mqtt-channel] Policy drop: peer=${inbound.from} operator=${inbound.operatorId ?? '(none)'} not in allowFrom/allowOperators (dmPolicy=${ctx.account.dmPolicy ?? 'unset'})`,
+    );
     return;
   }
 

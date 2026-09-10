@@ -74,3 +74,57 @@ test("verifyMessage accepts valid signature from active peer", async () => {
   await client.init();
   assert.equal(await client.verifyMessage(envelope, signature, BOT_ID), true);
 });
+
+test("verifyMessage rejects when envelope.operator_id does not match on-chain operator", async () => {
+  const account = privateKeyToAccount(TEST_KEY);
+  const domain = { chainId: 31337, registryAddress: REGISTRY };
+  const envelope = {
+    from: BOT_ID,
+    from_id: BOT_ID,
+    operator_id: "org.openclaw.liar",
+    type: "coordination",
+    timestamp: new Date().toISOString(),
+    message_id: "msg-liar",
+    body: { text: "hello" },
+  };
+  const { signature } = await signEnvelope(account, envelope, domain);
+
+  const operator: OnchainOperator = {
+    owner: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    status: "active",
+    registeredAt: 1n,
+    revokedAt: 0n,
+  };
+  const bot: OnchainBot = {
+    botId: BOT_ID,
+    operatorId: opId(),
+    botKey: account.address,
+    status: "active",
+    registeredAt: 1n,
+    revokedAt: 0n,
+  };
+  const registry: IdentityRegistryReader = {
+    async getBotByLabel() {
+      return bot;
+    },
+    async getOperatorByLabel() {
+      return operator;
+    },
+    async getOperatorById() {
+      return operator;
+    },
+    async getEip712Domain() {
+      return domain;
+    },
+  };
+
+  const client = new IdentityClient({
+    botId: BOT_ID,
+    operatorId: OPERATOR_ID,
+    ethPrivateKey: TEST_KEY,
+    registry,
+    eip712Domain: domain,
+  });
+  await client.init();
+  assert.equal(await client.verifyMessage(envelope, signature, BOT_ID), false);
+});

@@ -2,6 +2,8 @@
 
 Profile-aware operator tooling for `ClankerIdentity`: mint, whoami, list bots, revoke/rotate, and transfer. Agents can drive these once `~/.clanker` exists. Prefer **`clanker setup`** for humans; use `clanker init --preset` for scripts.
 
+**Facts · Policy · Transport** — Mint / revoke write **Facts**. `clanker pair` writes **Policy** (hub pairing store + local `allowOperators`). Hub `/acl` is **Transport**. → [`trust-model.md`](trust-model.md)
+
 Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include a join site or MQTT message monitoring.
 
 ## Quick start (experimental Sepolia)
@@ -19,6 +21,8 @@ clanker doctor
 clanker whoami
 clanker operator mint org.you --yes
 clanker bot mint you.laptop --yes
+# Both sides before DMs deliver:
+clanker pair add org.openclaw.pat --yes
 ```
 
 Non-interactive (agents / CI):
@@ -67,7 +71,7 @@ Prints the detection table plus pass/warn/fail checks (including `GET mqttAuthSe
 
 ## Mutates (plan → confirm)
 
-`operator mint`, `bot mint` / `revoke` / `rotate`, and `operator transfer *` print a plan and confirm on a TTY unless `--yes` or `--json`. Success paths print a **Next:** hint.
+`operator mint`, `bot mint` / `revoke` / `rotate`, `operator transfer *`, and `pair add` print a plan and confirm on a TTY unless `--yes` or `--json`. Success paths print a **Next:** hint.
 
 ## Reads
 
@@ -126,6 +130,8 @@ On any other RPC, missing key or Anvil #0 → hard error. After mint / transfer 
 | `clanker bots [--json] [--operator] [--address]` | Bots for the inferred (or preferred) label; `--address` is read-only |
 | `clanker bot status <label>` | Storage read of `bots(id)` |
 | `clanker bot revoke \| rotate` | Same txs as `chain revoke-bot` / `rotate-bot-key` |
+| `clanker pair add \| remove <operator>` | Policy: allow-list peer on mqtt-auth; syncs `allowOperators` (`--auth-url`, `--openclaw-home DIR` for non-default OpenClaw config) |
+| `clanker pair list \| status` | List allows / check mutual (`--auth-url`) |
 | `clanker operator transfer propose <label> <newOwner>` | `proposeOperatorTransfer` |
 | `clanker operator transfer accept <label>` | `acceptOperatorTransfer`; refreshes `operator.json` after receipt |
 
