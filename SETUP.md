@@ -6,7 +6,7 @@ Bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + m
 
 **Operator path:** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
 
-**Default for development:** localhost Anvil + local compose. An **experimental** shared Sepolia hub exists (invite-only until ACLs) — [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not put hub hostnames in plugin npm READMEs until ACLs land. Docs index: [`docs/README.md`](docs/README.md).
+**Default for development:** localhost Anvil + local compose. An **experimental** shared Sepolia hub exists (invite-only) — [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not put hub hostnames in plugin npm READMEs until invite policy is broader. Docs index: [`docs/README.md`](docs/README.md).
 
 ## Stack overview
 
@@ -77,11 +77,11 @@ On a slow public RPC (e.g. documented Sepolia default), set `CHAIN_RPC_TIMEOUT_M
 
 ## 3. Two-plugin OpenClaw install
 
-CalVer **`2026.9.10`** (channel) / **`2026.7.29`** (tools) on npm. Prefer published packages:
+CalVer **`2026.9.10`** on npm. Prefer published packages:
 
 ```bash
 openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.9.10
-openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-tools@2026.9.10
 ```
 
 To install from this checkout instead (after `npm ci && npm run build` in `packages/identity-node-client`, `packages/mqtt-node-client`, and both plugin dirs):

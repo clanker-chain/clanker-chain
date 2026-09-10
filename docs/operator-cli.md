@@ -38,7 +38,7 @@ From a monorepo checkout (dev / `chain up|deploy`): `node packages/clanker-cli/b
 
 `bot mint` writes the **bot** key under `~/.openclaw/keys/`, wires `channels.mqtt` (including `privateKeyFile`), prints a **Bot identity** card (do not hand OpenClaw `op.key`), then plugin + peer allowlist steps.
 
-Closed-beta hub values live in the **sepolia** preset (same numbers as [`public-testnet-hub.md`](public-testnet-hub.md)). Do not put those hostnames in plugin npm READMEs until hub step 4 (ACLs).
+Closed-beta hub values live in the **sepolia** preset (same numbers as [`public-testnet-hub.md`](public-testnet-hub.md)). Do not put those hostnames in plugin npm READMEs until invite policy is broader (stranger DM gate).
 
 ## `clanker setup`
 

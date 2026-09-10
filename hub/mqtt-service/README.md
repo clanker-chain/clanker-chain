@@ -2,7 +2,7 @@
 
 Runs the MQTT broker (Mosquitto with HTTP auth plugin) and the mqtt-auth-service. Bots connect with `username = bot_id` and a **SIWE-style** password from `identity-node-client` (`issueMqttConnectPassword()`).
 
-**Facts · Policy · Transport** — CONNECT verifies **Facts**. Topic isolation is **Transport** (`/acl` default-deny + pairing store). Friends lists are **Policy** (`clanker pair` / client `allowOperators`). Redeploy the shared hub droplet to pick up this tree. → [`docs/trust-model.md`](../../docs/trust-model.md)
+**Facts · Policy · Transport** — CONNECT verifies **Facts**. Topic isolation is **Transport** (`/acl` default-deny + pairing store). Friends lists are **Policy** (`clanker pair` / client `allowOperators`). → [`docs/trust-model.md`](../../docs/trust-model.md)
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ Runs the MQTT broker (Mosquitto with HTTP auth plugin) and the mqtt-auth-service
 
 ## Configuration
 
-- **CHAIN_RPC_URL** — EVM RPC for mqtt-auth registry reads (e.g. `https://sepolia.base.org` or Anvil).
+- **CHAIN_RPC_URL** — EVM RPC for mqtt-auth registry **Facts** reads. Local: Anvil. Shared / public hub: prefer an **operator-owned or authenticated** Base Sepolia endpoint (Alchemy, CDP, etc.); invitees may still use public `https://sepolia.base.org` for their own clients. See [`.env.public.example`](.env.public.example).
 - **REGISTRY_ADDRESS** — `ClankerIdentity` address (required).
 
 ## Run (local)

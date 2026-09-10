@@ -9,7 +9,7 @@ Pin to the published closed-beta release:
 
 ```bash
 openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.9.10
-openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-tools@2026.9.10
 ```
 
 Enable plugin ids **`mqtt`** and **`mqtt-tools`** in your OpenClaw config (`plugins.enabled`). `clanker bot mint` and `clanker init-openclaw` already ensure those ids when they wire `openclaw.json`.
