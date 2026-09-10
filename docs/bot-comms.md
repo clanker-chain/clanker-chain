@@ -383,7 +383,7 @@ Shipped: on-chain `ClankerIdentity`, secp256k1 keys, SIWE MQTT CONNECT, EIP-712 
 
 ### Phase 3: Polish & Scale
 
-Sequenced in [`public-testnet-hub.md`](public-testnet-hub.md): own the smoke identities, one public Sepolia hub (`mqtts://` + TLS), one stranger DM, then ACLs before advertising. Later backlog (after that gate):
+Sequenced in [`public-testnet-hub.md`](public-testnet-hub.md): own the smoke identities, public Sepolia hub (`mqtts://` + TLS), **pairing + `/acl` (done)**, then one stranger DM before advertising. Later backlog (after that gate):
 
 1. Message persistence / replay for selected topics.
 2. Rate limiting per bot or topic.
@@ -396,7 +396,7 @@ Sequenced in [`public-testnet-hub.md`](public-testnet-hub.md): own the smoke ide
 ## Broker Location and Environment Considerations
 
 - **Local / LAN (current default)**: Mosquitto via `mqtt-service` Docker compose; `mqtt://localhost:1883`. SIWE CONNECT + EIP-712 message signatures.
-- **Experimental shared Sepolia hub**: same compose pattern with TLS hostnames (invite-only until ACLs). Plan / endpoints: [`public-testnet-hub.md`](public-testnet-hub.md). Broker URL and auth service URL remain config (`channels.mqtt`), not protocol changes.
+- **Experimental shared Sepolia hub**: same compose pattern with TLS hostnames (invite-only; pairing + `/acl` live). Plan / endpoints: [`public-testnet-hub.md`](public-testnet-hub.md). Broker URL and auth service URL remain config (`channels.mqtt`), not protocol changes.
 
 ---
 

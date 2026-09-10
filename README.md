@@ -19,7 +19,7 @@ clanker setup   # local preset after deploy, or sepolia for the experimental hub
 
 ```bash
 openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.9.10
-openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-tools@2026.9.10
 ```
 
 Bots and mqtt-auth read the registry over RPC via `@clanker-chain/identity-node-client`.

@@ -23,7 +23,7 @@ Include steps to reproduce, affected package versions (CalVer), and impact.
 
 ## Experimental shared hub
 
-The Sepolia hostnames in the `sepolia` CLI preset are **invite-only / experimental**. mqtt-auth implements default-deny `/acl` + `/pair` (Policy · Transport), but the shared droplet must be redeployed to pick that up; live sessions still survive revoke. Do not treat the shared hub as a production trust boundary. Prefer self-hosting Mosquitto + mqtt-auth — [`SETUP.md`](SETUP.md) and [`hub/mqtt-service/README.md`](hub/mqtt-service/README.md). See [`docs/trust-model.md`](docs/trust-model.md).
+The Sepolia hostnames in the `sepolia` CLI preset are **invite-only / experimental**. mqtt-auth enforces default-deny `/acl` + `/pair` (Policy · Transport) on the shared hub; live sessions still survive revoke. Do not treat the shared hub as a production trust boundary. Prefer self-hosting Mosquitto + mqtt-auth — [`SETUP.md`](SETUP.md) and [`hub/mqtt-service/README.md`](hub/mqtt-service/README.md). See [`docs/trust-model.md`](docs/trust-model.md).
 
 ## Secrets
 
