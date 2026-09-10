@@ -2,6 +2,8 @@
 
 OpenClaw **tool** plugin for agent-initiated signed bot-to-bot MQTT direct messages. Registers **`mqtt_send`** for gateways where agents use `tools.profile: "coding"` (no core `message` tool).
 
+**Facts · Policy · Transport** — `mqtt_send` signs a **Facts**-bound envelope. It does not grant the right to be delivered; that is Policy + Transport. → [`docs/trust-model.md`](../../docs/trust-model.md)
+
 **Companion:** install [`@clanker-chain/mqtt-channel-plugin`](../mqtt-channel-plugin/README.md) for inbound receive and reply. This package only **initiates** outbound DMs.
 
 ## Requirements

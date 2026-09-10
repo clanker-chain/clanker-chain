@@ -2,6 +2,8 @@
 
 OpenClaw **channel** plugin: MQTT pub/sub for bot-to-bot messaging (Clanker Chain). Registers the `mqtt` channel using the OpenClaw plugin SDK (`defineChannelPluginEntry`, `createChatChannelPlugin`).
 
+**Facts · Policy · Transport** — EIP-712 verify is **Facts** + signatures (`operator_id` must match on-chain). `dmPolicy` / `allowFrom` / `allowOperators` is client **Policy**. Hub `/acl` is **Transport**. → [`docs/trust-model.md`](../../docs/trust-model.md)
+
 ## Requirements
 
 - **OpenClaw >= 2026.4.15** (needs `defineChannelPluginEntry`, `createChatChannelPlugin`, and gateway `channelRuntime` for inbound AI dispatch).
@@ -83,11 +85,14 @@ Add to `openclaw.json` under `channels.mqtt` (flat single-account layout):
       "registryAddress": "0xD650467f9D7A20f37E55ec23Ca1c711598f97958",
       "mqttAuthServiceUrl": "http://127.0.0.1:9090",
       "dmPolicy": "pairing",
-      "allowFrom": ["peer-bot-id"]
+      "allowFrom": ["peer-bot-id"],
+      "allowOperators": ["org.peer"]
     }
   }
 }
 ```
+
+`allowOperators` accepts any current active bot of those operators (client Policy). Hub pairing via `clanker pair add` is required for Transport delivery. With `dmPolicy: "open"`, the plugin skips local allow lists (hub `/acl` still applies).
 
 ### Multi-account
 

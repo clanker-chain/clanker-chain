@@ -177,6 +177,10 @@ Usage:
   clanker bot status <label> [--json]
   clanker bot revoke <label> [--json] [--yes]
   clanker bot rotate <label> <newKeyAddress> [--json] [--yes]
+  clanker pair add <operator-label> [--yes] [--auth-url URL] [--openclaw-home DIR]
+  clanker pair remove <operator-label> [--auth-url URL] [--openclaw-home DIR]
+  clanker pair list [--auth-url URL]
+  clanker pair status <operator-label> [--auth-url URL]
   clanker init-openclaw
   clanker chain up|deploy|mint-operator|mint-bot|rotate-bot-key|revoke-bot ...
   clanker check mqtt <bot_id> <operator_id>
@@ -188,10 +192,11 @@ Profile:
   ~/.clanker/keys/           bot keys (also written to ~/.openclaw/keys/)
 
 Humans: \`clanker setup\` then \`clanker doctor\` / \`whoami\`.
+Pairing (Policy): both operators run \`clanker pair add\` before DMs deliver on the hub.
 Mutates print a plan and confirm unless --yes or --json.
 whoami is fast by default; pass --with-bots to enrich child bots (or use \`clanker bots\`).
 
-See docs/operator-cli.md.
+See docs/operator-cli.md and docs/trust-model.md.
 `);
 }
 
@@ -446,6 +451,93 @@ async function main() {
 
   if (cmd === "bots") {
     await cmdBots(rest);
+    return;
+  }
+
+  if (cmd === "pair") {
+    const [sub, ...pairRest] = rest;
+    if (!sub || !["add", "remove", "list", "status"].includes(sub)) {
+      console.error("Usage: clanker pair add|remove|list|status [operator-label]");
+      process.exit(1);
+    }
+
+    let peerLabel = null;
+    for (let i = 0; i < pairRest.length; i += 1) {
+      const a = pairRest[i];
+      if (a.startsWith("--")) {
+        if (a !== "--json" && a !== "--yes" && pairRest[i + 1] && !pairRest[i + 1].startsWith("--")) {
+          i += 1; // skip flag value
+        }
+        continue;
+      }
+      peerLabel = a;
+      break;
+    }
+
+    const { runPairAction } = await import("../lib/pair.mjs");
+    try {
+      if (sub === "add") {
+        const planRows = [
+          ["action", "pair add (Policy)"],
+          ["peer", peerLabel ?? "(missing)"],
+          ["note", "One-way allow; peer must pair you for bidirectional DMs"],
+        ];
+        const ok = await confirmPlan(pairRest, planRows, `Allow operator ${peerLabel}?`);
+        if (!ok) process.exit(0);
+      }
+      const out = await runPairAction(pairRest, sub, peerLabel);
+      if (hasFlag(pairRest, "--json")) {
+        console.log(JSON.stringify(out, null, 2));
+      } else if (sub === "list") {
+        console.log(`Operator: ${out.operatorId}`);
+        console.log(`Auth: ${out.authUrl}`);
+        const allows = out.listed?.allows ?? [];
+        if (!allows.length) {
+          console.log("(no allows)");
+        } else {
+          for (const a of allows) {
+            console.log(
+              `  ${a.peer_operator_id}  ${a.mutual ? "mutual" : "pending (one-way)"}`,
+            );
+          }
+        }
+      } else if (sub === "status") {
+        console.log(`peer:    ${out.peerLabel}`);
+        console.log(`allowed: ${out.allowed}`);
+        console.log(`mutual:  ${out.mutual}`);
+        if (out.allowed && !out.mutual) {
+          console.log("Waiting for peer to run: clanker pair add <your-operator>");
+        }
+      } else {
+        console.log(
+          `${sub} ${out.peerLabel}: ${out.result?.mutual ? "mutual" : "one-way / pending"}`,
+        );
+        if (out.openclawSync?.synced) {
+          console.log(`Synced allowOperators → ${out.openclawSync.path}`);
+          console.log(
+            "Restart (or reload) the OpenClaw gateway so channels.mqtt.allowOperators is picked up.",
+          );
+        } else if (out.openclawSync?.reason === "missing_openclaw_json") {
+          console.log(
+            `Hub Policy updated, but no openclaw.json at ${out.openclawSync.path} — ` +
+              "client allowOperators was not synced. Create OpenClaw config or set allowOperators manually.",
+          );
+        }
+        if (sub === "add" && !out.result?.mutual) {
+          nextHint(`Ask ${out.peerLabel} to run: clanker pair add ${out.operatorId}`);
+        }
+      }
+    } catch (err) {
+      exitCliError({
+        error: err.message,
+        because: "pairing needs operator key + mqtt-auth /pair endpoints",
+        try: [
+          "clanker doctor",
+          "clanker pair add org.peer --auth-url http://127.0.0.1:9090 --yes",
+          "See docs/trust-model.md",
+        ],
+      });
+    }
     return;
   }
 

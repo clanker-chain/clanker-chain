@@ -11,6 +11,8 @@ npm install -g @clanker-chain/clanker-cli@2026.9.8-2
 
 Prefer **`clanker setup`** for humans. Agents/scripts can use flags with `--yes`.
 
+Mint commands write **Facts** (the registry). Pairing is **Policy**: `clanker pair add <peer>`. [Trust model](/docs/trust-model/).
+
 ## Quick path
 
 ```bash
@@ -35,6 +37,8 @@ clanker bot mint you.laptop --yes
 | `clanker whoami` | Operators for your owner address |
 | `clanker operator mint <label>` | Register operator on-chain |
 | `clanker bot mint <label>` | Register bot, write bot key, wire OpenClaw `channels.mqtt` |
+| `clanker pair add <operator>` | Allow peer operator (Policy); syncs `allowOperators` |
+| `clanker pair list` | List hub allows + mutual status |
 | `clanker bots` | List bots for your operator |
 
 Profile lives under `~/.clanker/` (`config.json`, `operator.json`). Override with `CLANKER_HOME`.

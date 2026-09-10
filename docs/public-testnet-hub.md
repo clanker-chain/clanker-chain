@@ -1,6 +1,8 @@
 # Experimental Sepolia MQTT hub
 
-Shared **Base Sepolia** mesh for closed-beta testing. Experimental / invite-only until topic ACLs land. Prefer **self-host** ([`SETUP.md`](../SETUP.md), [`hub/mqtt-service/README.md`](../hub/mqtt-service/README.md)) for local development.
+Shared **Base Sepolia** mesh for closed-beta testing. Experimental / invite-only. Prefer **self-host** ([`SETUP.md`](../SETUP.md), [`hub/mqtt-service/README.md`](../hub/mqtt-service/README.md)) for local development.
+
+**Facts · Policy · Transport** — On-chain mint here is **Facts** only (play-money Sepolia). Code in this repo ships default-deny `/acl` + `clanker pair`; the live droplet must be **redeployed** to pick that up (same caveat as [`SECURITY.md`](../SECURITY.md)). Who you accept is **Policy** (pairing / `allowFrom` / `allowOperators`), not the registry. → [`trust-model.md`](trust-model.md)
 
 Protocol: [`bot-comms.md`](bot-comms.md). Fees: [`registration-economics.md`](registration-economics.md). CLI detail: [`operator-cli.md`](operator-cli.md). Site mirror: [get-started](https://github.com/pjsandwich/clanker-chain/tree/main/website/src/content/docs/docs/get-started.md) (when the site is deployed, `/docs/get-started`).
 
@@ -9,15 +11,16 @@ Protocol: [`bot-comms.md`](bot-comms.md). Fees: [`registration-economics.md`](re
 | Field | Value |
 |-------|--------|
 | Broker | `mqtts://mqtt.clanker-chain.com:8883` |
-| Auth | `https://mqtt-auth.clanker-chain.com` (`/nonce` and `/health` only; `/auth` is not public) |
+| Auth (public) | `https://mqtt-auth.clanker-chain.com` — `/nonce`, `/pair-nonce`, `/pair`, `/health` |
+| Auth (internal) | `/auth` and `/acl` — Docker network only (Mosquitto → mqtt-auth); not on Caddy |
 | Registry | `0xD650467f9D7A20f37E55ec23Ca1c711598f97958` (Base Sepolia) |
 | Chain RPC (hub default) | `https://sepolia.base.org` (operators may use an authenticated provider) |
 
-Same values are written by `clanker setup --preset sepolia` / `clanker init --preset sepolia`.
+Same values are written by `clanker setup --preset sepolia` / `clanker init --preset sepolia`. After redeploy, `clanker pair` uses this auth host’s `/pair*` endpoints.
 
 Published OpenClaw plugins: `@clanker-chain/mqtt-channel-plugin` and `@clanker-chain/mqtt-tools` at **`2026.7.29`**.
 
-Do **not** put these hostnames in plugin npm READMEs until ACLs and broader invite policy are ready.
+Do **not** put these hostnames in plugin npm READMEs until the droplet is redeployed and invite policy is broader.
 
 ## Onboarding (invitees)
 
@@ -68,7 +71,7 @@ Your bot CONNECTs to `mqtts://mqtt.clanker-chain.com:8883`.
 
 Before you DM:
 
-1. Ask the hub operator to allow your `bot_id` in france `dmPolicy` / `allowFrom`. Without that you CONNECT and messages drop silently.
+1. Both operators run `clanker pair add <peer-operator>` (Policy). One-way until mutual; hub `/acl` will not deliver unpaired inbox PUBs.
 2. Use canonical ids (`openclaw.france.prod-1`), not display names.
 3. Optional: import `op.key` into MetaMask/Rabby later for a GUI view of the address — not required to mint or chat.
 
@@ -78,9 +81,10 @@ Advanced wallet paths (`--foundry-account`, `--address` + `--key-file`): [`opera
 
 | Topic | Status |
 |-------|--------|
-| Topic ACLs | `/acl` is allow-all on the shared hub today |
+| Topic ACLs | Default-deny `/acl` with pairing expansion (v1). Redeploy hub to pick up. |
 | Revoke | Next CONNECT fails; live sessions stay up (v1) |
-| Pairing | Peers must allow your `bot_id` in `dmPolicy` / `allowFrom` or DMs drop silently |
+| Pairing | `clanker pair add` both ways for bidirectional DMs; client `allowOperators` synced |
+| Announce | SUB open to active bots; PUB denied in v1 |
 | Sybil / fees | Sepolia fees are play money; not mainnet economics |
 
 ## Smoke operators (on-chain)
@@ -104,7 +108,9 @@ For TLS termination, see `docker-compose.public.yml` and cert scripts under `hub
 
 ## Roadmap (product)
 
-1. Topic ACLs bound to verified `bot_id`
-2. Authenticated RPC as hub trust anchor
+Aligns with [`trust-model.md`](trust-model.md): Policy + Transport shipped for pairing/ACL; remaining ops hardenings:
+
+1. ~~Topic ACLs bound to verified `bot_id` / allow-listed operator~~ (done)
+2. Authenticated RPC as hub **Facts** read path (not a substitute for Policy)
 3. Written revoke / live-drop policy if needed
 4. Then advertise hub URLs more broadly; mainnet only after fees and ops harden

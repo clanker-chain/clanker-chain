@@ -3,10 +3,19 @@
  * CONNECT validates SIWE-style EIP-191 `personal_sign` over
  * `clanker-mqtt:auth:<bot_id>:<nonce>` (password = `<nonce>.<sigHex>`).
  * Bot/operator status is read from ClankerIdentity via RPC.
+ *
+ * Facts · Policy · Transport (docs/trust-model.md):
+ * - /auth = Facts (botKey + active)
+ * - /pair* = Policy (operator-keyed allow-list)
+ * - /acl = Transport (default-deny topic rules)
  */
 
-import { recoverMessageAddress, type Address } from "viem";
-import { RegistryClient } from "@clanker-chain/identity-node-client";
+import { mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { recoverMessageAddress, type Address, type Hex } from "viem";
+import { RegistryClient, registryLabelToId } from "@clanker-chain/identity-node-client";
+import { evaluateAcl, type Acc } from "./acl.js";
+import { PairingStore } from "./pairing-store.js";
 
 const CHAIN_RPC_URL =
   process.env.CHAIN_RPC_URL ?? Bun.env.CHAIN_RPC_URL ?? "";
@@ -20,20 +29,19 @@ const REAPER_MS = 60_000;
 const NONCE_RATE_WINDOW_MS = 60_000;
 const NONCE_RATE_MAX =
   Number(process.env.MQTT_NONCE_RATE_MAX ?? Bun.env.MQTT_NONCE_RATE_MAX ?? 30) || 30;
-// Auth gate: default uncached so revoke / rotateBotKey take effect on the next CONNECT.
-// Live sessions are not dropped (/acl allow-all). Set REGISTRY_CACHE_TTL_MS>0 only if
-// public RPC rate limits require it.
 const registryCacheParsed = Number(
   process.env.REGISTRY_CACHE_TTL_MS ?? Bun.env.REGISTRY_CACHE_TTL_MS ?? 0,
 );
 const REGISTRY_CACHE_TTL_MS = Number.isFinite(registryCacheParsed)
   ? Math.max(0, registryCacheParsed)
   : 0;
-// Shared by /health and /auth registry reads. Raise for slow public RPCs
-// (e.g. CHAIN_RPC_TIMEOUT_MS=10000) if CONNECT sees registry_unavailable.
 const CHAIN_RPC_TIMEOUT_MS =
   Number(process.env.CHAIN_RPC_TIMEOUT_MS ?? Bun.env.CHAIN_RPC_TIMEOUT_MS ?? 3_000) ||
   3_000;
+const PAIRING_STORE_PATH =
+  process.env.PAIRING_STORE_PATH ??
+  Bun.env.PAIRING_STORE_PATH ??
+  join(process.cwd(), "data", "pairing.json");
 
 if (!CHAIN_RPC_URL || !/^0x[0-9a-fA-F]{40}$/.test(REGISTRY_ADDRESS ?? "")) {
   console.error(
@@ -42,6 +50,8 @@ if (!CHAIN_RPC_URL || !/^0x[0-9a-fA-F]{40}$/.test(REGISTRY_ADDRESS ?? "")) {
   process.exit(1);
 }
 
+mkdirSync(dirname(PAIRING_STORE_PATH), { recursive: true });
+
 const registry = new RegistryClient({
   rpcUrl: CHAIN_RPC_URL,
   registryAddress: REGISTRY_ADDRESS,
@@ -49,8 +59,11 @@ const registry = new RegistryClient({
   rpcTimeoutMs: CHAIN_RPC_TIMEOUT_MS,
 });
 
+const pairing = new PairingStore(PAIRING_STORE_PATH);
+
 interface NonceEntry {
-  botId: string;
+  subject: string;
+  kind: "bot" | "operator";
   expiresAt: number;
   used: boolean;
 }
@@ -68,6 +81,15 @@ function buildAuthMessage(botId: string, nonce: string): string {
   return `clanker-mqtt:auth:${botId}:${nonce}`;
 }
 
+function buildPairMessage(
+  operatorId: string,
+  action: string,
+  peer: string,
+  nonce: string,
+): string {
+  return `clanker-mqtt:pair:${operatorId}:${action}:${peer}:${nonce}`;
+}
+
 function pruneExpiredNonces(): void {
   const now = Date.now();
   for (const [k, v] of nonces) {
@@ -75,16 +97,16 @@ function pruneExpiredNonces(): void {
   }
 }
 
-function checkNonceRateLimit(botId: string): boolean {
+function checkNonceRateLimit(key: string): boolean {
   const now = Date.now();
-  const prev = nonceIssueTimes.get(botId) ?? [];
+  const prev = nonceIssueTimes.get(key) ?? [];
   const recent = prev.filter((t) => now - t < NONCE_RATE_WINDOW_MS);
   if (recent.length >= NONCE_RATE_MAX) {
-    nonceIssueTimes.set(botId, recent);
+    nonceIssueTimes.set(key, recent);
     return false;
   }
   recent.push(now);
-  nonceIssueTimes.set(botId, recent);
+  nonceIssueTimes.set(key, recent);
   return true;
 }
 
@@ -111,7 +133,13 @@ async function verifyMqttSiwe(
   const sigHex = password.slice(first + 1) as `0x${string}`;
   const entry = nonces.get(nonce);
   const now = Date.now();
-  if (!entry || entry.used || entry.expiresAt < now || entry.botId !== botId) {
+  if (
+    !entry ||
+    entry.kind !== "bot" ||
+    entry.used ||
+    entry.expiresAt < now ||
+    entry.subject !== botId
+  ) {
     return { ok: false, error: "bad_nonce" };
   }
   const message = buildAuthMessage(botId, nonce);
@@ -188,9 +216,53 @@ async function parseAuthRequest(
   return null;
 }
 
-function parseBotIdFromNonceRequest(url: URL): string | null {
-  const q = url.searchParams.get("bot_id");
-  if (q) return q;
+async function parseAclRequest(
+  request: Request,
+): Promise<{ username: string; topic: string; acc: Acc; clientid?: string } | null> {
+  if (request.method === "GET") {
+    const url = new URL(request.url);
+    const username = url.searchParams.get("username");
+    const topic = url.searchParams.get("topic");
+    const accRaw = url.searchParams.get("acc");
+    const clientid = url.searchParams.get("clientid") ?? undefined;
+    if (username === null || topic === null || accRaw === null) return null;
+    const acc = Number(accRaw);
+    if (!Number.isFinite(acc)) return null;
+    return { username, topic, acc, clientid: clientid ?? undefined };
+  }
+  if (request.method === "POST") {
+    const contentType = request.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      try {
+        const body = (await request.json()) as Record<string, unknown>;
+        const username = typeof body.username === "string" ? body.username : null;
+        const topic = typeof body.topic === "string" ? body.topic : null;
+        const acc = typeof body.acc === "number" ? body.acc : Number(body.acc);
+        const clientid = typeof body.clientid === "string" ? body.clientid : undefined;
+        if (username === null || topic === null || !Number.isFinite(acc)) return null;
+        return { username, topic, acc, clientid };
+      } catch {
+        return null;
+      }
+    }
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      const form = await request.formData();
+      const username = form.get("username");
+      const topic = form.get("topic");
+      const accRaw = form.get("acc");
+      const clientid = form.get("clientid");
+      const u = typeof username === "string" ? username : null;
+      const t = typeof topic === "string" ? topic : null;
+      const a = typeof accRaw === "string" ? Number(accRaw) : Number(accRaw);
+      if (u === null || t === null || !Number.isFinite(a)) return null;
+      return {
+        username: u,
+        topic: t,
+        acc: a,
+        clientid: typeof clientid === "string" ? clientid : undefined,
+      };
+    }
+  }
   return null;
 }
 
@@ -200,7 +272,7 @@ async function handleNonce(request: Request): Promise<Response> {
   }
   let botId: string | null = null;
   if (request.method === "GET") {
-    botId = parseBotIdFromNonceRequest(new URL(request.url));
+    botId = new URL(request.url).searchParams.get("bot_id");
   } else {
     try {
       const ct = request.headers.get("content-type") ?? "";
@@ -219,17 +291,258 @@ async function handleNonce(request: Request): Promise<Response> {
   if (!botId) {
     return jsonErr(400, "missing_bot_id");
   }
-  if (!checkNonceRateLimit(botId)) {
+  if (!checkNonceRateLimit(`bot:${botId}`)) {
     return jsonErr(429, "rate_limited");
   }
   const nonce = randomNonceToken();
   const expiresAt = Date.now() + NONCE_TTL_MS;
-  nonces.set(nonce, { botId, expiresAt, used: false });
+  nonces.set(nonce, { subject: botId, kind: "bot", expiresAt, used: false });
   const message = buildAuthMessage(botId, nonce);
   return json(200, {
     nonce,
     expires_at: new Date(expiresAt).toISOString(),
     message,
+  });
+}
+
+async function handlePairNonce(request: Request): Promise<Response> {
+  if (request.method !== "GET" && request.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+  let operatorId: string | null = null;
+  let action: string | null = null;
+  let peerLabel: string | null = null;
+  if (request.method === "GET") {
+    const url = new URL(request.url);
+    operatorId = url.searchParams.get("operator_id");
+    action = url.searchParams.get("action");
+    peerLabel = url.searchParams.get("peer_label") ?? url.searchParams.get("peer_operator_id");
+  } else {
+    try {
+      const body = (await request.json()) as {
+        operator_id?: string;
+        action?: string;
+        peer_label?: string;
+        peer_operator_id?: string;
+      };
+      operatorId = typeof body.operator_id === "string" ? body.operator_id : null;
+      action = typeof body.action === "string" ? body.action : null;
+      peerLabel =
+        typeof body.peer_label === "string"
+          ? body.peer_label
+          : typeof body.peer_operator_id === "string"
+            ? body.peer_operator_id
+            : null;
+    } catch {
+      operatorId = null;
+    }
+  }
+  if (!operatorId) {
+    return jsonErr(400, "missing_operator_id");
+  }
+  if (!action || !["add", "remove", "list"].includes(action)) {
+    return jsonErr(400, "bad_action");
+  }
+  if ((action === "add" || action === "remove") && !peerLabel) {
+    return jsonErr(400, "missing_peer");
+  }
+  if (!checkNonceRateLimit(`op:${operatorId}`)) {
+    return jsonErr(429, "rate_limited");
+  }
+  const nonce = randomNonceToken();
+  const expiresAt = Date.now() + NONCE_TTL_MS;
+  nonces.set(nonce, { subject: operatorId, kind: "operator", expiresAt, used: false });
+  const message =
+    action === "list"
+      ? `clanker-mqtt:pair-list:${operatorId}:${nonce}`
+      : buildPairMessage(operatorId, action, peerLabel!, nonce);
+  return json(200, {
+    nonce,
+    expires_at: new Date(expiresAt).toISOString(),
+    message,
+  });
+}
+
+function resolveOperatorIdHex(labelOrId: string): Hex {
+  if (/^0x[0-9a-fA-F]{64}$/.test(labelOrId)) {
+    return labelOrId.toLowerCase() as Hex;
+  }
+  return registryLabelToId(labelOrId);
+}
+
+async function handlePairPost(request: Request): Promise<Response> {
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return jsonErr(400, "invalid_json");
+  }
+
+  const operatorLabel =
+    typeof body.operator_id === "string"
+      ? body.operator_id
+      : typeof body.operator_label === "string"
+        ? body.operator_label
+        : null;
+  const peerLabel =
+    typeof body.peer_label === "string"
+      ? body.peer_label
+      : typeof body.peer_operator_id === "string"
+        ? body.peer_operator_id
+        : null;
+  const action = typeof body.action === "string" ? body.action : null;
+  const nonce = typeof body.nonce === "string" ? body.nonce : null;
+  const signature = typeof body.signature === "string" ? body.signature : null;
+
+  if (!operatorLabel || !peerLabel || !action || !nonce || !signature) {
+    return jsonErr(400, "missing_fields");
+  }
+  if (action !== "add" && action !== "remove") {
+    return jsonErr(400, "bad_action");
+  }
+  if (!/^0x[0-9a-fA-F]{130}$/.test(signature)) {
+    return jsonErr(400, "bad_signature");
+  }
+
+  const entry = nonces.get(nonce);
+  const now = Date.now();
+  if (
+    !entry ||
+    entry.kind !== "operator" ||
+    entry.used ||
+    entry.expiresAt < now ||
+    entry.subject !== operatorLabel
+  ) {
+    return jsonErr(403, "bad_nonce");
+  }
+
+  const ownerId = resolveOperatorIdHex(operatorLabel);
+  const peerId = resolveOperatorIdHex(peerLabel);
+  const message = buildPairMessage(operatorLabel, action, peerLabel, nonce);
+
+  let recovered: `0x${string}`;
+  try {
+    recovered = await recoverMessageAddress({
+      message,
+      signature: signature as `0x${string}`,
+    });
+  } catch {
+    return jsonErr(403, "invalid_signature");
+  }
+
+  let operator;
+  try {
+    operator = await registry.getOperatorById(ownerId);
+  } catch {
+    return jsonErr(503, "registry_unavailable");
+  }
+  if (!operator || operator.status !== "active") {
+    return jsonErr(403, "operator_not_active");
+  }
+  if (recovered.toLowerCase() !== operator.owner.toLowerCase()) {
+    return jsonErr(403, "address_mismatch");
+  }
+
+  // Peer must exist as an active operator when adding
+  if (action === "add") {
+    let peerOp;
+    try {
+      peerOp = await registry.getOperatorById(peerId);
+    } catch {
+      return jsonErr(503, "registry_unavailable");
+    }
+    if (!peerOp || peerOp.status !== "active") {
+      return jsonErr(400, "peer_not_active");
+    }
+  }
+
+  entry.used = true;
+
+  const displayLabel = /^0x[0-9a-fA-F]{64}$/.test(operatorLabel)
+    ? pairing.get(ownerId).label || operatorLabel
+    : operatorLabel;
+
+  const updated =
+    action === "add"
+      ? pairing.addOperator(ownerId, displayLabel, peerId)
+      : pairing.removeOperator(ownerId, peerId);
+
+  const mutual = pairing.isMutual(ownerId, peerId);
+
+  return json(200, {
+    ok: true,
+    action,
+    operator_id: ownerId,
+    operator_label: displayLabel,
+    peer_operator_id: peerId,
+    peer_label: peerLabel,
+    mutual,
+    allowOperatorIds: updated.allowOperatorIds,
+  });
+}
+
+async function handlePairGet(request: Request): Promise<Response> {
+  const url = new URL(request.url);
+  const operatorLabel = url.searchParams.get("operator_id");
+  const nonce = url.searchParams.get("nonce");
+  const signature = url.searchParams.get("signature");
+  if (!operatorLabel || !nonce || !signature) {
+    return jsonErr(400, "missing_fields");
+  }
+  if (!/^0x[0-9a-fA-F]{130}$/.test(signature)) {
+    return jsonErr(400, "bad_signature");
+  }
+
+  const entry = nonces.get(nonce);
+  const now = Date.now();
+  if (
+    !entry ||
+    entry.kind !== "operator" ||
+    entry.used ||
+    entry.expiresAt < now ||
+    entry.subject !== operatorLabel
+  ) {
+    return jsonErr(403, "bad_nonce");
+  }
+
+  const ownerId = resolveOperatorIdHex(operatorLabel);
+  const message = `clanker-mqtt:pair-list:${operatorLabel}:${nonce}`;
+  let recovered: `0x${string}`;
+  try {
+    recovered = await recoverMessageAddress({
+      message,
+      signature: signature as `0x${string}`,
+    });
+  } catch {
+    return jsonErr(403, "invalid_signature");
+  }
+
+  let operator;
+  try {
+    operator = await registry.getOperatorById(ownerId);
+  } catch {
+    return jsonErr(503, "registry_unavailable");
+  }
+  if (!operator || operator.status !== "active") {
+    return jsonErr(403, "operator_not_active");
+  }
+  if (recovered.toLowerCase() !== operator.owner.toLowerCase()) {
+    return jsonErr(403, "address_mismatch");
+  }
+
+  entry.used = true;
+  const listed = pairing.list(ownerId);
+  const allows = listed.allowOperatorIds.map((peerId) => ({
+    peer_operator_id: peerId,
+    mutual: pairing.isMutual(ownerId, peerId),
+  }));
+
+  return json(200, {
+    operator_id: ownerId,
+    operator_label: listed.label || operatorLabel,
+    allowOperatorIds: listed.allowOperatorIds,
+    allowBotIds: listed.allowBotIds,
+    allows,
   });
 }
 
@@ -254,6 +567,16 @@ const server = Bun.serve({
       return handleNonce(request);
     }
 
+    if (path === "/pair-nonce") {
+      return handlePairNonce(request);
+    }
+
+    if (path === "/pair") {
+      if (request.method === "POST") return handlePairPost(request);
+      if (request.method === "GET") return handlePairGet(request);
+      return new Response("Method Not Allowed", { status: 405 });
+    }
+
     if (path === "/auth") {
       const body = await parseAuthRequest(request);
       if (!body) {
@@ -270,13 +593,20 @@ const server = Bun.serve({
       return new Response(result.error ?? "Forbidden", { status: 403 });
     }
 
-    if (path === "/acl" || path === "/acl/") {
-      return new Response("OK", { status: 200 });
+    if (path === "/acl") {
+      const body = await parseAclRequest(request);
+      if (!body) {
+        return new Response("Forbidden", { status: 403 });
+      }
+      const decision = await evaluateAcl(body, registry, pairing);
+      if (decision.ok) {
+        return new Response("OK", { status: 200 });
+      }
+      return new Response(decision.reason, { status: 403 });
     }
 
     if (path === "/health" || path === "/") {
       try {
-        // Uncached chainId + blockNumber + botFee() — confirms REGISTRY_ADDRESS is callable.
         const { chainId, blockNumber } = await registry.probeRpc();
         return json(200, {
           ok: true,
@@ -301,3 +631,4 @@ const server = Bun.serve({
 console.log(`MQTT auth service listening on port ${server.port}`);
 console.log(`CHAIN_RPC_URL=${CHAIN_RPC_URL}`);
 console.log(`REGISTRY_ADDRESS=${REGISTRY_ADDRESS}`);
+console.log(`PAIRING_STORE_PATH=${PAIRING_STORE_PATH}`);

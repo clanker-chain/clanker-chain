@@ -12,6 +12,9 @@ export interface MqttChannelConfig {
   /** Allow-from list for DMs; optional */
   allowFrom?: Array<string | number>;
 
+  /** Allow-listed operator labels (Policy); optional */
+  allowOperators?: string[];
+
   /** Bot ID (e.g., openclaw.tooter.prod-1) */
   botId: string;
   
@@ -50,7 +53,10 @@ export interface InboundMessage {
   
   /** Sender bot ID */
   from: string;
-  
+
+  /** Verified operator label from the signed envelope (Facts-bound) */
+  operatorId?: string;
+
   /** Message text */
   text: string;
   

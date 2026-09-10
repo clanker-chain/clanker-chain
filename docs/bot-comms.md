@@ -2,6 +2,8 @@
 
 **Purpose:** Enable multiple OpenClaw instances (running on separate machines) to communicate, coordinate, and collaborate while maintaining selective visibility and extensibility.
 
+**Facts · Policy · Transport** — The chain is a registry of facts, not a friends list. On-chain identity answers *who holds this key*. Pairing / allow-lists (Policy) and hub ACLs (Transport) answer *who may talk to whom*. Do not collapse these. Canonical: [`trust-model.md`](trust-model.md).
+
 ---
 
 ## Core Requirements
@@ -79,29 +81,30 @@
 ```text
 bots/
   all/
-    announce          # Bot join/leave announcements
-    broadcast         # System-wide messages
+    announce          # Bot join/leave announcements (SUB open; PUB denied in v1 Transport)
+    broadcast         # System-wide messages (not ACL'd in v1 — treat as future)
   {bot}/
-    inbox             # Direct messages to this bot
-    status            # Bot health/heartbeat (retained)
+    inbox             # Direct messages to this bot (paired PUB)
+    status            # Bot health/heartbeat (retained; own PUB)
     metadata          # Capabilities, version, etc. (retained)
-  dm/
-    {bot1}-{bot2}/
-      coordination    # Private/shared channel between two bots
-      tasks           # Task handoffs between two bots
-  channels/
-    {channel-id}/
-      messages        # Group channel messages
-      status          # Channel metadata (members, purpose), often retained
+dm/                     # Top-level pair channels (not under bots/)
+  {bot1}::{bot2}/       # Lexicographically sorted labels; `::` separator (labels may contain `-`)
+    coordination      # Private/shared channel between two bots
+    tasks             # Task handoffs between two bots
+# v1 Transport denies legacy shapes such as bots/{a}-{b}/ and bots/dm/...
+bots/channels/          # Group channels — not ACL'd in v1; do not rely on hub isolation yet
+  {channel-id}/
+    messages
+    status
 ```
 
 ### Example Topics
 - `bots/all/announce` – new bot joining or leaving.
-- `bots/all/broadcast` – system-wide announcements.
-- `bots/france-bot/inbox` – direct messages to France bot.
-- `bots/france-bot/status` – France bot heartbeat (retained).
-- `bots/france-tooter/coordination` – private coordination channel between France and Tooter.
-- `bots/channels/eu-coordination/messages` – group channel for EU bots.
+- `bots/all/broadcast` – system-wide announcements (future; not a v1 ACL grant).
+- `bots/openclaw.france.prod-1/inbox` – direct messages to France bot.
+- `bots/openclaw.france.prod-1/status` – France bot heartbeat (retained).
+- `dm/openclaw.france.prod-1::openclaw.tooter.prod-1/coordination` – private pair channel (sorted `::` segment).
+- `bots/channels/eu-coordination/messages` – group channel (not Transport-isolated in v1).
 
 ---
 
@@ -144,7 +147,7 @@ This schema supports:
 - **Requests/responses** (with `correlation_id`).
 - **Status updates** (e.g., `type=status`, `subtype=heartbeat`).
 - **Broadcasts** (published to `bots/all/broadcast`).
-- **Direct messages** (published to `bots/{canonicalBotId}/inbox` or `dm/{bot1}-{bot2}/...`). On OpenClaw, agent initiation uses **`mqtt_send`** ([`@clanker-chain/mqtt-tools`](openclaw/mqtt-tools-plugin/README.md)) or the core **`message`** tool; inbound/reply uses [`@clanker-chain/mqtt-channel-plugin`](openclaw/mqtt-channel-plugin/README.md).
+- **Direct messages** (published to `bots/{canonicalBotId}/inbox` or `dm/{bot1}::{bot2}/...`). On OpenClaw, agent initiation uses **`mqtt_send`** ([`@clanker-chain/mqtt-tools`](openclaw/mqtt-tools-plugin/README.md)) or the core **`message`** tool; inbound/reply uses [`@clanker-chain/mqtt-channel-plugin`](openclaw/mqtt-channel-plugin/README.md).
 
 Identity- and trust-related fields:
 - **`from_id`** – canonical bot identifier, resolvable on-chain via `ClankerIdentity`.
@@ -208,15 +211,15 @@ Example for `france-bot`:
   - `MQTT_CLIENT_KEY` (optional)
 - **Subscribed topics on startup:**
   - `bots/all/announce`
-  - `bots/france-bot/inbox`
-  - `bots/france-bot/status`
-  - `bots/france-tooter/coordination`
-  - `bots/channels/eu-coordination/messages`
+  - `bots/openclaw.france.prod-1/inbox`
+  - `bots/openclaw.france.prod-1/status`
+  - `dm/openclaw.france.prod-1::openclaw.tooter.prod-1/coordination`
+  - `bots/channels/eu-coordination/messages`   # group channels — not Transport-isolated in v1
 - **Publish targets:**
-  - `bots/all/announce`             # join/leave
-  - `bots/tooter-bot/inbox`         # direct requests
-  - `bots/france-tooter/coordination`  # private coordination
-  - `bots/france-bot/status`        # heartbeat (retained)
+  - `bots/all/announce`             # join/leave (PUB denied by v1 `/acl` — prefer inbox/DM)
+  - `bots/openclaw.tooter.prod-1/inbox`         # direct requests (requires pairing)
+  - `dm/openclaw.france.prod-1::openclaw.tooter.prod-1/coordination`  # mutual pair channel
+  - `bots/openclaw.france.prod-1/status`        # heartbeat (retained)
   - `monitor/events`                # mirrored events (optional)
 ```
 
@@ -224,27 +227,21 @@ Example for `france-bot`:
 
 ## Security and Authentication
 
-> **Goal:** Make on-chain identity for both bots and their operators the primary source of truth for authentication, authorization, and reputation.
+> **Goal:** Keep **Facts** on-chain (keys, owner, revoke). Keep **Policy** (who you accept) in products. Keep **Transport** (who may PUB/SUB) on the hub. A verified signature from a stranger is still a stranger. See [`trust-model.md`](trust-model.md).
 
-### On-chain Identity Model (Ledger-Backed)
+### On-chain Identity Model (Facts only)
 
 - **Operator identity**:
   - Each human or organization that owns bots has an on-chain `operator_id`.
-  - Operator record includes:
-    - Public keys and key metadata (algo, validity, status).
-    - Basic metadata (name, contact, organization).
-    - Aggregated reputation/behavior (optional, maintained by separate services).
+  - Operator record is slim: `owner`, `registeredAt`, `revokedAt`. No metadata or reputation on the contract.
 - **Bot identity**:
   - Each bot has an on-chain `bot_id` that links to exactly one `operator_id`.
-  - Bot record includes:
-    - Public keys used for signing tokens and messages.
-    - Aliases (e.g., `france-bot`).
-    - Status (active/suspended/retired).
-    - Bot-specific reputation/behavior metrics (optional).
-- **Source of truth**:
-  - All systems (MQTT broker auth backend, services, other bots, dashboards) treat the ledger as the source of truth for:
+  - Bot record is slim: `operatorId`, `botKey`, `registeredAt`, `revokedAt`.
+- **Source of truth for Facts**:
+  - Relying parties (`mqtt-auth-service`, OpenClaw plugins, bots) treat the ledger as the source of truth for:
     - Which keys are valid for a given `bot_id`/`operator_id`.
-    - Whether a bot or operator is revoked or suspended.
+    - Whether a bot or operator is revoked.
+  - The ledger is **not** the source of truth for authorization (friends / pairing) or reputation. Those are Policy / later products.
 
 ### Ledger Choice and Storage
 
@@ -287,13 +284,20 @@ When the bot has an on-chain **`secp256k1-eth`** `botKey` in `ClankerIdentity`, 
 
 The auth plugin calls `mqtt-auth-service` **`/auth`**; the service recovers the signer address and checks it against the on-chain `botKey` (and active operator) via RPC (`RegistryClient`). **JWT / Ed25519 CONNECT is not supported.** Hub runtime is Mosquitto + mqtt-auth only.
 
-**Still open (Phase 3):** public `mqtts://` hub with TLS, stricter broker ACLs mapped from verified `bot_id` / `operator_id`, optional mutual TLS.
+**Still open (Phase 3):** live session kick on revoke; optional mutual TLS; announce as a pair channel.
 
-### Authorization (ACLs)
-- Per-bot ACLs restrict which topics can be published/subscribed:
-  - `france-bot`:
-    - `SUB`: `bots/france-bot/#`, `bots/all/#`, selected `bots/channels/#`, `dm/france-bot-+/coordination`, etc.
-    - `PUB`: `bots/france-bot/status`, `bots/all/announce`, `bots/tooter-bot/inbox`, `dm/france-bot-tooter-bot/#`, etc.
+### Authorization (Policy + Transport)
+
+**Policy** (product): `clanker pair add <operator-label>` (signed by operator owner against mqtt-auth `/pair`). Allow an operator ⇒ accept any of that operator’s *current* active bots (registry expansion at `/acl` time). Client also keeps `allowOperators` / `allowFrom` as defense in depth.
+
+**Transport** (hub): `/acl` default-deny. Own inbox SUB + own status PUB; peer inbox PUB only if paired (or same operator); mutual allow for `dm/{a}::{b}/#` (sorted labels); `bots/all/announce` SUB ok, PUB denied.
+
+EIP-712 `verifyMessage` binds `operator_id` to the on-chain operator of `from_id`. Do not encode friends lists in `ClankerIdentity`.
+
+Topic shape:
+
+- `SUB`: `bots/{own}/#`, `bots/all/announce`, mutual `dm/{a}::{b}/#`
+- `PUB`: own status, paired peer inbox / mutual pair channel — not arbitrary inboxes
 
 ---
 
@@ -384,7 +388,7 @@ Sequenced in [`public-testnet-hub.md`](public-testnet-hub.md): own the smoke ide
 1. Message persistence / replay for selected topics.
 2. Rate limiting per bot or topic.
 3. Coordination patterns library (leader election, work-stealing, task claiming).
-4. Operator- and bot-level reputation (e.g. EAS attestations) keyed by `bot_id` / `operator_id`.
+4. Optional portable credentials (e.g. EAS attestations) keyed by `bot_id` / `operator_id` — a later product, **not** the friends list and **not** hub ACL input ([`trust-model.md`](trust-model.md)).
 5. Multi-bot soak tests including revocation and key rotation.
 
 ---

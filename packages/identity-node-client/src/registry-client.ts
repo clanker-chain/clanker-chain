@@ -21,7 +21,7 @@ export interface RegistryClientOptions {
   chainId?: number;
   /** Cache TTL for label/id lookups (default 10s). Use `0` to disable.
    * mqtt-auth defaults to `0` so revoke/rotate take effect on the **next CONNECT**
-   * (live sessions are not kicked; `/acl` is allow-all).
+   * (live sessions are not kicked; `/acl` re-checks pairing on each PUB/SUB).
    * Bot `IdentityClient` keeps the 10s default for public-RPC rate limits on
    * `init` / `verifyMessage` — revoked peers may still verify for up to TTL. */
   cacheTtlMs?: number;

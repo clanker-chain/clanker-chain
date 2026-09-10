@@ -1,8 +1,15 @@
-# Public auth front: only /nonce and /health. /auth and /acl stay on the Docker network.
+# Public auth front: /nonce, /health, /pair-nonce, /pair.
+# /auth and /acl stay on the Docker network (Mosquitto only).
 mqtt-auth.clanker-chain.com {
 	tls /etc/letsencrypt/live/mqtt.clanker-chain.com/fullchain.pem /etc/letsencrypt/live/mqtt.clanker-chain.com/privkey.pem
 
 	handle /nonce* {
+		reverse_proxy mqtt-auth:9090
+	}
+	handle /pair-nonce* {
+		reverse_proxy mqtt-auth:9090
+	}
+	handle /pair* {
 		reverse_proxy mqtt-auth:9090
 	}
 	handle /health* {

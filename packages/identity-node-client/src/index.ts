@@ -235,6 +235,11 @@ export class IdentityClient {
     if (!bot.botKey || bot.botKey === "0x0000000000000000000000000000000000000000") {
       return false;
     }
+    // Facts hygiene: envelope.operator_id must match the on-chain operator of from_id.
+    const claimedOp = String(msg.operator_id ?? "").trim();
+    if (!claimedOp || labelToId(claimedOp).toLowerCase() !== bot.operatorId.toLowerCase()) {
+      return false;
+    }
     return verifyEnvelope(msg, signature, bot.botKey, domain);
   }
 

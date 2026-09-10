@@ -2,11 +2,16 @@
 #   docker build -f hub/mqtt-auth-service/Dockerfile .
 FROM oven/bun:1
 
-# Mirror monorepo layout so package.json `file:../../packages/identity-node-client` resolves.
+# Mirror monorepo layout so package.json `file:../../packages/…` resolves.
 WORKDIR /packages/identity-node-client
 COPY packages/identity-node-client/package.json packages/identity-node-client/package-lock.json* packages/identity-node-client/tsconfig*.json ./
 COPY packages/identity-node-client/src ./src
 RUN bun install && bunx tsc -p tsconfig.build.json
+
+WORKDIR /packages/mqtt-node-client
+COPY packages/mqtt-node-client/package.json packages/mqtt-node-client/package-lock.json* packages/mqtt-node-client/tsconfig.json ./
+COPY packages/mqtt-node-client/src ./src
+RUN bun install && bunx tsc -p tsconfig.json
 
 WORKDIR /hub/mqtt-auth-service
 COPY hub/mqtt-auth-service/package.json hub/mqtt-auth-service/bun.lock ./

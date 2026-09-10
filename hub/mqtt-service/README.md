@@ -2,6 +2,8 @@
 
 Runs the MQTT broker (Mosquitto with HTTP auth plugin) and the mqtt-auth-service. Bots connect with `username = bot_id` and a **SIWE-style** password from `identity-node-client` (`issueMqttConnectPassword()`).
 
+**Facts · Policy · Transport** — CONNECT verifies **Facts**. Topic isolation is **Transport** (`/acl` default-deny + pairing store). Friends lists are **Policy** (`clanker pair` / client `allowOperators`). Redeploy the shared hub droplet to pick up this tree. → [`docs/trust-model.md`](../../docs/trust-model.md)
+
 ## Prerequisites
 
 - Reachable chain RPC and deployed `ClankerIdentity` (`CHAIN_RPC_URL`, `REGISTRY_ADDRESS`).

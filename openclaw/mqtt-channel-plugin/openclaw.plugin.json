@@ -33,6 +33,13 @@
             },
             "description": "Allowlist of sender bot IDs for DMs (optional)"
           },
+          "allowOperators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Allowlist of operator labels (Policy). Accepts any current active bot of those operators."
+          },
           "botId": {
             "type": "string",
             "description": "Bot ID (e.g. openclaw.test-bot.local-1)"

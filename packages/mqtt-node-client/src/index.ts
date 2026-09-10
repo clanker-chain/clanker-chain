@@ -6,6 +6,7 @@ import type {
 } from "./types.js";
 
 export type { MqttConnectOptions, MqttMessageEnvelope, MqttPublishOptions, ReceivedMessage } from "./types.js";
+export { dmPairSegment, parseDmTopic, topicForDmCoordination } from "./dm-topics.js";
 
 /** Topic for a bot's inbox (direct messages to that bot). */
 export function topicForInbox(botName: string): string {
@@ -15,12 +16,6 @@ export function topicForInbox(botName: string): string {
 /** Topic for bot join/leave announcements. */
 export function topicForAnnounce(): string {
   return "bots/all/announce";
-}
-
-/** Topic for private coordination between two bots (display names). */
-export function topicForDmCoordination(bot1: string, bot2: string): string {
-  const segment = [bot1, bot2].sort().join("-");
-  return `dm/${segment}/coordination`;
 }
 
 /** Topic for a bot's status (heartbeat, retained). */

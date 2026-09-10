@@ -15,6 +15,7 @@ export type ResolvedMqttAccount = {
   mqttAuthServiceUrl?: string;
   dmPolicy?: string | null;
   allowFrom?: Array<string | number> | null;
+  allowOperators?: string[] | null;
   topics?: MqttChannelConfig['topics'];
   pollIntervalMs?: number;
 };
@@ -75,6 +76,14 @@ function readAllowFrom(obj: MqttSection | undefined): Array<string | number> | n
   return v.filter((x) => typeof x === 'string' || typeof x === 'number') as Array<string | number>;
 }
 
+function readAllowOperators(obj: MqttSection | undefined): string[] | null | undefined {
+  const v = obj?.allowOperators;
+  if (!Array.isArray(v)) {
+    return undefined;
+  }
+  return v.filter((x): x is string => typeof x === 'string' && x.length > 0);
+}
+
 export function listMqttAccountIds(cfg: OpenClawConfig): string[] {
   const section = getMqttSection(cfg);
   if (!section) {
@@ -119,6 +128,7 @@ export function resolveMqttAccount(cfg: OpenClawConfig, accountId?: string | nul
     readOptionalString(section, 'mqttAuthServiceUrl');
   const dmPolicy = readOptionalString(slice, 'dmPolicy') ?? readOptionalString(section, 'dmPolicy');
   const allowFrom = readAllowFrom(slice) ?? readAllowFrom(section);
+  const allowOperators = readAllowOperators(slice) ?? readAllowOperators(section);
 
   const topicsRaw = slice?.topics;
   let topics: MqttChannelConfig['topics'] | undefined;
@@ -155,6 +165,7 @@ export function resolveMqttAccount(cfg: OpenClawConfig, accountId?: string | nul
     mqttAuthServiceUrl,
     dmPolicy: dmPolicy ?? null,
     allowFrom: allowFrom ?? null,
+    allowOperators: allowOperators ?? null,
     topics,
     pollIntervalMs,
   };

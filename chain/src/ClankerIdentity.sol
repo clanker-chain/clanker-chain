@@ -3,7 +3,8 @@ pragma solidity ^0.8.24;
 
 /// @title ClankerIdentity
 /// @notice Minimal on-chain registry: operator ownership, bot ownership, and active signing keys.
-///         No metadata, no reputation — peripheral services index events off-chain.
+///         Facts only (docs/trust-model.md). No metadata, reputation, or allow-lists —
+///         pairing and “who may talk to whom” belong in products; topic ACLs belong on the hub.
 contract ClankerIdentity {
     struct Operator {
         address owner;
