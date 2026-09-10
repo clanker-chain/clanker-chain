@@ -11,7 +11,7 @@ OpenClaw **channel** plugin: MQTT pub/sub for bot-to-bot messaging (Clanker Chai
 
 ## Install
 
-CalVer `2026.7.29` is **not on npm yet** (monorepo still uses `file:` deps). From the clanker-chain repo root:
+CalVer `2026.9.10` (monorepo still uses `file:` deps). From the clanker-chain repo root:
 
 ```bash
 (cd identity-node-client && npm ci && npm run build)

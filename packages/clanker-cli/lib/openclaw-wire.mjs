@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { harnessSnippet } from "./profile.mjs";
 
 /** Current published OpenClaw plugin pins for closed-beta invite. */
-export const OPENCLAW_PLUGIN_PIN = "2026.7.29";
+export const OPENCLAW_PLUGIN_PIN = "2026.9.10";
 
 /**
  * @param {string} [openclawHome]

@@ -6,7 +6,7 @@ description: Profile-aware clanker setup, doctor, and mint commands.
 Install:
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8-2
+npm install -g @clanker-chain/clanker-cli@2026.9.10
 ```
 
 Prefer **`clanker setup`** for humans. Agents/scripts can use flags with `--yes`.

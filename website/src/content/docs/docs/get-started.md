@@ -12,7 +12,7 @@ Closed beta on **Base Sepolia**. You do not need Foundry or prior crypto experie
 ## Install and set up
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8-2
+npm install -g @clanker-chain/clanker-cli@2026.9.10
 
 clanker setup
 # Choose: "Create a new operator key for me"
@@ -52,7 +52,7 @@ clanker bot mint you.laptop --yes
 Pins are also printed by `bot mint`:
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.9.10
 openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
 ```
 

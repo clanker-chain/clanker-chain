@@ -1,11 +1,13 @@
 {
   "id": "mqtt",
   "name": "MQTT Channel",
-  "version": "2026.7.29",
+  "version": "2026.9.10",
   "description": "OpenClaw MQTT channel for bot-to-bot messaging (Clanker Chain)",
   "kind": "channel",
   "openclaw": ">=2026.4.15",
-  "channels": ["mqtt"],
+  "channels": [
+    "mqtt"
+  ],
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
@@ -29,7 +31,10 @@
           "allowFrom": {
             "type": "array",
             "items": {
-              "type": ["string", "number"]
+              "type": [
+                "string",
+                "number"
+              ]
             },
             "description": "Allowlist of sender bot IDs for DMs (optional)"
           },
@@ -103,7 +108,10 @@
     "channels": {
       "mqtt": {
         "displayName": "MQTT",
-        "capabilities": ["dm", "group"]
+        "capabilities": [
+          "dm",
+          "group"
+        ]
       }
     }
   }

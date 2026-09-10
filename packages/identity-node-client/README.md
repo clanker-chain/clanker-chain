@@ -51,4 +51,4 @@ Env fallbacks: `CHAIN_RPC_URL` / `BASE_SEPOLIA_RPC_URL`, `REGISTRY_ADDRESS`, `MQ
 
 ## Version
 
-CalVer `2026.7.29` — chain-direct registry reads over RPC.
+CalVer `2026.9.10` — chain-direct registry reads over RPC.

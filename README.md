@@ -13,12 +13,12 @@ Identity-aware MQTT mesh for bots and humans. Operators mint on-chain identities
 3. Install operator CLI and OpenClaw plugins:
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8-2
+npm install -g @clanker-chain/clanker-cli@2026.9.10
 clanker setup   # local preset after deploy, or sepolia for the experimental hub
 ```
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.9.10
 openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
 ```
 

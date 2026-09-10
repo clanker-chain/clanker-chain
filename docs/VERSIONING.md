@@ -32,11 +32,11 @@ Git tags must match `package.json` exactly:
 
 | Package | Tag example |
 |---------|-------------|
-| `@clanker-chain/identity-node-client` | `identity-node-client-v2026.7.29` |
-| `@clanker-chain/mqtt-node-client` | `mqtt-node-client-v2026.5.25-2` |
-| `@clanker-chain/mqtt-channel-plugin` | `mqtt-channel-plugin-v2026.7.29` |
+| `@clanker-chain/identity-node-client` | `identity-node-client-v2026.9.10` |
+| `@clanker-chain/mqtt-node-client` | `mqtt-node-client-v2026.9.10` |
+| `@clanker-chain/mqtt-channel-plugin` | `mqtt-channel-plugin-v2026.9.10` |
 | `@clanker-chain/mqtt-tools` | `mqtt-tools-plugin-v2026.7.29` |
-| `@clanker-chain/clanker-cli` | `clanker-cli-v2026.9.8-2` |
+| `@clanker-chain/clanker-cli` | `clanker-cli-v2026.9.10` |
 
 **Deprecated packages (npm only — source removed):** `@clanker-chain/mqtt-plugin`, `@clanker-chain/identity-plugin`. Use channel + tools + `identity-node-client` instead.
 
@@ -45,21 +45,21 @@ Git tags must match `package.json` exactly:
 Pin **exact** CalVer (including micro when used):
 
 ```json
-"@clanker-chain/identity-node-client": "2026.7.29",
-"@clanker-chain/mqtt-node-client": "2026.5.25-2",
-"@clanker-chain/mqtt-channel-plugin": "2026.7.29",
+"@clanker-chain/identity-node-client": "2026.9.10",
+"@clanker-chain/mqtt-node-client": "2026.9.10",
+"@clanker-chain/mqtt-channel-plugin": "2026.9.10",
 "@clanker-chain/mqtt-tools": "2026.7.29"
 ```
 
-`2026.7.29` is on npm with exact CalVer pins (no `file:`). Install with `openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29` and `@clanker-chain/mqtt-tools@2026.7.29` (see [`SETUP.md`](../SETUP.md)). For a later same-day fix, use a micro suffix (`2026.7.29-1`).
+`2026.9.10` ships pairing Policy / Transport client pins (no `file:`). Install with `openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.9.10` and `@clanker-chain/mqtt-tools@2026.7.29` (see [`SETUP.md`](../SETUP.md)). For a later same-day fix, use a micro suffix (`2026.9.10-1`).
 
 ## Publish order
 
-1. `@clanker-chain/identity-node-client` — **`2026.7.29`** (chain-direct `RegistryClient`)
-2. `@clanker-chain/mqtt-node-client` — **`2026.5.25-2`** (already published; republish only if the client changes)
-3. `@clanker-chain/mqtt-channel-plugin` — **`2026.7.29`** (pins `identity-node-client@2026.7.29`, `mqtt-node-client@2026.5.25-2`)
-4. `@clanker-chain/mqtt-tools` — **`2026.7.29`** (same pins; requires channel + `channels.mqtt`)
-5. `@clanker-chain/clanker-cli` — **`2026.9.8-2`** (bot identity handoff card after mint)
+1. `@clanker-chain/identity-node-client` — **`2026.9.10`** (chain-direct `RegistryClient`; `operator_id` bind in `verifyMessage`)
+2. `@clanker-chain/mqtt-node-client` — **`2026.9.10`** (`dm/{a}::{b}` topic helpers)
+3. `@clanker-chain/mqtt-channel-plugin` — **`2026.9.10`** (pins `identity-node-client@2026.9.10`, `mqtt-node-client@2026.9.10`; `allowOperators` / `dmPolicy`)
+4. `@clanker-chain/mqtt-tools` — **`2026.7.29`** (unchanged this release)
+5. `@clanker-chain/clanker-cli` — **`2026.9.10`** (`clanker pair` Policy UX)
 
 Wait for npm registry propagation between steps when installing published deps in CI.
 
@@ -69,4 +69,4 @@ Wait for npm registry propagation between steps when installing published deps i
 
 ## Release notes
 
-Document wire breaking changes explicitly (MQTT auth, key file format, `signature_scheme`, identity read path). For micro releases, note what changed since the same-day base (`2026.7.29` → `2026.7.29-1`).
+Document wire breaking changes explicitly (MQTT auth, key file format, `signature_scheme`, identity read path). For micro releases, note what changed since the same-day base (`2026.9.10` → `2026.9.10-1`).

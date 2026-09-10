@@ -1,6 +1,6 @@
 {
   "name": "mqtt-auth-service",
-  "version": "2026.7.29",
+  "version": "2026.9.10",
   "private": true,
   "type": "module",
   "scripts": {

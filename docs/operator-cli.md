@@ -11,7 +11,7 @@ Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include
 No wallet experience needed. Hub + invite onboarding: [`public-testnet-hub.md`](public-testnet-hub.md). For local Anvil, see [`SETUP.md`](../SETUP.md).
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8-2
+npm install -g @clanker-chain/clanker-cli@2026.9.10
 
 clanker setup
 # Choose: "Create a new operator key for me" → note the 0x address

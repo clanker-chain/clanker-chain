@@ -8,7 +8,7 @@ description: Install mqtt + mqtt-tools and configure channels.mqtt.
 Pin to the published closed-beta release:
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.9.10
 openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
 ```
 

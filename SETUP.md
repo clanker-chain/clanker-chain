@@ -18,7 +18,7 @@ Bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + m
 | `@clanker-chain/identity-node-client` | Bot library (`RegistryClient` + SIWE + EIP-712) |
 | `@clanker-chain/mqtt-channel-plugin` | OpenClaw gateway channel (receive + reply) |
 | `@clanker-chain/mqtt-tools` | OpenClaw tool plugin (`mqtt_send` for agent-initiated send) |
-| `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.8-2`) |
+| `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.10`) |
 
 Minting stays on-chain via `clanker-cli`.
 
@@ -43,7 +43,7 @@ Start the local hub: [`hub/mqtt-service/README.md`](hub/mqtt-service/README.md) 
 ### Experimental Sepolia hub
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.8-2
+npm install -g @clanker-chain/clanker-cli@2026.9.10
 clanker setup
 clanker doctor
 clanker whoami
@@ -77,10 +77,10 @@ On a slow public RPC (e.g. documented Sepolia default), set `CHAIN_RPC_TIMEOUT_M
 
 ## 3. Two-plugin OpenClaw install
 
-CalVer **`2026.7.29`** is on npm. Prefer published packages:
+CalVer **`2026.9.10`** (channel) / **`2026.7.29`** (tools) on npm. Prefer published packages:
 
 ```bash
-openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.7.29
+openclaw plugins install @clanker-chain/mqtt-channel-plugin@2026.9.10
 openclaw plugins install @clanker-chain/mqtt-tools@2026.7.29
 ```
 
