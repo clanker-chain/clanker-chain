@@ -409,18 +409,15 @@ test("pair list and remove via signed HTTP", async () => {
   ).toBe(false);
 });
 
-test("mutual pair unlocks dm/{a}::{b} ACL (incl. hyphenated labels)", async () => {
+test("mutual pair unlocks dm/{a}::{b} ACL", async () => {
   if (skip) return;
   const h = harness!;
 
   // Reuse cross-operator bots from the one-way pair test; complete mutual allow.
   const peerOpLabel = "org.openclaw.peer-pair";
   const peerBotId = "openclaw.peer.pair-bot";
-  // Hyphenated labels — same encoding path as closed-beta `*.prod-1` ids.
-  const left = "openclaw.acl.bot-1";
-  expect(left).toBe(h.botId);
+  const left = h.botId;
   const right = peerBotId;
-  expect(right.includes("-") || left.includes(".")).toBe(true);
 
   const segment = [left, right].sort().join("::");
   const dmTopic = `dm/${segment}/coordination`;
@@ -462,67 +459,17 @@ test("mutual pair unlocks dm/{a}::{b} ACL (incl. hyphenated labels)", async () =
   });
   expect(peerAcl.status).toBe(200);
 
-  // Explicit hyphenated pair (register new bots under existing operators).
-  const ANVIL_KEY_4 =
-    "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a" as Hex;
-  const ANVIL_KEY_5 =
-    "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba" as Hex;
-  const funder = createWalletClient({
-    account: privateKeyToAccount(ANVIL_DEFAULT_KEY),
-    chain: foundry,
-    transport: http(h.rpcUrl),
-  });
-  await funder.sendTransaction({
-    to: privateKeyToAccount(ANVIL_KEY_4).address,
-    value: 10n ** 18n,
-  });
-  await funder.sendTransaction({
-    to: privateKeyToAccount(ANVIL_KEY_5).address,
-    value: 10n ** 18n,
-  });
-
-  const hyphenA = "openclaw.france.prod-1";
-  const hyphenB = "openclaw.tooter.prod-1";
-  const wallet0 = createWalletClient({
-    account: privateKeyToAccount(ANVIL_DEFAULT_KEY),
-    chain: foundry,
-    transport: http(h.rpcUrl),
-  });
-  const walletPeer = createWalletClient({
-    account: privateKeyToAccount(ANVIL_KEY_3),
-    chain: foundry,
-    transport: http(h.rpcUrl),
-  });
-  await wallet0.writeContract({
-    address: h.registry,
-    abi: clankerIdentityAbi,
-    functionName: "registerBot",
-    args: [keccak256(toBytes(h.operatorLabel)), hyphenA, privateKeyToAccount(ANVIL_KEY_4).address],
-  });
-  await walletPeer.writeContract({
-    address: h.registry,
-    abi: clankerIdentityAbi,
-    functionName: "registerBot",
-    args: [keccak256(toBytes(peerOpLabel)), hyphenB, privateKeyToAccount(ANVIL_KEY_5).address],
-  });
-
-  const hyphenTopic = `dm/${[hyphenA, hyphenB].sort().join("::")}/coordination`;
-  const hyphenAcl = await fetch(`${h.mqttUrl}/acl`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ username: hyphenA, topic: hyphenTopic, acc: 2 }),
-  });
-  expect(hyphenAcl.status).toBe(200);
-
-  const legacy = [hyphenA, hyphenB].sort().join("-");
+  // Legacy hyphen-joined segment is not a valid pair topic (encoding covered in unit tests).
+  const legacy = [left, right].sort().join("-");
   const legacyDeny = await fetch(`${h.mqttUrl}/acl`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      username: hyphenA,
+      username: left,
       topic: `dm/${legacy}/coordination`,
       acc: 2,
     }),
   });
   expect(legacyDeny.status).toBe(403);
+  expect(await legacyDeny.text()).toMatch(/denied|dm_not/);
 });
