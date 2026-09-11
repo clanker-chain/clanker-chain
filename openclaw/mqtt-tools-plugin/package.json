@@ -35,10 +35,10 @@
   "dependencies": {
     "@clanker-chain/identity-node-client": "2026.9.10",
     "@clanker-chain/mqtt-node-client": "2026.9.10",
-    "typebox": "^1.1.38"
+    "typebox": "^1.3.28"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.1",
+    "@types/bun": "^1.4.2",
     "@types/node": "^22.0.0",
     "typescript": "^5.9.3"
   },
