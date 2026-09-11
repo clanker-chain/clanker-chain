@@ -2,7 +2,7 @@
 
 Profile-aware operator tooling for `ClankerIdentity`: mint, whoami, list bots, revoke/rotate, and transfer. Agents can drive these once `~/.clanker` exists. Prefer **`clanker setup`** for humans; use `clanker init --preset` for scripts.
 
-**Facts · Policy · Transport** — Mint / revoke write **Facts**. `clanker pair` writes **Policy** (hub pairing store + local `allowOperators`). Hub `/acl` is **Transport**. → [`trust-model.md`](trust-model.md)
+**Facts · Policy · Transport** — Mint / revoke write **Facts** on the public-good registry. `clanker pair` writes this product’s **Policy** (hub pairing store + local `allowOperators`). Hub `/acl` is **Transport**. Fees are a sunk-cost filter, not protection. → [`trust-model.md`](trust-model.md)
 
 Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include a join site or MQTT message monitoring.
 

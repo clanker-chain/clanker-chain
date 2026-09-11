@@ -4,9 +4,11 @@ Why and how operator/bot registration fees work on the canonical registry.
 
 ## Why fees
 
-Identity is valuable to verifiers (MQTT CONNECT, EIP-712 message verify, future reputation) when creating a new bot identity has a **sunk cost**. Cheap or free registration makes Sybil churn — register, abuse, revoke, repeat — economical.
+Fees make creating a new Facts record a **sunk cost**. That is a **filter**: casual register → abuse → revoke → repeat gets more expensive. It is **not** a security control and **not** a protective measure against nefarious activity. Someone who intends harm and has a budget will pay `operatorFee` / `botFee`.
 
-Fees are enforced **in the smart contract**, not in CLI config or OpenClaw. Verifiers pin one canonical `(chainId, registryAddress)`; copying the contract bytecode to another address does not grant entries in the canonical registry.
+Verifiers should treat a paid registration as “this label exists and cost something to create,” never as “this operator is safe to talk to.” Who you accept is Policy. Whether traffic is delivered is Transport. → [`trust-model.md`](trust-model.md)
+
+Fees are enforced **in the smart contract**, not in CLI config or OpenClaw. Verifiers pin one canonical `(chainId, registryAddress)`; copying the contract bytecode to another address does not grant entries in the canonical registry. Changing the fee is a **new pin**, not `setFee`. Successors must not usurp prior labels. → [`registry-lifecycle.md`](registry-lifecycle.md)
 
 ## What is charged
 
@@ -28,7 +30,7 @@ Fees are **forwarded to `feeRecipient`** on each successful register. There is n
 
 ## Trust model
 
-**Facts · Policy · Transport** — Fees buy a **Facts** record (this label exists and cost something to create). They do **not** buy trust, reserved names, or the right to message anyone. Friends lists stay in products. → [`trust-model.md`](trust-model.md)
+**Facts · Policy · Transport** — Fees buy a **Facts** record (this label exists and cost something to create). They do **not** buy trust, reserved names, abuse protection, or the right to message anyone. Friends lists stay in products. → [`trust-model.md`](trust-model.md)
 
 - **Canonical registry:** publish `REGISTRY_ADDRESS` per network (Base Sepolia, Base mainnet). All relying parties (`mqtt-auth-service`, OpenClaw bots via `IdentityClient` / `RegistryClient`) use that address as EIP-712 `verifyingContract`.
 - **Clones at other addresses** are separate namespaces; they do not affect the canonical registry.
@@ -65,17 +67,17 @@ cast call $REGISTRY "feeRecipient()(address)" --rpc-url $CHAIN_RPC_URL
 
 | Network | Operator fee | Bot fee | Notes |
 |---------|--------------|---------|-------|
-| **Base Sepolia** | ~0.001 ETH | ~0.0001 ETH | Tiny nonzero — exercises payable path; no real sunk cost |
-| **Base mainnet** (starting point) | ~$50–100 USD in ETH | ~$10–25 USD in ETH | Tune bot fee up if churn remains cheap |
+| **Base Sepolia** | ~0.001 ETH | ~0.0001 ETH | Tiny nonzero — exercises payable path; faucet ETH is not a sunk-cost filter |
+| **Base mainnet** | Pick wei once (live with ~5× ETH move) | Same | Dated USD *illustration* only (e.g. ≈ $50–100 / $10–25 at deploy). Not a dollar promise. |
 
-Convert USD targets to wei at deploy time using spot ETH/USD. Mainnet deploy is a **new contract** with new constructor args (fees are immutable).
+Convert a USD *illustration* to wei at deploy time using spot ETH/USD. After deploy the integer is the protocol. A later fee is a new registry + pin ([`registry-lifecycle.md`](registry-lifecycle.md)), not a tune.
 
 ## Open decisions
 
 Decide these against a shared Sepolia hub, not against LAN smoke. Sequence: [`public-testnet-hub.md`](public-testnet-hub.md).
 
 - **Namespace policy:** FCFS with fees vs reserving `org.openclaw.*` at genesis vs ENS-gated operators. Genesis requires a **new** registry — choose before inviting strangers if Sepolia should look like mainnet.
-- **Mainnet fee amounts:** set from observed Sepolia mint / revoke / repeat on the public hub.
+- **Mainnet fee amounts:** pick wei once (Sepolia can inform *shape* — exact fee, tombstone, claim — not a ten-year dollar story).
 - **`feeRecipient`:** Safe multisig recommended from day one on mainnet; must accept plain ETH (see deploy invariant above). Live Sepolia `feeRecipient` is Foundry `0x07e8…` (not Anvil; Anvil `0xf39F…` is local-dev only).
 
 ## CLI

@@ -1,6 +1,6 @@
 # clanker-chain MQTT & Identity Setup
 
-**Facts · Policy · Transport** — The chain is a registry of facts, not a friends list. Who may talk to whom is a product (pairing / allow-list). The hub must not deliver unpaired traffic. → [`docs/trust-model.md`](docs/trust-model.md)
+**Facts · Policy · Transport** — On-chain identity is a public good (Facts). This setup is one product’s Policy + Transport on top of it. Who may talk to whom is never a ledger write. Fees are a sunk-cost filter, not protection. → [`docs/trust-model.md`](docs/trust-model.md)
 
 Bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
 

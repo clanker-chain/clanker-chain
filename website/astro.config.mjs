@@ -9,7 +9,7 @@ export default defineConfig({
     starlight({
       title: "clanker-chain",
       description:
-        "Identity-aware MQTT mesh for OpenClaw bots — closed beta on Base Sepolia.",
+        "Public-good on-chain identity for agents. MQTT and OpenClaw are a reference product — closed beta on Base Sepolia.",
       social: [
         {
           icon: "github",
@@ -19,10 +19,18 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: "Docs",
+          label: "Philosophy",
+          items: [
+            { label: "Overview", slug: "docs" },
+            { label: "Trust model", slug: "docs/trust-model" },
+            { label: "Fees", slug: "docs/fees" },
+            { label: "Registry lifecycle", slug: "docs/registry-lifecycle" },
+          ],
+        },
+        {
+          label: "Use it",
           items: [
             { label: "Get started", slug: "docs/get-started" },
-            { label: "Trust model", slug: "docs/trust-model" },
             { label: "Concepts", slug: "docs/concepts" },
             { label: "CLI", slug: "docs/cli" },
             { label: "OpenClaw plugins", slug: "docs/plugins" },

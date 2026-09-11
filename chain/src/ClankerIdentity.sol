@@ -1,11 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {IClankerIdentity} from "./IClankerIdentity.sol";
+
 /// @title ClankerIdentity
-/// @notice Minimal on-chain registry: operator ownership, bot ownership, and active signing keys.
-///         Facts only (docs/trust-model.md). No metadata, reputation, or allow-lists —
-///         pairing and “who may talk to whom” belong in products; topic ACLs belong on the hub.
-contract ClankerIdentity {
+/// @notice Public-good Facts registry: operator ownership, bot keys, revoke.
+///         No metadata, reputation, or allow-lists — pairing and “who may talk
+///         to whom” belong in products (docs/trust-model.md). Fees are a
+///         sunk-cost filter (docs/registration-economics.md), not authorization.
+///         `priorRegistry` walks predecessors so a successor cannot usurp
+///         labels (docs/registry-lifecycle.md).
+contract ClankerIdentity is IClankerIdentity {
+    uint256 private constant MAX_PRIOR_HOPS = 16;
+
     struct Operator {
         address owner;
         uint64 registeredAt;
@@ -22,9 +29,11 @@ contract ClankerIdentity {
     uint256 public immutable operatorFee;
     uint256 public immutable botFee;
     address public immutable feeRecipient;
+    /// @notice Immediate predecessor on this chain, or zero for genesis.
+    address public immutable override priorRegistry;
 
-    mapping(bytes32 => Operator) public operators;
-    mapping(bytes32 => Bot) public bots;
+    mapping(bytes32 => Operator) public override operators;
+    mapping(bytes32 => Bot) public override bots;
     mapping(bytes32 => address) public pendingOperatorOwner;
     mapping(address => bytes32) public botKeyToId;
 
@@ -49,17 +58,20 @@ contract ClankerIdentity {
     error WrongFee();
     error FeeTransferFailed();
 
-    constructor(uint256 _operatorFee, uint256 _botFee, address _feeRecipient) {
+    constructor(uint256 _operatorFee, uint256 _botFee, address _feeRecipient, address _priorRegistry) {
         if (_feeRecipient == address(0)) revert ZeroAddress();
+        if (_priorRegistry == address(this)) revert ZeroAddress();
         operatorFee = _operatorFee;
         botFee = _botFee;
         feeRecipient = _feeRecipient;
+        priorRegistry = _priorRegistry;
     }
 
     function registerOperator(string calldata label) external payable returns (bytes32 id) {
         if (msg.value != operatorFee) revert WrongFee();
         id = keccak256(bytes(label));
         if (operators[id].registeredAt != 0) revert OperatorTaken();
+        _enforcePriorOperator(id);
         operators[id] = Operator({owner: msg.sender, registeredAt: uint64(block.timestamp), revokedAt: 0});
         emit OperatorRegistered(id, msg.sender, label);
         _forwardFee();
@@ -110,6 +122,7 @@ contract ClankerIdentity {
 
         id = keccak256(bytes(label));
         if (bots[id].registeredAt != 0) revert BotTaken();
+        _enforcePriorBot(id, operatorId);
 
         if (botKeyToId[botKey] != bytes32(0)) revert BotKeyInUse();
 
@@ -163,6 +176,32 @@ contract ClankerIdentity {
         }
         b.revokedAt = uint64(block.timestamp);
         emit BotRevoked(botId);
+    }
+
+    function _enforcePriorOperator(bytes32 id) private view {
+        address p = priorRegistry;
+        for (uint256 i = 0; i < MAX_PRIOR_HOPS && p != address(0); i++) {
+            (address owner, uint64 registeredAt, uint64 revokedAt) = IClankerIdentity(p).operators(id);
+            if (registeredAt != 0) {
+                if (revokedAt != 0 || owner != msg.sender) revert OperatorTaken();
+                return;
+            }
+            p = IClankerIdentity(p).priorRegistry();
+        }
+    }
+
+    function _enforcePriorBot(bytes32 id, bytes32 operatorId) private view {
+        address p = priorRegistry;
+        for (uint256 i = 0; i < MAX_PRIOR_HOPS && p != address(0); i++) {
+            (bytes32 priorOp, , uint64 registeredAt, uint64 revokedAt) = IClankerIdentity(p).bots(id);
+            if (registeredAt != 0) {
+                if (revokedAt != 0 || priorOp != operatorId) revert BotTaken();
+                (address owner, uint64 ora, uint64 orv) = IClankerIdentity(p).operators(priorOp);
+                if (ora == 0 || orv != 0 || owner != msg.sender) revert BotTaken();
+                return;
+            }
+            p = IClankerIdentity(p).priorRegistry();
+        }
     }
 
     function _forwardFee() private {

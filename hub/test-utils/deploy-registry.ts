@@ -48,6 +48,8 @@ export interface DeployTestRegistryOptions {
   botFeeWei?: bigint;
   /** Fee recipient; must be non-zero. Defaults to the deployer address. */
   feeRecipient?: Hex;
+  /** Predecessor registry on this chain, or zero for genesis. */
+  priorRegistry?: Hex;
 }
 
 /**
@@ -62,6 +64,8 @@ export async function deployTestRegistry(
   const botFee = opts.botFeeWei ?? 0n;
   // Any non-zero address works for a zero-fee registry (no ETH is forwarded).
   const feeRecipient = opts.feeRecipient ?? ANVIL_DEFAULT_ADDRESS;
+  const priorRegistry =
+    opts.priorRegistry ?? "0x0000000000000000000000000000000000000000";
 
   const deploy = Bun.spawn(
     [
@@ -77,6 +81,7 @@ export async function deployTestRegistry(
       operatorFee.toString(),
       botFee.toString(),
       feeRecipient,
+      priorRegistry,
     ],
     { cwd: opts.chainDir, stdout: "pipe", stderr: "pipe" },
   );

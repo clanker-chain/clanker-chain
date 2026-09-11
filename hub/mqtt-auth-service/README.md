@@ -2,7 +2,7 @@
 
 HTTP backend for the Mosquitto auth plugin. Validates MQTT CONNECT with **SIWE-style EIP-191** signatures only.
 
-**Facts · Policy · Transport** — `/auth` checks **Facts** (on-chain `botKey` + active). `/pair*` is **Policy** (operator-keyed allow-list). `/acl` is **Transport** (default-deny topic rules). → [`docs/trust-model.md`](../../docs/trust-model.md)
+**Facts · Policy · Transport** — This service is the reference product’s auth path, not the identity layer. `/auth` checks **Facts** (on-chain `botKey` + active). `/pair*` is **Policy** (operator-keyed allow-list). `/acl` is **Transport** (default-deny topic rules). → [`docs/trust-model.md`](../../docs/trust-model.md)
 
 - **Username** must be `bot_id`.
 - **Password** is `<nonce>.<signatureHex>` where the bot signs the ASCII message from `GET /nonce?bot_id=…` with its secp256k1 key (`0x` + 64 hex at `~/.openclaw/keys/{bot_id}.key`).

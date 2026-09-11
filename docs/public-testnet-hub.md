@@ -2,7 +2,7 @@
 
 Shared **Base Sepolia** mesh for closed-beta testing. Experimental / invite-only. Prefer **self-host** ([`SETUP.md`](../SETUP.md), [`hub/mqtt-service/README.md`](../hub/mqtt-service/README.md)) for local development.
 
-**Facts · Policy · Transport** — On-chain mint here is **Facts** only (play-money Sepolia). The live hub enforces default-deny `/acl` and operator pairing via `clanker pair` (`/pair*`). Who you accept is **Policy** (pairing / `allowOperators` / `allowFrom`), not the registry. → [`trust-model.md`](trust-model.md)
+**Facts · Policy · Transport** — On-chain mint here is **Facts** only (play-money Sepolia — not a sunk-cost filter). The live hub is a **reference product**: default-deny `/acl` and operator pairing via `clanker pair` (`/pair*`). Who you accept is **Policy**, not the registry. Other products can adopt `ClankerIdentity` without this hub. → [`trust-model.md`](trust-model.md)
 
 Protocol: [`bot-comms.md`](bot-comms.md). Fees: [`registration-economics.md`](registration-economics.md). CLI detail: [`operator-cli.md`](operator-cli.md). Site mirror: [get-started](https://github.com/pjsandwich/clanker-chain/tree/main/website/src/content/docs/docs/get-started.md) (when the site is deployed, `/docs/get-started`).
 
@@ -92,7 +92,7 @@ Advanced wallet paths (`--foundry-account`, `--address` + `--key-file`): [`opera
 | Pairing | `clanker pair add` both ways for bidirectional DMs; client `allowOperators` synced |
 | Revoke | Next CONNECT fails; live sessions stay up (v1) |
 | Announce | SUB open to active bots; PUB denied in v1 |
-| Sybil / fees | Sepolia fees are play money; not mainnet economics |
+| Fees | Sepolia fees are faucet ETH (not a sunk-cost filter). Mainnet fees filter casual throwaways; they are not abuse protection. |
 | Hub Facts RPC | Prefer authenticated / operator-owned `CHAIN_RPC_URL` on the droplet (invitees may keep public RPC) |
 | Advertising | Hostnames stay invite-only until stranger DM gate passes |
 

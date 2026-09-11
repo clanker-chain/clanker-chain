@@ -63,6 +63,10 @@ Pin **exact** CalVer (including micro when used):
 
 Wait for npm registry propagation between steps when installing published deps in CI.
 
+## On-chain pin vs npm CalVer
+
+Package versions (`2026.9.10`) are **not** the registry. The public-good identity pin is `(chainId, registryAddress)` and only moves when a successor is deployed. That process, and the no-usurpation rule, live in [`registry-lifecycle.md`](registry-lifecycle.md). Do not bump CalVer as a substitute for a new pin, and do not treat a new pin as an npm major.
+
 ## Non-npm services
 
 `hub/mqtt-auth-service` uses a CalVer string in `package.json` for traceability; it is deployed from the repo or Docker, not published to npm.

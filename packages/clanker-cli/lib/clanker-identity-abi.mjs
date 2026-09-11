@@ -19,6 +19,11 @@ export const clankerIdentityAbi = [
         "name": "_feeRecipient",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_priorRegistry",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
@@ -167,6 +172,19 @@ export const clankerIdentityAbi = [
         "internalType": "bytes32"
       }
     ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "priorRegistry",
+    "inputs": [],
     "outputs": [
       {
         "name": "",

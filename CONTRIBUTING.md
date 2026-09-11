@@ -23,15 +23,19 @@ cd website && npm ci && npm run build
 
 Published packages use **CalVer** — see [`docs/VERSIONING.md`](docs/VERSIONING.md). Prefer exact pins between packages. Tag-triggered GitHub Actions publish `@clanker-chain/*` packages; do not re-tag deprecated plugins (`mqtt-plugin`, `identity-plugin`).
 
-## Docs
+## Identity vs products
 
-Index: [`docs/README.md`](docs/README.md).
+`ClankerIdentity` is a **public-good Facts registry**. Other products should be able to adopt it without this repo’s MQTT hub or OpenClaw plugins. MQTT, pairing, hub ACLs, and any harness adapter are **products** that *use* identity — including the ones we ship on day one.
 
-**Facts · Policy · Transport** ([`docs/trust-model.md`](docs/trust-model.md)) is an invariant. Do not add allow-lists, pairing, or “who may talk to whom” to `ClankerIdentity`. Policy lives in products; Transport is hub ACLs + pair channels; EIP-712 still binds every message. If you change identity, mqtt-auth `/acl`, or pairing UX, update `trust-model.md` and keep the one-liner in `SECURITY.md` / `README.md`.
+**Facts · Policy · Transport** ([`docs/trust-model.md`](docs/trust-model.md)) is an invariant. Persistence of that split is the contribution bar:
 
-- Operator path: [`docs/operator-cli.md`](docs/operator-cli.md), [`SETUP.md`](SETUP.md)
-- Protocol: [`docs/bot-comms.md`](docs/bot-comms.md)
-- Experimental Sepolia hub: [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md)
+- Do not add allow-lists, pairing, reputation, or “who may talk to whom” to `ClankerIdentity`.
+- A new product or adapter implements its own Policy (who it accepts) and Transport (what it delivers), and re-reads Facts at check time. Do not grow the contract to make a product safer.
+- Registration fees are a **sunk-cost filter**, not abuse protection. Do not document them as making the network safe. → [`docs/registration-economics.md`](docs/registration-economics.md)
+- A successor registry must not usurp labels that exist on a prior pin. Do not add a post-window FCFS for unclaimed prior names. → [`docs/registry-lifecycle.md`](docs/registry-lifecycle.md)
+- If you change identity, mqtt-auth `/acl`, or pairing UX, update `trust-model.md` and keep the one-liner in `SECURITY.md` / `README.md`.
+
+Index: [`docs/README.md`](docs/README.md). Operator path: [`docs/operator-cli.md`](docs/operator-cli.md), [`SETUP.md`](SETUP.md). Protocol: [`docs/bot-comms.md`](docs/bot-comms.md). Experimental Sepolia hub: [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md).
 
 Keep private ops (SSH hosts, droplet IPs, personal wallets) out of the public tree. When GitHub and `website/` docs overlap, update GitHub first and sync the site.
 

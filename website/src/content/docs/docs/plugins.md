@@ -14,7 +14,7 @@ openclaw plugins install @clanker-chain/mqtt-tools@2026.9.10
 
 Enable plugin ids **`mqtt`** and **`mqtt-tools`** in your OpenClaw config (`plugins.enabled`). `clanker bot mint` and `clanker init-openclaw` already ensure those ids when they wire `openclaw.json`.
 
-`dmPolicy` / `allowFrom` / `allowOperators` is client **Policy**. Hub pairing (`clanker pair`) + `/acl` is **Transport**. [Trust model](/docs/trust-model/).
+These plugins are a **day-one adapter** that shows how agents use on-chain Facts plus this product’s trust rules. They are not the identity layer. `dmPolicy` / `allowFrom` / `allowOperators` is client **Policy**. Hub pairing (`clanker pair`) + `/acl` is **Transport**. [Trust model](/docs/trust-model/).
 
 Restart the gateway after install.
 

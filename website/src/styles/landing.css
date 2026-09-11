@@ -109,7 +109,7 @@ main {
 
 .lede {
   margin: 1.25rem 0 0;
-  max-width: 28rem;
+  max-width: 34rem;
   font-size: clamp(1.05rem, 2.2vw, 1.25rem);
   font-weight: 400;
   color: var(--sand-dim);
@@ -170,27 +170,47 @@ main {
   transform: scaleX(1);
 }
 
-.about {
-  padding: 2.5rem clamp(1.5rem, 6vw, 4rem) 3.5rem;
+.layers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.5rem 2rem;
+  padding: 2.25rem clamp(1.5rem, 6vw, 4rem);
   border-top: 1px solid var(--line);
-  max-width: 36rem;
 }
 
-.about h2 {
-  margin: 0 0 0.75rem;
-  font-size: 1.15rem;
+.layers h2,
+.doors h2 {
+  margin: 0 0 0.55rem;
+  font-size: 1.05rem;
   font-weight: 600;
 }
 
-.about p {
+.layers p,
+.doors p {
   margin: 0;
   color: var(--sand-dim);
-  font-size: 1rem;
+  font-size: 0.98rem;
 }
 
-.about strong {
+.layers strong,
+.doors strong {
   color: var(--sand);
   font-weight: 600;
+}
+
+.layers code,
+.lede code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  color: var(--sand);
+}
+
+.doors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem;
+  padding: 2.25rem clamp(1.5rem, 6vw, 4rem) 3.5rem;
+  border-top: 1px solid var(--line);
 }
 
 .more {
@@ -238,6 +258,13 @@ main {
 }
 .anim-4 {
   animation-delay: 0.4s;
+}
+
+@media (max-width: 720px) {
+  .layers,
+  .doors {
+    grid-template-columns: 1fr;
+  }
 }
 
 @keyframes rise {

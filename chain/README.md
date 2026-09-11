@@ -1,8 +1,8 @@
 # clanker-chain — Foundry (`chain/`)
 
-Solidity registry for operator and bot identities. Used with **Anvil** locally and (later) Base for public-good deployment.
+Solidity registry for operator and bot identities. This contract is the **public-good Facts layer**: other products pin `(chainId, registryAddress)` and do not need this repo’s MQTT hub. Used with **Anvil** locally, Base Sepolia for rehearsal, and (later) Base mainnet for a real sunk-cost namespace.
 
-**Facts · Policy · Transport** — `ClankerIdentity` is **Facts** only (owner, `botKey`, revoke). Do not add allow-lists, pairing, metadata, or reputation here. Those belong in products and hub ACLs. → [`docs/trust-model.md`](../docs/trust-model.md)
+**Facts · Policy · Transport** — `ClankerIdentity` is **Facts** only (owner, `botKey`, revoke). Do not add allow-lists, pairing, metadata, or reputation here. Those belong in products. Registration fees are a sunk-cost filter, not abuse protection. → [`docs/trust-model.md`](../docs/trust-model.md), [`docs/registration-economics.md`](../docs/registration-economics.md)
 
 ## Prerequisites
 
@@ -50,13 +50,14 @@ To use the bare `clanker` command, either install the package globally from this
 
 ## Deploy registry (Anvil default account)
 
-The constructor requires immutable fee parameters: `(operatorFee, botFee, feeRecipient)`. Set these env vars before deploy:
+The constructor requires immutable parameters: `(operatorFee, botFee, feeRecipient, priorRegistry)`. Set these env vars before deploy:
 
 | Variable | Description |
 |----------|-------------|
 | `OPERATOR_FEE_WEI` | Wei sent with each `registerOperator` (exact match required) |
 | `BOT_FEE_WEI` | Wei sent with each `registerBot` |
 | `FEE_RECIPIENT` | Address that receives fees on each registration (non-zero) |
+| `PRIOR_REGISTRY` | Optional. Predecessor `ClankerIdentity` on **this** chain, or unset / `0x0` for genesis. Successors walk this so prior labels cannot be usurped. |
 
 **Local dev example** (tiny nonzero fees):
 
@@ -100,7 +101,7 @@ cast call $REGISTRY "botFee()(uint256)" --rpc-url $CHAIN_RPC_URL
 cast call $REGISTRY "feeRecipient()(address)" --rpc-url $CHAIN_RPC_URL
 ```
 
-See [`docs/registration-economics.md`](../docs/registration-economics.md) for rationale and mainnet targets.
+See [`docs/registration-economics.md`](../docs/registration-economics.md) for fee rationale and [`docs/registry-lifecycle.md`](../docs/registry-lifecycle.md) for pins and no-usurpation.
 
 ## Read contract state with `cast`
 

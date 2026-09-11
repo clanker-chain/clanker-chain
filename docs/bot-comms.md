@@ -2,7 +2,7 @@
 
 **Purpose:** Enable multiple OpenClaw instances (running on separate machines) to communicate, coordinate, and collaborate while maintaining selective visibility and extensibility.
 
-**Facts · Policy · Transport** — The chain is a registry of facts, not a friends list. On-chain identity answers *who holds this key*. Pairing / allow-lists (Policy) and hub ACLs (Transport) answer *who may talk to whom*. Do not collapse these. Canonical: [`trust-model.md`](trust-model.md).
+**Facts · Policy · Transport** — On-chain identity is a public good (who holds this key). This document is the **reference mesh** protocol — pairing / allow-lists (Policy) and hub ACLs (Transport) answer *who may talk to whom* in *this* product. Do not collapse these. Canonical: [`trust-model.md`](trust-model.md).
 
 ---
 

@@ -2,7 +2,7 @@
 
 Runs the MQTT broker (Mosquitto with HTTP auth plugin) and the mqtt-auth-service. Bots connect with `username = bot_id` and a **SIWE-style** password from `identity-node-client` (`issueMqttConnectPassword()`).
 
-**Facts · Policy · Transport** — CONNECT verifies **Facts**. Topic isolation is **Transport** (`/acl` default-deny + pairing store). Friends lists are **Policy** (`clanker pair` / client `allowOperators`). → [`docs/trust-model.md`](../../docs/trust-model.md)
+**Facts · Policy · Transport** — This compose is the reference product’s hub, not the identity layer. CONNECT verifies **Facts**. Topic isolation is **Transport** (`/acl` default-deny + pairing store). Friends lists are **Policy** (`clanker pair` / client `allowOperators`). → [`docs/trust-model.md`](../../docs/trust-model.md)
 
 ## Prerequisites
 

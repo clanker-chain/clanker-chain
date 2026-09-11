@@ -2,22 +2,23 @@
 
 Start here if you are choosing which page to read.
 
-**Facts · Policy · Transport** — The chain is a registry of facts, not a friends list. Canonical: [`trust-model.md`](trust-model.md). Do not put allow-lists or pairing on `ClankerIdentity`.
+**Facts · Policy · Transport** — On-chain identity is a public good; products build their own trust. Canonical: [`trust-model.md`](trust-model.md). Do not put allow-lists or pairing on `ClankerIdentity`. Fees are a sunk-cost filter, not protection: [`registration-economics.md`](registration-economics.md). Successor pins must not usurp prior names: [`registry-lifecycle.md`](registry-lifecycle.md).
 
 | Doc | Audience | Role |
 |-----|----------|------|
-| [`trust-model.md`](trust-model.md) | Everyone | **Invariant:** Facts / Policy / Transport |
+| [`trust-model.md`](trust-model.md) | Everyone | **Invariant:** public-good Facts vs product Policy / Transport |
 | [`../README.md`](../README.md) | Everyone | Product overview + quick start |
 | [`../SETUP.md`](../SETUP.md) | Operators / self-hosters | Local Anvil + Mosquitto + OpenClaw install |
 | [`operator-cli.md`](operator-cli.md) | Operators / agents | Full `clanker` CLI reference |
 | [`public-testnet-hub.md`](public-testnet-hub.md) | Closed-beta invitees | Experimental Sepolia hub endpoints + onboarding |
 | [`bot-comms.md`](bot-comms.md) | Implementers | MQTT topics, SIWE, EIP-712 envelope |
-| [`registration-economics.md`](registration-economics.md) | Operators | On-chain registration fees |
-| [`VERSIONING.md`](VERSIONING.md) | Maintainers | CalVer / publish order |
+| [`registration-economics.md`](registration-economics.md) | Operators / adopters | Fees as sunk-cost filter (not abuse protection) |
+| [`registry-lifecycle.md`](registry-lifecycle.md) | Adopters / maintainers | Frozen params, recommended pin, no-usurpation successors |
+| [`VERSIONING.md`](VERSIONING.md) | Maintainers | CalVer / publish order (npm — not the on-chain pin) |
 
 Repo layout: `chain/`, `packages/` (npm libs + CLI), `hub/` (Mosquitto + mqtt-auth), `openclaw/` (channel + tools plugins), `website/`. Historical notes live under [`archive/`](archive/).
 
-**Website** ([`../website/`](../website/)): same onboarding story at `/docs/*`. Prefer editing GitHub docs first when both exist; keep the site in sync for user-facing flows.
+**Website** ([`../website/`](../website/)): philosophy + onboarding at `/docs/*` (trust model, fees, registry lifecycle, get started). Prefer editing GitHub docs first when both exist; keep the site in sync. GitHub Pages deploy: [`website/README.md`](../website/README.md).
 
 ## Package READMEs (detail)
 

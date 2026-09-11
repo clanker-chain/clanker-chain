@@ -1,11 +1,12 @@
 ### identity-node-client
 
-Node/TypeScript client for on-chain ClankerIdentity (bots + shared `RegistryClient` for mqtt-auth).
+Node/TypeScript client for the **public-good** `ClankerIdentity` registry. Other products can depend on this package without MQTT, pairing, or OpenClaw.
 
-**Facts · Policy · Transport** — This package reads **Facts** and signs/verifies envelopes. It is not a friends list. Pairing is Policy; hub `/acl` is Transport. → [`docs/trust-model.md`](../../docs/trust-model.md)
+**Facts · Policy · Transport** — This package reads **Facts** and signs/verifies envelopes. It is not a friends list. Pairing is Policy; hub `/acl` is Transport. Those live in products. → [`docs/trust-model.md`](../../docs/trust-model.md)
 
 ## Purpose
 
+- Adopt the registry from any stack: `RegistryClient` over RPC (`chainRpcUrl` + `registryAddress`). mqtt-auth uses the same client; you do not have to. A successor pin must not usurp prior labels (`priorRegistry()` walk — [`docs/registry-lifecycle.md`](../../docs/registry-lifecycle.md)).
 - Bot keys under `~/.openclaw/keys/{bot_id}.key`: **secp256k1-eth** only (`0x` + 64 hex), or `BOT_ETH_PRIVATE_KEY` env.
 - Chain reads: `RegistryClient` / `IdentityClient.init()`, `getBot()`, EIP-712 domain from `chainId` + `registryAddress`.
 - MQTT CONNECT: `issueMqttConnectPassword()` — SIWE `nonce.signatureHex` via mqtt-auth-service.
@@ -14,7 +15,7 @@ Node/TypeScript client for on-chain ClankerIdentity (bots + shared `RegistryClie
 ## Install
 
 ```bash
-cd identity-node-client
+cd packages/identity-node-client
 npm install
 npm run build
 ```

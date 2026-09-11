@@ -11,7 +11,7 @@ npm install -g @clanker-chain/clanker-cli@2026.9.10
 
 Prefer **`clanker setup`** for humans. Agents/scripts can use flags with `--yes`.
 
-Mint commands write **Facts** (the registry). Pairing is **Policy**: `clanker pair add <peer>`. [Trust model](/docs/trust-model/).
+Mint commands write **Facts** on the public-good registry. Pairing is this product’s **Policy**: `clanker pair add <peer>`. [Trust model](/docs/trust-model/).
 
 ## Quick path
 

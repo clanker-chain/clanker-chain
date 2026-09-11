@@ -22,7 +22,7 @@ contract ClankerIdentityTest is Test {
     address internal carol = address(0xCA801);
 
     function setUp() public {
-        reg = new ClankerIdentity(OPERATOR_FEE, BOT_FEE, feeRecipient);
+        reg = new ClankerIdentity(OPERATOR_FEE, BOT_FEE, feeRecipient, address(0));
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
         vm.deal(carol, 100 ether);
@@ -47,7 +47,7 @@ contract ClankerIdentityTest is Test {
 
     function testConstructorZeroRecipientReverts() public {
         vm.expectRevert(ClankerIdentity.ZeroAddress.selector);
-        new ClankerIdentity(OPERATOR_FEE, BOT_FEE, address(0));
+        new ClankerIdentity(OPERATOR_FEE, BOT_FEE, address(0), address(0));
     }
 
     function testRegisterOperatorWrongFeeReverts() public {
@@ -98,7 +98,7 @@ contract ClankerIdentityTest is Test {
 
     function testFeeTransferFailedReverts() public {
         RevertingReceiver reverting = new RevertingReceiver();
-        ClankerIdentity paidReg = new ClankerIdentity(OPERATOR_FEE, BOT_FEE, address(reverting));
+        ClankerIdentity paidReg = new ClankerIdentity(OPERATOR_FEE, BOT_FEE, address(reverting), address(0));
 
         vm.prank(alice);
         vm.expectRevert(ClankerIdentity.FeeTransferFailed.selector);
@@ -107,7 +107,7 @@ contract ClankerIdentityTest is Test {
 
     function testFeeTransferFailedRevertsOnBot() public {
         RevertingReceiver reverting = new RevertingReceiver();
-        ClankerIdentity paidReg = new ClankerIdentity(0, BOT_FEE, address(reverting));
+        ClankerIdentity paidReg = new ClankerIdentity(0, BOT_FEE, address(reverting), address(0));
 
         vm.prank(alice);
         bytes32 opId = paidReg.registerOperator{value: 0}("org.openclaw.alice");
@@ -117,7 +117,7 @@ contract ClankerIdentityTest is Test {
     }
 
     function testZeroFeeRegistrationSucceeds() public {
-        ClankerIdentity freeReg = new ClankerIdentity(0, 0, feeRecipient);
+        ClankerIdentity freeReg = new ClankerIdentity(0, 0, feeRecipient, address(0));
         vm.prank(alice);
         bytes32 opId = freeReg.registerOperator{value: 0}("org.openclaw.alice");
         vm.prank(alice);
