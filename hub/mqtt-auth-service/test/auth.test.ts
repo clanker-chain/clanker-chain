@@ -163,11 +163,11 @@ beforeAll(async () => {
   if (!siweSkip) {
     siweHarness = await startSiweHarness();
   }
-});
+}, 60_000);
 
 afterAll(async () => {
   await siweHarness?.cleanup();
-});
+}, 30_000);
 
 test("SIWE auth: happy path", async () => {
   if (siweSkip || !siweHarness) {

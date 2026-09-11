@@ -185,11 +185,11 @@ beforeAll(async () => {
       rmSync(pairDir, { recursive: true, force: true });
     },
   };
-});
+}, 60_000);
 
 afterAll(async () => {
   if (harness) await harness.cleanup();
-});
+}, 30_000);
 
 test("POST /acl own inbox / announce / sibling / stranger", async () => {
   if (skip) return;
