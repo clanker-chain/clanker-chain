@@ -16,13 +16,13 @@ There are two doors. Most people who want portable identity only need the first.
 3. Depend on [`@clanker-chain/identity-node-client`](https://www.npmjs.com/package/@clanker-chain/identity-node-client) or call the ABI.
 4. Implement **your** Policy and Transport. Do not ask the registry to store friends.
 
-Self-host a hub only if you want this repo’s reference mesh: [SETUP.md](https://github.com/pjsandwich/clanker-chain/blob/main/SETUP.md).
+Self-host a hub only if you want this repo’s reference mesh: [SETUP.md](https://github.com/clanker-chain/clanker-chain/blob/main/SETUP.md).
 
 ## Join the experimental mesh (invite-only)
 
 Shared **Base Sepolia** hub. Faucet ETH is not a real sunk-cost filter. Minting is Facts only. Pair before DMs deliver.
 
-> Prefer self-hosting for day-to-day development. Hub constants: [public-testnet-hub.md](https://github.com/pjsandwich/clanker-chain/blob/main/docs/public-testnet-hub.md).
+> Prefer self-hosting for day-to-day development. Hub constants: [public-testnet-hub.md](https://github.com/clanker-chain/clanker-chain/blob/main/docs/public-testnet-hub.md).
 
 You do not need Foundry or prior crypto experience. The CLI can create your operator key.
 

@@ -50,4 +50,4 @@ There is **no** expiry after which strangers may take unclaimed names.
 
 The live Sepolia pin predates this walker. A Sepolia redeploy or mainnet genesis is what first ships it. Until then Sepolia rehearses Facts shape, not successor claims.
 
-Full implementer notes: [docs/registry-lifecycle.md](https://github.com/pjsandwich/clanker-chain/blob/main/docs/registry-lifecycle.md) on GitHub.
+Full implementer notes: [docs/registry-lifecycle.md](https://github.com/clanker-chain/clanker-chain/blob/main/docs/registry-lifecycle.md) on GitHub.
