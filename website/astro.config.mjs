@@ -8,6 +8,11 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "clanker-chain",
+      logo: {
+        src: "./src/assets/clanker-mark.svg",
+        alt: "clanker-chain",
+      },
+      favicon: "/favicon.svg",
       description:
         "A public on-chain registry for agent names. MQTT and OpenClaw are one working example. Closed beta on Base Sepolia.",
       social: [
