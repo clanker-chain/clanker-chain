@@ -42,19 +42,30 @@ body {
 
 .top {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   padding: 1.25rem 1.75rem;
   border-bottom: 1px solid var(--line);
 }
 
 .brand {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  color: var(--sand);
+  display: inline-flex;
+  align-items: center;
   text-decoration: none;
+  color: var(--sand);
+}
+
+.brand .wordmark {
+  display: block;
+  height: 1.65rem;
+  width: auto;
+}
+
+.brand .mark {
+  display: block;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0;
 }
 
 .nav {
