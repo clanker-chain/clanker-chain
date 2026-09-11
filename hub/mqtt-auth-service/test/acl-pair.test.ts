@@ -6,11 +6,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "path";
 import {
+  createPublicClient,
   createWalletClient,
   http,
   keccak256,
   toBytes,
   type Hex,
+  type PublicClient,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { foundry } from "viem/chains";
@@ -26,6 +28,18 @@ import {
 const repoRoot = join(import.meta.dir, "../../..");
 const chainDir = join(repoRoot, "chain");
 const mqttAuthServiceDir = join(repoRoot, "hub/mqtt-auth-service");
+
+/** Anvil accounts #3–#5. Distinct per concurrent test so nonces never collide. */
+const ANVIL_KEY_3 =
+  "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6" as Hex;
+const ANVIL_KEY_4 =
+  "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a" as Hex;
+const ANVIL_KEY_5 =
+  "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba" as Hex;
+
+async function waitMined(pc: PublicClient, hash: Hex): Promise<void> {
+  await pc.waitForTransactionReceipt({ hash });
+}
 
 function skipSiwe(): string | null {
   if (process.env.MQTT_EVM_TESTS_SKIP === "1" || process.env.MQTT_EVM_TESTS_SKIP === "true") {
@@ -56,14 +70,12 @@ async function waitHttpOk(url: string, max = 40): Promise<void> {
   throw new Error(`timeout waiting for ${url}`);
 }
 
-const ANVIL_KEY_3 =
-  "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6" as Hex;
-
 interface Harness {
   cleanup: () => Promise<void>;
   mqttUrl: string;
   registry: Hex;
   rpcUrl: string;
+  pc: PublicClient;
   operatorLabel: string;
   botId: string;
   secondBotId: string;
@@ -94,30 +106,51 @@ beforeAll(async () => {
   const botId = "openclaw.acl.bot-1";
   const secondBotId = "openclaw.acl.bot-2";
   const account0 = privateKeyToAccount(ANVIL_DEFAULT_KEY);
+  const pc = createPublicClient({ chain: foundry, transport: http(rpcUrl) });
   const wallet = createWalletClient({
     account: account0,
     chain: foundry,
     transport: http(rpcUrl),
   });
-  await wallet.writeContract({
-    address: registry,
-    abi: clankerIdentityAbi,
-    functionName: "registerOperator",
-    args: [operatorLabel],
-  });
+  await waitMined(
+    pc,
+    await wallet.writeContract({
+      address: registry,
+      abi: clankerIdentityAbi,
+      functionName: "registerOperator",
+      args: [operatorLabel],
+    }),
+  );
   const operatorIdBytes = keccak256(toBytes(operatorLabel));
-  await wallet.writeContract({
-    address: registry,
-    abi: clankerIdentityAbi,
-    functionName: "registerBot",
-    args: [operatorIdBytes as Hex, botId, privateKeyToAccount(ANVIL_KEY_1).address],
-  });
-  await wallet.writeContract({
-    address: registry,
-    abi: clankerIdentityAbi,
-    functionName: "registerBot",
-    args: [operatorIdBytes as Hex, secondBotId, privateKeyToAccount(ANVIL_KEY_2).address],
-  });
+  await waitMined(
+    pc,
+    await wallet.writeContract({
+      address: registry,
+      abi: clankerIdentityAbi,
+      functionName: "registerBot",
+      args: [operatorIdBytes as Hex, botId, privateKeyToAccount(ANVIL_KEY_1).address],
+    }),
+  );
+  await waitMined(
+    pc,
+    await wallet.writeContract({
+      address: registry,
+      abi: clankerIdentityAbi,
+      functionName: "registerBot",
+      args: [operatorIdBytes as Hex, secondBotId, privateKeyToAccount(ANVIL_KEY_2).address],
+    }),
+  );
+
+  // Pre-fund peer accounts so concurrent tests do not race on account #0 nonces.
+  for (const key of [ANVIL_KEY_3, ANVIL_KEY_4, ANVIL_KEY_5]) {
+    await waitMined(
+      pc,
+      await wallet.sendTransaction({
+        to: privateKeyToAccount(key).address,
+        value: 10n ** 18n,
+      }),
+    );
+  }
 
   const pairDir = mkdtempSync(join(tmpdir(), "pair-acl-"));
   const mqttPort = 23000 + Math.floor(Math.random() * 3000);
@@ -141,6 +174,7 @@ beforeAll(async () => {
     mqttUrl,
     registry,
     rpcUrl,
+    pc,
     operatorLabel,
     botId,
     secondBotId,
@@ -207,13 +241,6 @@ test("pair add unlocks cross-operator inbox publish (one-way)", async () => {
   const h = harness!;
 
   const account3 = privateKeyToAccount(ANVIL_KEY_3);
-  const funder = createWalletClient({
-    account: privateKeyToAccount(ANVIL_DEFAULT_KEY),
-    chain: foundry,
-    transport: http(h.rpcUrl),
-  });
-  await funder.sendTransaction({ to: account3.address, value: 10n ** 18n });
-
   const wallet3 = createWalletClient({
     account: account3,
     chain: foundry,
@@ -221,19 +248,25 @@ test("pair add unlocks cross-operator inbox publish (one-way)", async () => {
   });
   const peerOpLabel = "org.openclaw.peer-pair";
   const peerBotId = "openclaw.peer.pair-bot";
-  await wallet3.writeContract({
-    address: h.registry,
-    abi: clankerIdentityAbi,
-    functionName: "registerOperator",
-    args: [peerOpLabel],
-  });
+  await waitMined(
+    h.pc,
+    await wallet3.writeContract({
+      address: h.registry,
+      abi: clankerIdentityAbi,
+      functionName: "registerOperator",
+      args: [peerOpLabel],
+    }),
+  );
   const peerOpId = keccak256(toBytes(peerOpLabel));
-  await wallet3.writeContract({
-    address: h.registry,
-    abi: clankerIdentityAbi,
-    functionName: "registerBot",
-    args: [peerOpId, peerBotId, account3.address],
-  });
+  await waitMined(
+    h.pc,
+    await wallet3.writeContract({
+      address: h.registry,
+      abi: clankerIdentityAbi,
+      functionName: "registerBot",
+      args: [peerOpId, peerBotId, account3.address],
+    }),
+  );
 
   const before = await fetch(`${h.mqttUrl}/acl`, {
     method: "POST",
@@ -319,25 +352,22 @@ test("pair list and remove via signed HTTP", async () => {
   const peerOpLabel = "org.openclaw.peer-list";
   const owner = privateKeyToAccount(ANVIL_DEFAULT_KEY);
 
-  // Register peer operator (no bot required for list/remove)
-  const account3 = privateKeyToAccount(ANVIL_KEY_3);
-  const funder = createWalletClient({
-    account: privateKeyToAccount(ANVIL_DEFAULT_KEY),
+  // Dedicated Anvil key so this can run concurrent with the one-way pair test.
+  const account4 = privateKeyToAccount(ANVIL_KEY_4);
+  const wallet4 = createWalletClient({
+    account: account4,
     chain: foundry,
     transport: http(h.rpcUrl),
   });
-  await funder.sendTransaction({ to: account3.address, value: 10n ** 18n });
-  const wallet3 = createWalletClient({
-    account: account3,
-    chain: foundry,
-    transport: http(h.rpcUrl),
-  });
-  await wallet3.writeContract({
-    address: h.registry,
-    abi: clankerIdentityAbi,
-    functionName: "registerOperator",
-    args: [peerOpLabel],
-  });
+  await waitMined(
+    h.pc,
+    await wallet4.writeContract({
+      address: h.registry,
+      abi: clankerIdentityAbi,
+      functionName: "registerOperator",
+      args: [peerOpLabel],
+    }),
+  );
 
   const addNonce = await fetch(
     `${h.mqttUrl}/pair-nonce?operator_id=${encodeURIComponent(h.operatorLabel)}&action=add&peer_label=${encodeURIComponent(peerOpLabel)}`,
@@ -413,17 +443,60 @@ test("mutual pair unlocks dm/{a}::{b} ACL", async () => {
   if (skip) return;
   const h = harness!;
 
-  // Reuse cross-operator bots from the one-way pair test; complete mutual allow.
-  const peerOpLabel = "org.openclaw.peer-pair";
-  const peerBotId = "openclaw.peer.pair-bot";
+  // Self-contained: do not rely on the one-way pair test having run first.
+  const peerOpLabel = "org.openclaw.peer-mutual";
+  const peerBotId = "openclaw.peer.mutual-bot";
   const left = h.botId;
   const right = peerBotId;
+  const peerOwner = privateKeyToAccount(ANVIL_KEY_5);
+  const wallet5 = createWalletClient({
+    account: peerOwner,
+    chain: foundry,
+    transport: http(h.rpcUrl),
+  });
+  await waitMined(
+    h.pc,
+    await wallet5.writeContract({
+      address: h.registry,
+      abi: clankerIdentityAbi,
+      functionName: "registerOperator",
+      args: [peerOpLabel],
+    }),
+  );
+  const peerOpId = keccak256(toBytes(peerOpLabel));
+  await waitMined(
+    h.pc,
+    await wallet5.writeContract({
+      address: h.registry,
+      abi: clankerIdentityAbi,
+      functionName: "registerBot",
+      args: [peerOpId, peerBotId, peerOwner.address],
+    }),
+  );
+
+  const owner = privateKeyToAccount(ANVIL_DEFAULT_KEY);
+  const forwardNonce = await fetch(
+    `${h.mqttUrl}/pair-nonce?operator_id=${encodeURIComponent(h.operatorLabel)}&action=add&peer_label=${encodeURIComponent(peerOpLabel)}`,
+  );
+  expect(forwardNonce.status).toBe(200);
+  const forwardBody = (await forwardNonce.json()) as { nonce: string; message: string };
+  const forwardSig = await owner.signMessage({ message: forwardBody.message });
+  const forwardRes = await fetch(`${h.mqttUrl}/pair`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      operator_id: h.operatorLabel,
+      peer_label: peerOpLabel,
+      action: "add",
+      nonce: forwardBody.nonce,
+      signature: forwardSig,
+    }),
+  });
+  expect(forwardRes.status).toBe(200);
 
   const segment = [left, right].sort().join("::");
   const dmTopic = `dm/${segment}/coordination`;
 
-  // Ensure reverse allow so isMutual holds (forward already set in prior test).
-  const peerOwner = privateKeyToAccount(ANVIL_KEY_3);
   const n = await fetch(
     `${h.mqttUrl}/pair-nonce?operator_id=${encodeURIComponent(peerOpLabel)}&action=add&peer_label=${encodeURIComponent(h.operatorLabel)}`,
   );
