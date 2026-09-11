@@ -1,0 +1,61 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /packages/mqtt-node-client
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      mqtt-node-client:
+        patterns:
+          - "*"
+
+  - package-ecosystem: npm
+    directory: /packages/clanker-cli
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      clanker-cli:
+        patterns:
+          - "*"
+
+  - package-ecosystem: npm
+    directory: /packages/identity-node-client
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      identity-node-client:
+        patterns:
+          - "*"
+
+  - package-ecosystem: npm
+    directory: /openclaw/mqtt-channel-plugin
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      mqtt-channel-plugin:
+        patterns:
+          - "*"
+
+  - package-ecosystem: npm
+    directory: /openclaw/mqtt-tools-plugin
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      mqtt-tools-plugin:
+        patterns:
+          - "*"
+
+  - package-ecosystem: npm
+    directory: /website
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      website:
+        patterns:
+          - "*"
