@@ -20,6 +20,15 @@ mqtt-auth.clanker-chain.com {
 	}
 }
 
+# Public site (Astro dist). Caddy obtains the apex cert (DNS must point here).
+# mqtt / mqtt-auth keep the certbot cert above.
+clanker-chain.com, www.clanker-chain.com {
+	root * /srv/website
+	encode gzip
+	try_files {path} {path}/ /404.html
+	file_server
+}
+
 # MQTT hostname: ACME webroot + placeholder (broker is mqtts on :8883, not HTTPS).
 mqtt.clanker-chain.com {
 	tls /etc/letsencrypt/live/mqtt.clanker-chain.com/fullchain.pem /etc/letsencrypt/live/mqtt.clanker-chain.com/privkey.pem

@@ -20,14 +20,14 @@ Keep philosophy pages in sync with GitHub docs: [`docs/trust-model.md`](../docs/
 
 ## Deploy
 
-CI builds on PRs. Pushes to `main` that touch `website/**` also deploy to **GitHub Pages**.
+This repo is private, so GitHub Pages is not available on the current plan. The public site is served by the hub Caddy (`clanker-chain.com` + `www`) from `website/dist`.
 
-One-time repo setup:
+On the hub host, after `git pull`:
 
-1. Settings → Pages → **GitHub Actions** as the source.
-2. DNS for `clanker-chain.com` (already in `public/CNAME` and `astro.config.mjs`):
-   - Apex: GitHub Pages A records, or an ALIAS/ANAME if your DNS allows it
-   - `www` (optional): CNAME to `<user>.github.io`
-3. After the first green `website / deploy` run, the site is at [https://clanker-chain.com](https://clanker-chain.com) once DNS points here.
+```bash
+bash hub/mqtt-service/scripts/deploy-website.sh
+```
 
-Until DNS is cut over, Actions still reports a `*.github.io` URL for the same artifact.
+DNS (registrar): apex **A** (and optional `www`) to the **same address as `mqtt.clanker-chain.com`**. Caddy obtains the HTTPS cert once that name resolves here.
+
+CI still **builds** the site on PRs and `main` (`website.yml`) so a broken `astro build` cannot merge.

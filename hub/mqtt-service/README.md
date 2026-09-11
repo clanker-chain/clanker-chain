@@ -39,6 +39,8 @@ docker compose -f docker-compose.public.yml --env-file .env up -d --build
 
 Typical public ports: **8883** (mqtts), **80/443** (Caddy). Do **not** expose plain `1883` / `9090` on the internet. Mosquitto should call `/auth` and `/acl` only on the internal Docker network.
 
+The marketing site (`clanker-chain.com`) is the same Caddy, serving `website/dist`. After pulling site changes: `bash scripts/deploy-website.sh` (from repo root: `bash hub/mqtt-service/scripts/deploy-website.sh`). Point the apex at this host before the first HTTPS cert can issue.
+
 Renew certs with `./scripts/renew-certs.sh` (e.g. monthly cron). After first boot, ensure the `mosquitto_data` volume is writable by Mosquitto if persistence logs `Permission denied`.
 
 Experimental shared Sepolia endpoints (invite-only): see [`docs/public-testnet-hub.md`](../docs/public-testnet-hub.md).

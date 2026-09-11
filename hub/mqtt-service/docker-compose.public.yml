@@ -57,6 +57,7 @@ services:
       - caddy_config:/config
       - letsencrypt:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
+      - ../../website/dist:/srv/website:ro
     depends_on:
       mqtt-auth:
         condition: service_healthy
