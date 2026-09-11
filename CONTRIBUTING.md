@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Node.js 20+ (CLI / libs); Node 22+ for `website/`
+- Node.js 20+ (CLI / libs). Node 22+ for `website/`
 - Bun (mqtt-auth-service and some CI lanes)
 - Foundry (`forge`, `cast`, `anvil`) for `chain/`
 
@@ -21,11 +21,11 @@ cd website && npm ci && npm run build
 
 ## Packages
 
-Published packages use **CalVer** — see [`docs/VERSIONING.md`](docs/VERSIONING.md). Prefer exact pins between packages. Tag-triggered GitHub Actions publish `@clanker-chain/*` packages; do not re-tag deprecated plugins (`mqtt-plugin`, `identity-plugin`).
+Published packages use **CalVer**. See [`docs/VERSIONING.md`](docs/VERSIONING.md). Prefer exact pins between packages. Tag-triggered GitHub Actions publish `@clanker-chain/*` packages. Do not re-tag deprecated plugins (`mqtt-plugin`, `identity-plugin`).
 
 ## Identity vs products
 
-`ClankerIdentity` is a **public-good Facts registry**. Other products should be able to adopt it without this repo’s MQTT hub or OpenClaw plugins. MQTT, pairing, hub ACLs, and any harness adapter are **products** that *use* identity — including the ones we ship on day one.
+`ClankerIdentity` is a **public-good Facts registry**. Other products should be able to adopt it without this repo’s MQTT hub or OpenClaw plugins. MQTT, pairing, hub ACLs, and any harness adapter are **products** that *use* identity, including the ones we ship on day one.
 
 **Facts · Policy · Transport** ([`docs/trust-model.md`](docs/trust-model.md)) is an invariant. Persistence of that split is the contribution bar:
 
@@ -45,6 +45,6 @@ By participating, you agree to uphold the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Pull requests
 
-- Keep PRs focused; include a short test plan.
+- Keep PRs focused. Include a short test plan.
 - Do not force-push to `main` (maintainers may rewrite history once before going public).
 - Do not commit secrets or `.env` files.

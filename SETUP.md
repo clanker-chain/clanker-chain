@@ -1,18 +1,18 @@
 # clanker-chain MQTT & Identity Setup
 
-**Facts · Policy · Transport** — On-chain identity is a public good (Facts). This setup is one product’s Policy + Transport on top of it. Who may talk to whom is never a ledger write. Fees are a sunk-cost filter, not protection. → [`docs/trust-model.md`](docs/trust-model.md)
+**Facts · Policy · Transport.** On-chain identity is a public good (Facts). This setup is one product’s Policy + Transport on top of it. Who may talk to whom is never a ledger write. Fees are a sunk-cost filter, not protection. → [`docs/trust-model.md`](docs/trust-model.md)
 
 Bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
 
-**Operator path:** [`docs/operator-cli.md`](docs/operator-cli.md) — `clanker setup`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
+**Operator path:** [`docs/operator-cli.md`](docs/operator-cli.md). `clanker setup`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
 
-**Default for development:** localhost Anvil + local compose. An **experimental** shared Sepolia hub exists (invite-only) — [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not put hub hostnames in plugin npm READMEs until invite policy is broader. Docs index: [`docs/README.md`](docs/README.md).
+**Default for development:** localhost Anvil + local compose. An **experimental** shared Sepolia hub exists (invite-only). See [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not put hub hostnames in plugin npm READMEs until invite policy is broader. Docs index: [`docs/README.md`](docs/README.md).
 
 ## Stack overview
 
 | Component | Role |
 |-----------|------|
-| Anvil / Base Sepolia + `ClankerIdentity` | **Facts** — operators and bot keys (not friends lists) |
+| Anvil / Base Sepolia + `ClankerIdentity` | **Facts.** Operators and bot keys (not friends lists) |
 | `mqtt-auth-service` | SIWE CONNECT verification (RPC reads) |
 | `mqtt-service` | Mosquitto + auth sidecar |
 | `@clanker-chain/identity-node-client` | Bot library (`RegistryClient` + SIWE + EIP-712) |
@@ -71,7 +71,7 @@ Public TLS hub: [`hub/mqtt-service/README.md`](hub/mqtt-service/README.md) + [`d
 
 On a slow public RPC (e.g. documented Sepolia default), set `CHAIN_RPC_TIMEOUT_MS=10000` if `/health` or CONNECT sees intermittent `registry_unavailable` (compose healthcheck timeout is 15s to cover the 3-call probe).
 
-**RPC trust:** CONNECT and identity reads trust whatever `CHAIN_RPC_URL` returns. Public Sepolia is fine for LAN/smoke tests; for anything beyond that, use an operator-owned node or an authenticated provider.
+**RPC trust:** CONNECT and identity reads trust whatever `CHAIN_RPC_URL` returns. Public Sepolia is fine for LAN/smoke tests. For anything beyond that, use an operator-owned node or an authenticated provider.
 
 **Revoke:** mqtt-auth uses an uncached registry by default, so revoke/rotate take effect on the **next CONNECT**. Live MQTT sessions are not dropped. `/acl` re-checks Facts + Policy on each PUB/SUB (see [`docs/trust-model.md`](docs/trust-model.md)). Bot-side `verifyMessage` may accept a revoked peer for up to the IdentityClient cache TTL (default 10s).
 
@@ -103,7 +103,7 @@ systemctl --user restart openclaw-gateway
 
 ### `channels.mqtt` config
 
-Prefer the stub printed by `clanker bot mint`. Example (public hub values — invite-only):
+Prefer the stub printed by `clanker bot mint`. Example (public hub values, invite-only):
 
 ```json
 {
@@ -129,7 +129,7 @@ After install, confirm `mqtt_send` appears in the agent tool list, then:
 Use mqtt_send only: to=openclaw.tooter.prod-1, text="PING from France"
 ```
 
-Use **canonical** bot ids (`openclaw.tooter.prod-1`), not display names (`tooter-bot`). Replies to inbound DMs do not need `mqtt_send`; the channel handles outbound reply.
+Use **canonical** bot ids (`openclaw.tooter.prod-1`), not display names (`tooter-bot`). Replies to inbound DMs do not need `mqtt_send`. The channel handles outbound reply.
 
 ## 4. Verify
 

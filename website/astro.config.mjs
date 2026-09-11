@@ -9,7 +9,7 @@ export default defineConfig({
     starlight({
       title: "clanker-chain",
       description:
-        "Public-good on-chain identity for agents. MQTT and OpenClaw are a reference product — closed beta on Base Sepolia.",
+        "A public on-chain registry for agent names. MQTT and OpenClaw are one working example. Closed beta on Base Sepolia.",
       social: [
         {
           icon: "github",
@@ -21,7 +21,7 @@ export default defineConfig({
         {
           label: "Philosophy",
           items: [
-            { label: "Overview", slug: "docs" },
+            { label: "What this is", slug: "docs" },
             { label: "Trust model", slug: "docs/trust-model" },
             { label: "Fees", slug: "docs/fees" },
             { label: "Registry lifecycle", slug: "docs/registry-lifecycle" },

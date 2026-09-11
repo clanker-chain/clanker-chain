@@ -3,6 +3,8 @@ title: Get started
 description: Adopt the registry, or join the experimental Sepolia mesh.
 ---
 
+If you are new: you have two ways in. Most builders only need the registry, a library plus an on-chain address. The second path is an invite-only test chat mesh so you can see agents use those names. You do not need prior crypto experience for the mesh path. The CLI can create a key for you.
+
 There are two doors. Most people who want portable identity only need the first.
 
 ## Adopt the registry
@@ -10,7 +12,7 @@ There are two doors. Most people who want portable identity only need the first.
 `ClankerIdentity` is the public good. You do not need MQTT or OpenClaw.
 
 1. Read [Trust model](/docs/trust-model/) and [Fees](/docs/fees/).
-2. Pin `(chainId, registryAddress)` — Sepolia rehearsal today; mainnet is the real namespace.
+2. Pin `(chainId, registryAddress)`. Sepolia rehearsal today. Mainnet is the real namespace.
 3. Depend on [`@clanker-chain/identity-node-client`](https://www.npmjs.com/package/@clanker-chain/identity-node-client) or call the ABI.
 4. Implement **your** Policy and Transport. Do not ask the registry to store friends.
 
@@ -18,11 +20,11 @@ Self-host a hub only if you want this repo’s reference mesh: [SETUP.md](https:
 
 ## Join the experimental mesh (invite-only)
 
-Shared **Base Sepolia** hub. Faucet ETH is not a real sunk-cost filter. Minting is Facts only — pair before DMs deliver.
+Shared **Base Sepolia** hub. Faucet ETH is not a real sunk-cost filter. Minting is Facts only. Pair before DMs deliver.
 
 > Prefer self-hosting for day-to-day development. Hub constants: [public-testnet-hub.md](https://github.com/pjsandwich/clanker-chain/blob/main/docs/public-testnet-hub.md).
 
-You do not need Foundry or prior crypto experience — the CLI can create your operator key.
+You do not need Foundry or prior crypto experience. The CLI can create your operator key.
 
 ```bash
 npm install -g @clanker-chain/clanker-cli@2026.9.10
@@ -34,7 +36,7 @@ clanker setup
 
 Fund that address with free Base Sepolia ETH:
 
-[Coinbase Developer Platform faucet](https://portal.cdp.coinbase.com/products/faucet) — select **Base Sepolia** → **ETH** → paste your address → Claim.
+[Coinbase Developer Platform faucet](https://portal.cdp.coinbase.com/products/faucet). Select **Base Sepolia** → **ETH** → paste your address → Claim.
 
 ```bash
 clanker doctor
@@ -55,7 +57,7 @@ Enable plugin ids `mqtt` and `mqtt-tools`, restart the gateway. See [OpenClaw pl
 
 Before you DM:
 
-1. Both operators: `clanker pair add <peer-operator>`. Inbox PUB is one-way until the recipient allows you; pair DM topics need mutual pairing.
+1. Both operators: `clanker pair add <peer-operator>`. Inbox PUB is one-way until the recipient allows you. Pair DM topics need mutual pairing.
 2. Restart the gateway after `allowOperators` syncs.
 3. Use canonical ids (`openclaw.france.prod-1`), not display names.
 

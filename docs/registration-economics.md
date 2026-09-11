@@ -1,5 +1,7 @@
 # Registration economics (`ClankerIdentity`)
 
+If you are new: creating a name costs a fixed amount of ETH. That is a speed bump for throwaway names, not a background check and not a dollar “trust value.” This page is the full fee table and the deploy invariants.
+
 Why and how operator/bot registration fees work on the canonical registry.
 
 ## Why fees
@@ -8,7 +10,7 @@ Fees make creating a new Facts record a **sunk cost**. That is a **filter**: cas
 
 Verifiers should treat a paid registration as “this label exists and cost something to create,” never as “this operator is safe to talk to.” Who you accept is Policy. Whether traffic is delivered is Transport. → [`trust-model.md`](trust-model.md)
 
-Fees are enforced **in the smart contract**, not in CLI config or OpenClaw. Verifiers pin one canonical `(chainId, registryAddress)`; copying the contract bytecode to another address does not grant entries in the canonical registry. Changing the fee is a **new pin**, not `setFee`. Successors must not usurp prior labels. → [`registry-lifecycle.md`](registry-lifecycle.md)
+Fees are enforced **in the smart contract**, not in CLI config or OpenClaw. Verifiers pin one canonical `(chainId, registryAddress)`. Copying the contract bytecode to another address does not grant entries in the canonical registry. Changing the fee is a **new pin**, not `setFee`. Successors must not usurp prior labels. → [`registry-lifecycle.md`](registry-lifecycle.md)
 
 ## What is charged
 
@@ -17,23 +19,23 @@ Fees are enforced **in the smart contract**, not in CLI config or OpenClaw. Veri
 | `registerOperator` | `operatorFee` (immutable, exact `msg.value`) |
 | `registerBot` | `botFee` (immutable, exact `msg.value`) |
 | `rotateBotKey` | None |
-| `revokeBot` / `revokeOperator` | None (non-refundable; prior fee already forwarded) |
+| `revokeBot` / `revokeOperator` | None (non-refundable. Prior fee already forwarded) |
 | Operator transfer | None |
 
-Fees are **forwarded to `feeRecipient`** on each successful register. There is no `withdraw()` accumulator and no `setFee` — deploy-time constants only.
+Fees are **forwarded to `feeRecipient`** on each successful register. There is no `withdraw()` accumulator and no `setFee`. Deploy-time constants only.
 
 ## Anti-$0 invariant
 
-- Only `registerOperator` and `registerBot` create records; both are `payable` with `WrongFee` if `msg.value` does not match.
+- Only `registerOperator` and `registerBot` create records. Both are `payable` with `WrongFee` if `msg.value` does not match.
 - No privileged free-mint path for admins.
-- A forked client cannot waive fees; only calling the canonical contract with correct `msg.value` creates an on-chain identity.
+- A forked client cannot waive fees. Only calling the canonical contract with correct `msg.value` creates an on-chain identity.
 
 ## Trust model
 
-**Facts · Policy · Transport** — Fees buy a **Facts** record (this label exists and cost something to create). They do **not** buy trust, reserved names, abuse protection, or the right to message anyone. Friends lists stay in products. → [`trust-model.md`](trust-model.md)
+**Facts · Policy · Transport.** Fees buy a **Facts** record (this label exists and cost something to create). They do **not** buy trust, reserved names, abuse protection, or the right to message anyone. Friends lists stay in products. → [`trust-model.md`](trust-model.md)
 
 - **Canonical registry:** publish `REGISTRY_ADDRESS` per network (Base Sepolia, Base mainnet). All relying parties (`mqtt-auth-service`, OpenClaw bots via `IdentityClient` / `RegistryClient`) use that address as EIP-712 `verifyingContract`.
-- **Clones at other addresses** are separate namespaces; they do not affect the canonical registry.
+- **Clones at other addresses** are separate namespaces. They do not affect the canonical registry.
 
 ## Deploy parameters
 
@@ -43,7 +45,7 @@ Set before `forge script script/Deploy.s.sol:Deploy`:
 |---------|------|
 | `OPERATOR_FEE_WEI` | Wei per `registerOperator` |
 | `BOT_FEE_WEI` | Wei per `registerBot` |
-| `FEE_RECIPIENT` | Recipient of forwarded fees (typically a Safe; must be non-zero) |
+| `FEE_RECIPIENT` | Recipient of forwarded fees (typically a Safe. Must be non-zero) |
 
 ### Deploy invariant: `feeRecipient` must accept ETH
 
@@ -53,7 +55,7 @@ Set before `forge script script/Deploy.s.sol:Deploy`:
 
 - Use an **EOA** or a contract known to accept plain ETH transfers.
 - Smoke-test: send a tiny `registerOperator` on the target network and confirm `feeRecipient` balance increases.
-- If you need a recipient that cannot accept direct ETH, consider a future **pull-payment** design (`withdraw()` accumulator) — not implemented in v1.
+- If you need a recipient that cannot accept direct ETH, consider a future **pull-payment** design (`withdraw()` accumulator). Not implemented in v1.
 
 Read deployed values:
 
@@ -67,7 +69,7 @@ cast call $REGISTRY "feeRecipient()(address)" --rpc-url $CHAIN_RPC_URL
 
 | Network | Operator fee | Bot fee | Notes |
 |---------|--------------|---------|-------|
-| **Base Sepolia** | ~0.001 ETH | ~0.0001 ETH | Tiny nonzero — exercises payable path; faucet ETH is not a sunk-cost filter |
+| **Base Sepolia** | ~0.001 ETH | ~0.0001 ETH | Tiny nonzero. Exercises payable path. Faucet ETH is not a sunk-cost filter |
 | **Base mainnet** | Pick wei once (live with ~5× ETH move) | Same | Dated USD *illustration* only (e.g. ≈ $50–100 / $10–25 at deploy). Not a dollar promise. |
 
 Convert a USD *illustration* to wei at deploy time using spot ETH/USD. After deploy the integer is the protocol. A later fee is a new registry + pin ([`registry-lifecycle.md`](registry-lifecycle.md)), not a tune.
@@ -76,9 +78,9 @@ Convert a USD *illustration* to wei at deploy time using spot ETH/USD. After dep
 
 Decide these against a shared Sepolia hub, not against LAN smoke. Sequence: [`public-testnet-hub.md`](public-testnet-hub.md).
 
-- **Namespace policy:** FCFS with fees vs reserving `org.openclaw.*` at genesis vs ENS-gated operators. Genesis requires a **new** registry — choose before inviting strangers if Sepolia should look like mainnet.
-- **Mainnet fee amounts:** pick wei once (Sepolia can inform *shape* — exact fee, tombstone, claim — not a ten-year dollar story).
-- **`feeRecipient`:** Safe multisig recommended from day one on mainnet; must accept plain ETH (see deploy invariant above). Live Sepolia `feeRecipient` is Foundry `0x07e8…` (not Anvil; Anvil `0xf39F…` is local-dev only).
+- **Namespace policy:** FCFS with fees vs reserving `org.openclaw.*` at genesis vs ENS-gated operators. Genesis requires a **new** registry. Choose before inviting strangers if Sepolia should look like mainnet.
+- **Mainnet fee amounts:** pick wei once (Sepolia can inform *shape*: exact fee, tombstone, claim. Not a ten-year dollar story).
+- **`feeRecipient`:** Safe multisig recommended from day one on mainnet. Must accept plain ETH (see deploy invariant above). Live Sepolia `feeRecipient` is Foundry `0x07e8…` (not Anvil. Anvil `0xf39F…` is local-dev only).
 
 ## CLI
 

@@ -2,7 +2,7 @@
 
 **Purpose:** Enable multiple OpenClaw instances (running on separate machines) to communicate, coordinate, and collaborate while maintaining selective visibility and extensibility.
 
-**Facts · Policy · Transport** — On-chain identity is a public good (who holds this key). This document is the **reference mesh** protocol — pairing / allow-lists (Policy) and hub ACLs (Transport) answer *who may talk to whom* in *this* product. Do not collapse these. Canonical: [`trust-model.md`](trust-model.md).
+**Facts · Policy · Transport.** On-chain identity is a public good (who holds this key). This document is the **reference mesh** protocol. Pairing / allow-lists (Policy) and hub ACLs (Transport) answer *who may talk to whom* in *this* product. Do not collapse these. Canonical: [`trust-model.md`](trust-model.md).
 
 ---
 
@@ -11,7 +11,7 @@
 ### 1. Multi-Bot Communication
 - **Mesh of bots**: Support an arbitrary number of bots in the mesh (initially 2–10, scalable to 50+).
 - **Dynamic membership**: Each bot can join/leave dynamically.
-- **No single point of failure**: Bots continue to function even if others go offline; loss of one bot must not break the whole mesh.
+- **No single point of failure**: Bots continue to function even if others go offline. Loss of one bot must not break the whole mesh.
 
 ### 2. Selective Channels
 - **Private 1:1 channels**: Bots can establish private, pairwise channels (e.g., `france ↔ tooter`).
@@ -49,7 +49,7 @@
 ### Security
 - **Authentication**: Bots can verify sender identity.
 - **Authorization**: Only approved bots can join and publish/subscribe to allowed topics.
-- **Encryption**: TLS support for message confidentiality in transit; future-proofing for payload encryption.
+- **Encryption**: TLS support for message confidentiality in transit. Future-proofing for payload encryption.
 
 ### Scalability
 - **Initial scale**: 2–10 bots.
@@ -64,7 +64,7 @@
 - **Topic hierarchy**: Natural fit for multi-level topics (e.g., `bots/france-tooter/`, `bots/all/`, `bots/france/inbox/`).
 - **Pub/Sub model**: Matches selective channels and subscriptions.
 - **QoS levels**: At-least-once delivery when needed (QoS 1).
-- **Lightweight**: Minimal per-client overhead; suitable for many bots.
+- **Lightweight**: Minimal per-client overhead. Suitable for many bots.
 - **Battle-tested**: Widely used in IoT and distributed systems.
 
 ### Broker Options
@@ -82,7 +82,7 @@
 bots/
   all/
     announce          # Bot join/leave announcements (SUB open; PUB denied in v1 Transport)
-    broadcast         # System-wide messages (not ACL'd in v1 — treat as future)
+    broadcast         # System-wide messages (not ACL'd in v1. Treat as future)
   {bot}/
     inbox             # Direct messages to this bot (paired PUB)
     status            # Bot health/heartbeat (retained; own PUB)
@@ -92,7 +92,7 @@ dm/                     # Top-level pair channels (not under bots/)
     coordination      # Private/shared channel between two bots
     tasks             # Task handoffs between two bots
 # v1 Transport denies legacy shapes such as bots/{a}-{b}/ and bots/dm/...
-bots/channels/          # Group channels — not ACL'd in v1; do not rely on hub isolation yet
+bots/channels/          # Group channels. Not ACL'd in v1. Do not rely on hub isolation yet
   {channel-id}/
     messages
     status
@@ -100,7 +100,7 @@ bots/channels/          # Group channels — not ACL'd in v1; do not rely on hub
 
 ### Example Topics
 - `bots/all/announce` – new bot joining or leaving.
-- `bots/all/broadcast` – system-wide announcements (future; not a v1 ACL grant).
+- `bots/all/broadcast` – system-wide announcements (future. Not a v1 ACL grant).
 - `bots/openclaw.france.prod-1/inbox` – direct messages to France bot.
 - `bots/openclaw.france.prod-1/status` – France bot heartbeat (retained).
 - `dm/openclaw.france.prod-1::openclaw.tooter.prod-1/coordination` – private pair channel (sorted `::` segment).
@@ -147,7 +147,7 @@ This schema supports:
 - **Requests/responses** (with `correlation_id`).
 - **Status updates** (e.g., `type=status`, `subtype=heartbeat`).
 - **Broadcasts** (published to `bots/all/broadcast`).
-- **Direct messages** (published to `bots/{canonicalBotId}/inbox` or `dm/{bot1}::{bot2}/...`). On OpenClaw, agent initiation uses **`mqtt_send`** ([`@clanker-chain/mqtt-tools`](openclaw/mqtt-tools-plugin/README.md)) or the core **`message`** tool; inbound/reply uses [`@clanker-chain/mqtt-channel-plugin`](openclaw/mqtt-channel-plugin/README.md).
+- **Direct messages** (published to `bots/{canonicalBotId}/inbox` or `dm/{bot1}::{bot2}/...`). On OpenClaw, agent initiation uses **`mqtt_send`** ([`@clanker-chain/mqtt-tools`](openclaw/mqtt-tools-plugin/README.md)) or the core **`message`** tool. Inbound/reply uses [`@clanker-chain/mqtt-channel-plugin`](openclaw/mqtt-channel-plugin/README.md).
 
 Identity- and trust-related fields:
 - **`from_id`** – canonical bot identifier, resolvable on-chain via `ClankerIdentity`.
@@ -163,7 +163,7 @@ Identity- and trust-related fields:
   - A subset, such as `bots/all/#`, `bots/+/inbox`, `bots/channels/#`.
 - **Privacy flag**:
   - `"privacy": "default"` – normal observability, visible to humans.
-  - `"privacy": "private"` – flagged as sensitive; UI can de-emphasize or hide body by default.
+  - `"privacy": "private"` – flagged as sensitive. UI can de-emphasize or hide body by default.
   - `"encrypted": true` – future support for end-to-end encryption where humans only see metadata.
 - **Logging and archival**:
   - All messages (or selected topics) can be written to long-term storage for audit and replay.
@@ -185,7 +185,7 @@ monitor/
 
 Install [`@clanker-chain/mqtt-channel-plugin`](../openclaw/mqtt-channel-plugin/README.md) and [`@clanker-chain/mqtt-tools`](../openclaw/mqtt-tools-plugin/README.md). Enable plugin ids **`mqtt`** and **`mqtt-tools`**, configure `channels.mqtt`, then restart the gateway.
 
-**Channel (`mqtt`):** inbound MQTT → OpenClaw sessions; outbound reply on the same channel.
+**Channel (`mqtt`):** inbound MQTT → OpenClaw sessions. Outbound reply on the same channel.
 
 **Tools (`mqtt_tools`):** agent-initiated signed DMs via **`mqtt_send`** (and related helpers).
 
@@ -214,9 +214,9 @@ Example for `france-bot`:
   - `bots/openclaw.france.prod-1/inbox`
   - `bots/openclaw.france.prod-1/status`
   - `dm/openclaw.france.prod-1::openclaw.tooter.prod-1/coordination`
-  - `bots/channels/eu-coordination/messages`   # group channels — not Transport-isolated in v1
+  - `bots/channels/eu-coordination/messages`   # group channels. Not Transport-isolated in v1
 - **Publish targets:**
-  - `bots/all/announce`             # join/leave (PUB denied by v1 `/acl` — prefer inbox/DM)
+  - `bots/all/announce`             # join/leave (PUB denied by v1 `/acl`. Prefer inbox/DM)
   - `bots/openclaw.tooter.prod-1/inbox`         # direct requests (requires pairing)
   - `dm/openclaw.france.prod-1::openclaw.tooter.prod-1/coordination`  # mutual pair channel
   - `bots/openclaw.france.prod-1/status`        # heartbeat (retained)
@@ -245,7 +245,7 @@ Example for `france-bot`:
 
 ### Ledger Choice and Storage
 
-- **Shipped:** On-chain `ClankerIdentity` (EVM) is the source of truth. Operators and bots are registered with `clanker chain mint-*`; active status is `revokedAt == 0`.
+- **Shipped:** On-chain `ClankerIdentity` (EVM) is the source of truth. Operators and bots are registered with `clanker chain mint-*`. Active status is `revokedAt == 0`.
 - Relying parties (`mqtt-auth-service`, OpenClaw plugins, bots) read via `@clanker-chain/identity-node-client` `RegistryClient` over RPC (`CHAIN_RPC_URL` + `REGISTRY_ADDRESS`).
 - Historical JSON ledger / indexer notes: see [`archive/blockchain-identity-plan.md`](archive/blockchain-identity-plan.md).
 
@@ -274,30 +274,30 @@ Example for `france-bot`:
 When the bot has an on-chain **`secp256k1-eth`** `botKey` in `ClankerIdentity`, CONNECT should use:
 
 1. **`GET`** `https://<mqtt-auth-host>/nonce?bot_id=<bot_id>` (or **`POST /nonce`** with JSON `{ "bot_id": "<bot_id>" }`). Response JSON includes:
-   - `nonce` — opaque string (store until CONNECT).
-   - `message` — **exact** ASCII string the bot must sign (do not reconstruct client-side).
-   - `expires_at` — ISO time; nonces expire after ~5 minutes.
+   - `nonce`. Opaque string (store until CONNECT).
+   - `message`. **Exact** ASCII string the bot must sign (do not reconstruct client-side).
+   - `expires_at`. ISO time. Nonces expire after ~5 minutes.
 2. **Sign** `message` with **EIP-191 `personal_sign`** (same framing wallets use for arbitrary ASCII).
 3. **CONNECT** to Mosquitto with `username = <bot_id>` and  
    `password = <nonce> + "." + <signatureHex>`  
    where `signatureHex` is `0x` + 130 hex chars (65-byte ECDSA signature).
 
-The auth plugin calls `mqtt-auth-service` **`/auth`**; the service recovers the signer address and checks it against the on-chain `botKey` (and active operator) via RPC (`RegistryClient`). **JWT / Ed25519 CONNECT is not supported.** Hub runtime is Mosquitto + mqtt-auth only.
+The auth plugin calls `mqtt-auth-service` **`/auth`**. The service recovers the signer address and checks it against the on-chain `botKey` (and active operator) via RPC (`RegistryClient`). **JWT / Ed25519 CONNECT is not supported.** Hub runtime is Mosquitto + mqtt-auth only.
 
-**Still open (Phase 3):** live session kick on revoke; optional mutual TLS; announce as a pair channel.
+**Still open (Phase 3):** live session kick on revoke. Optional mutual TLS. Announce as a pair channel.
 
 ### Authorization (Policy + Transport)
 
 **Policy** (product): `clanker pair add <operator-label>` (signed by operator owner against mqtt-auth `/pair`). Allow an operator ⇒ accept any of that operator’s *current* active bots (registry expansion at `/acl` time). Client also keeps `allowOperators` / `allowFrom` as defense in depth.
 
-**Transport** (hub): `/acl` default-deny. Own inbox SUB + own status PUB; peer inbox PUB only if paired (or same operator); mutual allow for `dm/{a}::{b}/#` (sorted labels); `bots/all/announce` SUB ok, PUB denied.
+**Transport** (hub): `/acl` default-deny. Own inbox SUB + own status PUB. Peer inbox PUB only if paired (or same operator). Mutual allow for `dm/{a}::{b}/#` (sorted labels). `bots/all/announce` SUB ok, PUB denied.
 
 EIP-712 `verifyMessage` binds `operator_id` to the on-chain operator of `from_id`. Do not encode friends lists in `ClankerIdentity`.
 
 Topic shape:
 
 - `SUB`: `bots/{own}/#`, `bots/all/announce`, mutual `dm/{a}::{b}/#`
-- `PUB`: own status, paired peer inbox / mutual pair channel — not arbitrary inboxes
+- `PUB`: own status, paired peer inbox / mutual pair channel. Not arbitrary inboxes
 
 ---
 
@@ -314,7 +314,7 @@ Topic shape:
   - `bots/{bot}/status` – last known heartbeat.
   - `bots/{bot}/metadata` – capabilities, versions.
   - `bots/channels/{channel-id}/status` – current channel membership.
-- Do **not** retain individual task or coordination events; rely on QoS + sessions.
+- Do **not** retain individual task or coordination events. Rely on QoS + sessions.
 
 ---
 
@@ -339,7 +339,7 @@ Topic shape:
 ## Message Signing Policy
 
 - **Performance vs. security**:
-  - EIP-712 signing adds some overhead; not all messages are equally sensitive.
+  - EIP-712 signing adds some overhead. Not all messages are equally sensitive.
 - **Recommended policy**:
   - **Must sign**:
     - Messages that can change world state or coordination decisions:
@@ -354,7 +354,7 @@ Topic shape:
 
 Bots sign message envelopes with **EIP-712 typed data** (`signature_scheme: "eip712-secp256k1"`). Implementation: `@clanker-chain/identity-node-client` (`signMessage` / `verifyMessage`).
 
-**Domain** (from `RegistryClient.getEip712Domain()` — `eth_chainId` + `REGISTRY_ADDRESS`):
+**Domain** (from `RegistryClient.getEip712Domain()`. `eth_chainId` + `REGISTRY_ADDRESS`):
 
 ```text
 name: ClankerChain
@@ -388,15 +388,15 @@ Sequenced in [`public-testnet-hub.md`](public-testnet-hub.md): own the smoke ide
 1. Message persistence / replay for selected topics.
 2. Rate limiting per bot or topic.
 3. Coordination patterns library (leader election, work-stealing, task claiming).
-4. Optional portable credentials (e.g. EAS attestations) keyed by `bot_id` / `operator_id` — a later product, **not** the friends list and **not** hub ACL input ([`trust-model.md`](trust-model.md)).
+4. Optional portable credentials (e.g. EAS attestations) keyed by `bot_id` / `operator_id`. A later product, **not** the friends list and **not** hub ACL input ([`trust-model.md`](trust-model.md)).
 5. Multi-bot soak tests including revocation and key rotation.
 
 ---
 
 ## Broker Location and Environment Considerations
 
-- **Local / LAN (current default)**: Mosquitto via `mqtt-service` Docker compose; `mqtt://localhost:1883`. SIWE CONNECT + EIP-712 message signatures.
-- **Experimental shared Sepolia hub**: same compose pattern with TLS hostnames (invite-only; pairing + `/acl` live). Plan / endpoints: [`public-testnet-hub.md`](public-testnet-hub.md). Broker URL and auth service URL remain config (`channels.mqtt`), not protocol changes.
+- **Local / LAN (current default)**: Mosquitto via `mqtt-service` Docker compose. `mqtt://localhost:1883`. SIWE CONNECT + EIP-712 message signatures.
+- **Experimental shared Sepolia hub**: same compose pattern with TLS hostnames (invite-only. Pairing + `/acl` live). Plan / endpoints: [`public-testnet-hub.md`](public-testnet-hub.md). Broker URL and auth service URL remain config (`channels.mqtt`), not protocol changes.
 
 ---
 
@@ -407,6 +407,6 @@ Sequenced in [`public-testnet-hub.md`](public-testnet-hub.md): own the smoke ide
 - **Human observability**: Humans can monitor and debug bot coordination traffic.
 - **Easy onboarding**: Adding a new bot to the mesh is straightforward via TOOLS.md config and credentials.
 - **Selective visibility**: Bots only see channels and topics they explicitly join.
-- **Reliable delivery**: No silent failures; at-least-once semantics for important messages, with logging on errors.
+- **Reliable delivery**: No silent failures. At-least-once semantics for important messages, with logging on errors.
 - **Clear documentation**: This document and supporting `TOOLS.md`/skill docs are sufficient for future bots to self-onboard.
 

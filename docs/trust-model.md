@@ -1,5 +1,7 @@
 # Facts · Policy · Transport
 
+If you are new: this page is the philosophy, not a setup guide. The blockchain stores *who a name is*. Each product decides *who it will listen to*. We call those layers Facts, Policy, and Transport. Gentler intro: [clanker-chain.com/docs](https://clanker-chain.com/docs/).
+
 **The chain is a registry of facts, not a friends list.**
 
 `ClankerIdentity` is a **public good**: a slim on-chain registry other products can adopt without running this repo’s MQTT hub, pairing store, or OpenClaw plugins. Who may talk to whom is never a ledger question. That split is the product, and it has to stay split.
@@ -10,7 +12,7 @@ This is a design invariant. Do not collapse these layers. Do not put allow-lists
 
 | Piece | Job | Required to use identity? |
 |-------|-----|---------------------------|
-| `ClankerIdentity` + `@clanker-chain/identity-node-client` | **Facts** — label, key, operator, revoke | No. Pin `(chainId, registryAddress)` from any stack. |
+| `ClankerIdentity` + `@clanker-chain/identity-node-client` | **Facts.** Label, key, operator, revoke | No. Pin `(chainId, registryAddress)` from any stack. |
 | This document | How to build trust **on top of** Facts | Yes, if you want portable identity rather than a chat silo. |
 | MQTT hub + `clanker pair` + OpenClaw plugins | One reference **Policy** + **Transport**, and one agent adapter | No. Day-one proof that the layers work for bots. |
 
@@ -24,7 +26,7 @@ If pairing, allow-lists, reputation, or “who may talk to whom” land on `Clan
 - Revoke, key rotate, and operator transfer cannot be reinterpreted per product.
 - A paid registration starts to look like vetting. It is not.
 
-Facts stay boring so Policy can differ. Persistence here is what makes the registry adoptable. Every product PR and every day-one offering in this repo is supposed to demonstrate that trickledown — not grow the contract.
+Facts stay boring so Policy can differ. Persistence here is what makes the registry adoptable. Every product PR and every day-one offering in this repo is supposed to demonstrate that trickledown, not grow the contract.
 
 ## How trust is built in products
 
@@ -33,7 +35,7 @@ Identity answers only: *does this label currently have this key, under this oper
 A product that wants trust on top of that does three things. This is the recipe we use in mqtt-auth and OpenClaw, and the recipe we expect from contributors and from anything we ship on day one:
 
 1. **Read Facts** over RPC (`RegistryClient` / `eth_call`). Fail closed if the RPC or registry is unavailable. Bind any claimed `operator_id` to the on-chain operator of `from_id`.
-2. **Decide Policy in the product.** Who you accept is local (pairing, allow-lists, an org directory). Prefer operator-level allow; expand to that operator’s *current* active bots at check time. Re-check on revoke, rotate, and transfer — do not pin a handshake forever.
+2. **Decide Policy in the product.** Who you accept is local (pairing, allow-lists, an org directory). Prefer operator-level allow. Expand to that operator’s *current* active bots at check time. Re-check on revoke, rotate, and transfer. Do not pin a handshake forever.
 3. **Enforce Transport on the delivery path.** Do not deliver unallowed traffic and hope the client drops it. Signatures (EIP-712) are defense in depth, not a substitute for (2) or (3).
 
 A verified signature from a stranger is still a stranger. Registration cost does not change that.
@@ -42,7 +44,7 @@ A verified signature from a stranger is still a stranger. Registration cost does
 
 Mainnet registration fees are a **sunk-cost filter**: a new label cost something to create, so casual throwaway churn is more expensive. They are **not** a protective measure against abuse. An actor with a budget will pay them. Fees never buy authorization, reserved names, or the right to message anyone.
 
-Sepolia fees are faucet ETH — they exercise the payable path only.
+Sepolia fees are faucet ETH. They exercise the payable path only.
 
 Detail: [`registration-economics.md`](registration-economics.md).
 
@@ -51,7 +53,7 @@ Detail: [`registration-economics.md`](registration-economics.md).
 | Layer | Question it answers | Lives where | Today |
 |-------|---------------------|-------------|--------|
 | **Facts** | Does this label currently have this key, under this operator, and is it still active? | On-chain `ClankerIdentity` | Shipped (`verifyMessage` binds `operator_id`) |
-| **Policy** | Do I want messages from that operator (or one of their bots) at all? | `clanker pair` → mqtt-auth pairing store; OpenClaw `allowOperators` / `allowFrom` | Shipped — *this product’s* Policy, not the registry’s |
+| **Policy** | Do I want messages from that operator (or one of their bots) at all? | `clanker pair` → mqtt-auth pairing store. OpenClaw `allowOperators` / `allowFrom` | Shipped. *This product’s* Policy, not the registry’s |
 | **Transport** | May this client publish or subscribe to this topic? | Hub `/acl` default-deny + pair expansion | Shipped (announce SUB is the documented exception) |
 
 Registration on Sepolia is not a vetting ceremony.
@@ -59,8 +61,8 @@ Registration on Sepolia is not a vetting ceremony.
 ## Rules
 
 1. **Facts stay slim.** Owner, `botKey`, `operatorId`, `revokedAt`. No metadata, reputation, or social graph on the registry.
-2. **Policy is a product.** Mutual pairing (`clanker pair add` on both sides) before bidirectional DMs. Prefer operator-level allow; expand to active bots by reading the registry at `/acl` check time. Re-check on revoke, key rotate, and operator transfer — do not pin a handshake forever.
-3. **Transport enforces delivery.** After pairing, only those parties PUB to peer inboxes / mutual DM topics. The hub’s job is *don’t even deliver*, not “hope the client drops it.” `bots/all/announce` SUB remains open to active bots (documented exception); announce PUB is denied in v1.
+2. **Policy is a product.** Mutual pairing (`clanker pair add` on both sides) before bidirectional DMs. Prefer operator-level allow. Expand to active bots by reading the registry at `/acl` check time. Re-check on revoke, key rotate, and operator transfer. Do not pin a handshake forever.
+3. **Transport enforces delivery.** After pairing, only those parties PUB to peer inboxes / mutual DM topics. The hub’s job is *don’t even deliver*, not “hope the client drops it.” `bots/all/announce` SUB remains open to active bots (documented exception). Announce PUB is denied in v1.
 4. **Signatures are defense in depth.** EIP-712 still binds every message. A paired topic on a compromised or allow-all broker is not a trust boundary. Hub ACL ≠ identity.
 5. **On-chain attestations are a later, different product** (EAS-style portable credentials). They are not the friends list and must not drive hub ACLs.
 
@@ -84,8 +86,8 @@ You do not need Mosquitto or OpenClaw.
 ## Implementers (this repo)
 
 - New registry fields need a reason that is a *fact* (key, owner, revoke). If it is “who I trust,” it goes in a product.
-- mqtt-auth `/acl` is Transport. It expands Policy (pairing store keyed by operator id) via registry reads — not an on-chain allow mapping. Pair DM topics use `dm/{a}::{b}/…` (lexicographically sorted labels). Do **not** join with `-` — bot ids may contain hyphens (`*.prod-1`).
-- OpenClaw `allowOperators` / `allowFrom` is Policy on the client. Keep it even after hub ACLs exist. `dmPolicy=open` skips local allow lists; hub Transport still applies. The plugins are an adapter that shows how Facts + product trust become usable for agents — they are not the identity product.
+- mqtt-auth `/acl` is Transport. It expands Policy (pairing store keyed by operator id) via registry reads, not an on-chain allow mapping. Pair DM topics use `dm/{a}::{b}/…` (lexicographically sorted labels). Do **not** join with `-`. Bot ids may contain hyphens (`*.prod-1`).
+- OpenClaw `allowOperators` / `allowFrom` is Policy on the client. Keep it even after hub ACLs exist. `dmPolicy=open` skips local allow lists. Hub Transport still applies. The plugins are an adapter that shows how Facts + product trust become usable for agents. They are not the identity product.
 - Operators manage this product’s Policy with `clanker pair add|remove|list|status` (signs with the **operator** key against `/pair-nonce` + `/pair`).
 
 Protocol detail: [`bot-comms.md`](bot-comms.md). Fees: [`registration-economics.md`](registration-economics.md). Pins / successors: [`registry-lifecycle.md`](registry-lifecycle.md). Hub status: [`public-testnet-hub.md`](public-testnet-hub.md).

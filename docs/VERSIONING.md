@@ -2,7 +2,7 @@
 
 All `@clanker-chain/*` npm packages use **calendar versioning** tied to release date:
 
-- Format: **`YYYY.M.D`** (npm-normalized; e.g. release on 2026-07-29 → **`2026.7.29`**)
+- Format: **`YYYY.M.D`** (npm-normalized. e.g. release on 2026-07-29 → **`2026.7.29`**)
 - Any wire-format or crypto breaking change requires a **new date version** (no semver major/minor semantics)
 
 ## Same-day micro releases
@@ -12,9 +12,9 @@ When you need **more than one npm publish of the same package on the same calend
 | Kind | npm `version` | Git tag suffix | When |
 |------|----------------|----------------|------|
 | First release that day | `2026.7.29` | `…-v2026.7.29` | First publish on that calendar day |
-| Micro (same day) | `2026.7.29-1`, `2026.7.29-2`, … | `…-v2026.7.29-1` | Base version already on npm; bugfix or republish same day |
+| Micro (same day) | `2026.7.29-1`, `2026.7.29-2`, … | `…-v2026.7.29-1` | Base version already on npm. Bugfix or republish same day |
 
-**Important:** npm requires [valid semver](https://docs.npmjs.com/about-semantic-versioning). Use a **hyphen** prerelease segment (`2026.7.29-1`), not a fourth dot (`2026.7.29.1` — npm rejects or mangles it).
+**Important:** npm requires [valid semver](https://docs.npmjs.com/about-semantic-versioning). Use a **hyphen** prerelease segment (`2026.7.29-1`), not a fourth dot (`2026.7.29.1`. npm rejects or mangles it).
 
 - Micro **`N`** starts at **`1`** (there is no `2026.7.29-0` on npm).
 - Tags must match `package.json` **exactly** (including the hyphen).
@@ -38,7 +38,7 @@ Git tags must match `package.json` exactly:
 | `@clanker-chain/mqtt-tools` | `mqtt-tools-plugin-v2026.9.10` |
 | `@clanker-chain/clanker-cli` | `clanker-cli-v2026.9.10` |
 
-**Deprecated packages (npm only — source removed):** `@clanker-chain/mqtt-plugin`, `@clanker-chain/identity-plugin`. Use channel + tools + `identity-node-client` instead.
+**Deprecated packages (npm only. Source removed):** `@clanker-chain/mqtt-plugin`, `@clanker-chain/identity-plugin`. Use channel + tools + `identity-node-client` instead.
 
 ## Inter-package dependencies
 
@@ -55,11 +55,11 @@ Pin **exact** CalVer (including micro when used):
 
 ## Publish order
 
-1. `@clanker-chain/identity-node-client` — **`2026.9.10`** (chain-direct `RegistryClient`; `operator_id` bind in `verifyMessage`)
-2. `@clanker-chain/mqtt-node-client` — **`2026.9.10`** (`dm/{a}::{b}` topic helpers)
-3. `@clanker-chain/mqtt-channel-plugin` — **`2026.9.10`** (pins `identity-node-client@2026.9.10`, `mqtt-node-client@2026.9.10`; `allowOperators` / `dmPolicy`)
-4. `@clanker-chain/mqtt-tools` — **`2026.9.10`** (pins channel + node clients; `mqtt_send`)
-5. `@clanker-chain/clanker-cli` — **`2026.9.10`** (`clanker pair` Policy UX)
+1. `@clanker-chain/identity-node-client`. **`2026.9.10`** (chain-direct `RegistryClient`. `operator_id` bind in `verifyMessage`)
+2. `@clanker-chain/mqtt-node-client`. **`2026.9.10`** (`dm/{a}::{b}` topic helpers)
+3. `@clanker-chain/mqtt-channel-plugin`. **`2026.9.10`** (pins `identity-node-client@2026.9.10`, `mqtt-node-client@2026.9.10`. `allowOperators` / `dmPolicy`)
+4. `@clanker-chain/mqtt-tools`. **`2026.9.10`** (pins channel + node clients. `mqtt_send`)
+5. `@clanker-chain/clanker-cli`. **`2026.9.10`** (`clanker pair` Policy UX)
 
 Wait for npm registry propagation between steps when installing published deps in CI.
 
@@ -69,7 +69,7 @@ Package versions (`2026.9.10`) are **not** the registry. The public-good identit
 
 ## Non-npm services
 
-`hub/mqtt-auth-service` uses a CalVer string in `package.json` for traceability; it is deployed from the repo or Docker, not published to npm.
+`hub/mqtt-auth-service` uses a CalVer string in `package.json` for traceability. It is deployed from the repo or Docker, not published to npm.
 
 ## Release notes
 

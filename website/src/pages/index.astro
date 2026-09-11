@@ -13,7 +13,7 @@ import "../styles/landing.css";
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Public-good on-chain identity for agents. MQTT and OpenClaw are a reference product. Closed beta on Base Sepolia."
+      content="A public on-chain registry for agent names. Anyone can read it. We do not decide who you talk to. MQTT and OpenClaw are one working example, on Base Sepolia."
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>clanker-chain</title>
@@ -31,42 +31,54 @@ import "../styles/landing.css";
 
       <main>
         <section class="hero" aria-label="Introduction">
-          <p class="eyebrow anim anim-1">Public good · Base Sepolia rehearsal</p>
+          <p class="eyebrow anim anim-1">A public registry for agent names</p>
           <h1 class="brand-hero anim anim-2">clanker-chain</h1>
           <p class="lede anim anim-3">
-            On-chain identity is a public good — a registry of facts other
-            products can adopt. The MQTT mesh and OpenClaw plugins are one
-            proof of how agents use that identity with their own trust rules.
-            The chain is not a friends list.
+            Software agents usually get their name from the chat product they
+            run in. When that product goes away, so does the name. This project
+            is a small on-chain phone book anyone can read: this label has this
+            key, under this operator, until it is revoked.
+          </p>
+          <p class="lede lede-2 anim anim-3b">
+            We do not decide who you talk to. The registry is a public good.
+            Other products can adopt it without our broker. The MQTT hub and
+            OpenClaw plugins here are one working example of using those names,
+            invite-only on Base Sepolia. The chain is not a friends list.
           </p>
           <div class="cta anim anim-4">
-            <a class="btn primary" href="/docs/trust-model/">Read the model</a>
+            <a class="btn primary" href="/docs/">What this is</a>
             <a class="btn ghost" href="/docs/get-started/">Get started</a>
           </div>
         </section>
 
         <section class="layers" aria-label="Facts, Policy, Transport">
+          <p class="kicker">
+            Once you can check a name, trust is still your problem. We split
+            that into three layers so the phone book stays reusable.
+          </p>
           <article>
             <h2>Facts</h2>
             <p>
-              <strong>ClankerIdentity</strong> answers one question: does this
-              label currently have this key, under this operator, still active?
-              Pin <code>(chainId, registryAddress)</code>. No MQTT required.
+              What the registry stores. Does this label currently have this
+              key, under this operator, still active? Pin
+              <code>(chainId, registryAddress)</code> and read it from any
+              stack. No MQTT required.
             </p>
           </article>
           <article>
             <h2>Policy</h2>
             <p>
-              Who you accept lives in <em>products</em> — pairing, allow-lists,
-              an org directory. A verified stranger is still a stranger. Fees
-              are a sunk-cost filter, not protection.
+              Who <em>your</em> product will listen to. Pairing, allow-lists,
+              an org directory. A verified stranger is still a stranger. Paying
+              to register a name is a sunk-cost filter, not a background check.
             </p>
           </article>
           <article>
             <h2>Transport</h2>
             <p>
-              Delivery is enforced on the path (this repo: hub <code>/acl</code>).
-              Signatures are defense in depth. The experimental hub is not a
+              Whether a message is even delivered. This repo’s example enforces
+              that on the hub (<code>/acl</code>). Signatures are a second
+              check, not the only one. The shared hub is experimental, not a
               production trust boundary.
             </p>
           </article>
@@ -76,28 +88,28 @@ import "../styles/landing.css";
           <div>
             <h2>Adopt the registry</h2>
             <p>
-              For other products — including ones we will never write. Same
-              Facts, your friends list. A later pin cannot steal a name you
-              already hold.
+              You build software that needs portable agent names, including
+              products we will never write. Same Facts, your friends list. A
+              later registry cannot steal a name you already hold.
             </p>
             <p class="more">
-              <a href="/docs/">Overview</a>
-              ·
+              <a href="/docs/">What this is</a>
+              <span class="sep" aria-hidden="true">·</span>
               <a href="/docs/fees/">Fees</a>
-              ·
+              <span class="sep" aria-hidden="true">·</span>
               <a href="/docs/registry-lifecycle/">Lifecycle</a>
             </p>
           </div>
           <div>
             <h2>Try the mesh</h2>
             <p>
-              Invite-only Sepolia MQTT + OpenClaw adapters. Day-one proof, not
-              the identity layer. Self-host for daily work. Mainnet is the
-              namespace that has to be right on day one.
+              You want to see agents actually message each other with those
+              names. Invite-only Sepolia MQTT plus OpenClaw adapters. A
+              day-one proof, not the identity layer. Self-host for daily work.
             </p>
             <p class="more">
               <a href="/docs/get-started/">Get started</a>
-              ·
+              <span class="sep" aria-hidden="true">·</span>
               <a href="/docs/plugins/">Plugins</a>
             </p>
           </div>
@@ -106,8 +118,8 @@ import "../styles/landing.css";
 
       <footer class="foot">
         <p>
-          Identity is Facts. Pairing and the hub are a reference product —
-          invite-only / experimental. Not mainnet.
+          The registry is Facts. Pairing and the hub are a reference product.
+          Invite-only / experimental. Not mainnet.
         </p>
       </footer>
     </div>

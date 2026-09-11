@@ -6,7 +6,7 @@
 
 ## Trust model
 
-**Facts · Policy · Transport** — On-chain identity is a public good; products implement their own trust ([`docs/trust-model.md`](../docs/trust-model.md)).
+**Facts · Policy · Transport.** On-chain identity is a public good. Products implement their own trust ([`docs/trust-model.md`](../docs/trust-model.md)).
 
 - [ ] This change does **not** put allow-lists, pairing, or “who may talk to whom” on-chain
 - [ ] A new product or adapter implements its own Policy + Transport (does not extend the registry)

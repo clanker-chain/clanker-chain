@@ -3,7 +3,9 @@ title: Registry lifecycle
 description: Frozen parameters, recommended pins, and why a successor cannot steal your name.
 ---
 
-A public-good registry is a **namespace**. After deploy there is no `setFee`, no owner, and no proxy. A “price change” is a new contract at a new address — not a parameter update.
+If you are new: once the registry is deployed, its rules cannot be edited in place. Think of it as a printed phone book. If the community later needs a different fee or a different rule, we print a new book, and promise that nobody can steal a name that already appeared in an older one. This page is that promise, in operational detail.
+
+A public-good registry is a **namespace**. After deploy there is no `setFee`, no owner, and no proxy. A “price change” is a new contract at a new address, not a parameter update.
 
 **Promise:** a later registry on the same chain must not let a stranger take a label that already exists on a prior registry.
 
@@ -11,7 +13,7 @@ A public-good registry is a **namespace**. After deploy there is no `setFee`, no
 
 | Frozen | Why it matters |
 |--------|----------------|
-| Fees in **wei** | Exact ETH units, not dollars. ETH/USD and inflation will move; the integer will not. |
+| Fees in **wei** | Exact ETH units, not dollars. ETH/USD and inflation will move. The integer will not. |
 | `feeRecipient` | Every mint forwards ETH there. If it cannot accept bare ETH, minting bricks until you deploy a new address. |
 | `priorRegistry` | Predecessor on **this** chain, or zero for genesis. Successors walk this chain. |
 | Label id | `keccak256` of the raw string. `Org.You` ≠ `org.you`. |
@@ -40,7 +42,7 @@ Sepolia and mainnet are different chains. Mainnet genesis does not point at Sepo
 | Prior state | Who may register on the new pin |
 |-------------|----------------------------------|
 | Never seen | Anyone (pays the new fee) |
-| Active, you are the current owner | You (you still pay — a claim, not a free mint) |
+| Active, you are the current owner | You (you still pay. A claim, not a free mint) |
 | Active, anyone else | Denied |
 | Revoked | Stays dead |
 
