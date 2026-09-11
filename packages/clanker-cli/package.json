@@ -26,5 +26,8 @@
     "@clack/prompts": "^1.8.0",
     "picocolors": "^1.1.1",
     "viem": "^2.21.0"
+  },
+  "overrides": {
+    "ws": "^8.21.0"
   }
 }
