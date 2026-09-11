@@ -52,4 +52,4 @@ Mainnet registration fees are a **sunk-cost filter**: a new label cost something
 
 A later registry must not let a stranger take a name that already exists on a prior pin. [Registry lifecycle](/docs/registry-lifecycle/).
 
-Implementer detail (GitHub): [docs/trust-model.md](https://github.com/pjsandwich/clanker-chain/blob/main/docs/trust-model.md).
+Implementer detail (GitHub): [docs/trust-model.md](https://github.com/clanker-chain/clanker-chain/blob/main/docs/trust-model.md).

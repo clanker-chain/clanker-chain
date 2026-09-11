@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Security issues (RCE, auth bypass, key leakage, hub abuse) → **Security Advisories**, not a public issue. See [SECURITY.md](https://github.com/pjsandwich/clanker-chain/blob/main/SECURITY.md).
+        Security issues (RCE, auth bypass, key leakage, hub abuse) → **Security Advisories**, not a public issue. See [SECURITY.md](https://github.com/clanker-chain/clanker-chain/blob/main/SECURITY.md).
   - type: dropdown
     id: surface
     attributes:

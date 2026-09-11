@@ -67,6 +67,6 @@ Details: [`SETUP.md`](SETUP.md), [`openclaw/mqtt-channel-plugin/README.md`](open
 
 ## Support
 
-- Bugs and features: [GitHub Issues](https://github.com/pjsandwich/clanker-chain/issues)
+- Bugs and features: [GitHub Issues](https://github.com/clanker-chain/clanker-chain/issues)
 - Security: [`SECURITY.md`](SECURITY.md) (private report only. Do not open a public issue)
 - Experimental shared hub: invite-only / not a production Transport layer. Prefer self-host ([`SETUP.md`](SETUP.md))

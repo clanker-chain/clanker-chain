@@ -14,7 +14,7 @@ export default defineConfig({
         {
           icon: "github",
           label: "GitHub",
-          href: "https://github.com/pjsandwich/clanker-chain",
+          href: "https://github.com/clanker-chain/clanker-chain",
         },
       ],
       sidebar: [

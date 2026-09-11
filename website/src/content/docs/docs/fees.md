@@ -34,4 +34,4 @@ A later fee is a [new registry pin](/docs/registry-lifecycle/), not a tune. Succ
 | **Base Sepolia** | Tiny nonzero fees. Faucet ETH, **not** a real filter |
 | **Base mainnet** (not deployed) | Pick wei once. Live with a large ETH move. Document ETH amounts. |
 
-Full fee table and deploy invariants: [docs/registration-economics.md](https://github.com/pjsandwich/clanker-chain/blob/main/docs/registration-economics.md).
+Full fee table and deploy invariants: [docs/registration-economics.md](https://github.com/clanker-chain/clanker-chain/blob/main/docs/registration-economics.md).
