@@ -1,4 +1,7 @@
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test";
+
+// Integration tests spawn anvil + mqtt; keep headroom above viem/RPC jitter.
+setDefaultTimeout(30_000);
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "path";
@@ -163,11 +166,11 @@ beforeAll(async () => {
   if (!siweSkip) {
     siweHarness = await startSiweHarness();
   }
-});
+}, 60_000);
 
 afterAll(async () => {
   await siweHarness?.cleanup();
-});
+}, 30_000);
 
 test("SIWE auth: happy path", async () => {
   if (siweSkip || !siweHarness) {
@@ -284,7 +287,7 @@ test("SIWE auth rejected when bot is revoked", async () => {
     functionName: "revokeBot",
     args: [botIdBytes as Hex],
   });
-  await pc.waitForTransactionReceipt({ hash });
+  await pc.waitForTransactionReceipt({ hash, pollingInterval: 50, timeout: 30_000 });
 
   const nRes = await fetch(`${mqttUrl}/nonce?bot_id=${encodeURIComponent(secondBotId)}`);
   const { nonce, message } = (await nRes.json()) as { nonce: string; message: string };
@@ -315,7 +318,7 @@ test("SIWE auth rejected when operator is revoked", async () => {
     functionName: "revokeOperator",
     args: [operatorIdBytes as Hex],
   });
-  await pc.waitForTransactionReceipt({ hash });
+  await pc.waitForTransactionReceipt({ hash, pollingInterval: 50, timeout: 30_000 });
 
   const nRes = await fetch(`${mqttUrl}/nonce?bot_id=${encodeURIComponent(botId)}`);
   const { nonce, message } = (await nRes.json()) as { nonce: string; message: string };
