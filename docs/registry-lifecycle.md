@@ -1,5 +1,7 @@
 # Registry lifecycle
 
+If you are new: once deployed, the registry cannot be edited in place. A later fee or rule means a new contract, and a promise that nobody can steal a name that already existed on an older one. This page is that promise in operational detail.
+
 How a public-good `ClankerIdentity` is deployed, pinned, and succeeded. Companion to [`trust-model.md`](trust-model.md) (Facts vs products) and [`registration-economics.md`](registration-economics.md) (fees as a sunk-cost filter).
 
 **Promise:** a later registry on the same chain must not let a stranger take a label that already exists on a prior registry. People who registered under an older pin should not have to worry about their namespace being usurped.
@@ -10,7 +12,7 @@ There is no owner, no `setFee`, and no proxy. After `CREATE`, these do not chang
 
 | Frozen | Why it matters |
 |--------|----------------|
-| `operatorFee` / `botFee` (wei) | Exact `msg.value`. Not dollars. ETH/USD and CPI will move; the integer will not. |
+| `operatorFee` / `botFee` (wei) | Exact `msg.value`. Not dollars. ETH/USD and CPI will move. The integer will not. |
 | `feeRecipient` | Push-payment on every mint. If it cannot accept bare ETH, every register reverts until you deploy a new address. |
 | `priorRegistry` | Immediate predecessor, or `address(0)` for a genesis deploy. Successors walk this chain. |
 | Label id `keccak256(bytes(label))` | Raw bytes. No Unicode NFC, no casefold. `Org.You` ≠ `org.you`. |
@@ -27,7 +29,7 @@ Relying parties pin `(chainId, registryAddress)`. `@clanker-chain/identity-node-
 - Operator / bot **keys** are ordinary Ethereum addresses. They are not trapped in the contract.
 - Label strings hash the same way on every successor, so ids are stable if the string is unchanged.
 
-This repo publishes **at most one recommended pin per chain**. Other products may keep an old pin; v1 is not paused or upgraded. Canonical is whoever clients choose to pin.
+This repo publishes **at most one recommended pin per chain**. Other products may keep an old pin. v1 is not paused or upgraded. Canonical is whoever clients choose to pin.
 
 ## When a successor exists (social process)
 
@@ -50,9 +52,9 @@ Sepolia and mainnet are different chains. A mainnet genesis has `priorRegistry =
 | Prior state | Who may register on this registry |
 |-------------|-----------------------------------|
 | Never seen | Anyone (pays this registry’s fee) |
-| Active, `msg.sender` is the current prior owner | Prior owner (pays this registry’s fee — a claim, not a free mint) |
+| Active, `msg.sender` is the current prior owner | Prior owner (pays this registry’s fee. A claim, not a free mint) |
 | Active, anyone else | Revert `OperatorTaken` / `BotTaken` |
-| Revoked (tombstone) | Revert — name stays dead. Same as v1. |
+| Revoked (tombstone) | Revert. Name stays dead. Same as v1. |
 
 For bots, a prior record may only be claimed under the **same** `operatorId`, by that operator’s current prior owner. Claim the operator first, then the bot.
 

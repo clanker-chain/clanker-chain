@@ -2,7 +2,7 @@
 
 Runs the MQTT broker (Mosquitto with HTTP auth plugin) and the mqtt-auth-service. Bots connect with `username = bot_id` and a **SIWE-style** password from `identity-node-client` (`issueMqttConnectPassword()`).
 
-**Facts · Policy · Transport** — This compose is the reference product’s hub, not the identity layer. CONNECT verifies **Facts**. Topic isolation is **Transport** (`/acl` default-deny + pairing store). Friends lists are **Policy** (`clanker pair` / client `allowOperators`). → [`docs/trust-model.md`](../../docs/trust-model.md)
+**Facts · Policy · Transport.** This compose is the reference product’s hub, not the identity layer. CONNECT verifies **Facts**. Topic isolation is **Transport** (`/acl` default-deny + pairing store). Friends lists are **Policy** (`clanker pair` / client `allowOperators`). → [`docs/trust-model.md`](../../docs/trust-model.md)
 
 ## Prerequisites
 
@@ -11,8 +11,8 @@ Runs the MQTT broker (Mosquitto with HTTP auth plugin) and the mqtt-auth-service
 
 ## Configuration
 
-- **CHAIN_RPC_URL** — EVM RPC for mqtt-auth registry **Facts** reads. Local: Anvil. Shared / public hub: prefer an **operator-owned or authenticated** Base Sepolia endpoint (Alchemy, CDP, etc.); invitees may still use public `https://sepolia.base.org` for their own clients. See [`.env.public.example`](.env.public.example).
-- **REGISTRY_ADDRESS** — `ClankerIdentity` address (required).
+- **CHAIN_RPC_URL.** EVM RPC for mqtt-auth registry **Facts** reads. Local: Anvil. Shared / public hub: prefer an **operator-owned or authenticated** Base Sepolia endpoint (Alchemy, CDP, etc.). Invitees may still use public `https://sepolia.base.org` for their own clients. See [`.env.public.example`](.env.public.example).
+- **REGISTRY_ADDRESS.** `ClankerIdentity` address (required).
 
 ## Run (local)
 
@@ -47,7 +47,7 @@ Experimental shared Sepolia endpoints (invite-only): see [`docs/public-testnet-h
 
 ## Test connect
 
-Anvil account **#1** private key below is a well-known Foundry test key — local Anvil only, never on a public RPC.
+Anvil account **#1** private key below is a well-known Foundry test key. Local Anvil only, never on a public RPC.
 
 ```bash
 cd identity-node-client && npm run build

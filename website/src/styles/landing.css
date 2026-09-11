@@ -86,7 +86,7 @@ main {
   flex-direction: column;
   justify-content: center;
   padding: clamp(3rem, 12vh, 6rem) clamp(1.5rem, 6vw, 4rem);
-  max-width: 42rem;
+  max-width: 46rem;
 }
 
 .eyebrow {
@@ -109,10 +109,14 @@ main {
 
 .lede {
   margin: 1.25rem 0 0;
-  max-width: 34rem;
+  max-width: 40rem;
   font-size: clamp(1.05rem, 2.2vw, 1.25rem);
   font-weight: 400;
   color: var(--sand-dim);
+}
+
+.lede-2 {
+  margin-top: 0.85rem;
 }
 
 .cta {
@@ -178,6 +182,14 @@ main {
   border-top: 1px solid var(--line);
 }
 
+.kicker {
+  grid-column: 1 / -1;
+  margin: 0 0 0.25rem;
+  max-width: 40rem;
+  color: var(--sand-dim);
+  font-size: 1rem;
+}
+
 .layers h2,
 .doors h2 {
   margin: 0 0 0.55rem;
@@ -214,9 +226,18 @@ main {
 }
 
 .more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.55rem;
+  row-gap: 0.35rem;
   margin-top: 1.25rem !important;
   font-family: var(--font-mono);
   font-size: 0.8rem !important;
+}
+
+.more .sep {
+  color: var(--sand-dim);
 }
 
 .more a {
@@ -256,8 +277,11 @@ main {
 .anim-3 {
   animation-delay: 0.28s;
 }
+.anim-3b {
+  animation-delay: 0.36s;
+}
 .anim-4 {
-  animation-delay: 0.4s;
+  animation-delay: 0.48s;
 }
 
 @media (max-width: 720px) {
