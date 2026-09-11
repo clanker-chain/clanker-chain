@@ -1,7 +1,10 @@
 /**
  * ACL + pairing integration tests (Anvil + mqtt-auth).
  */
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test";
+
+// Integration tests spawn anvil + mqtt; keep headroom above viem/RPC jitter.
+setDefaultTimeout(30_000);
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "path";
@@ -38,7 +41,8 @@ const ANVIL_KEY_5 =
   "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba" as Hex;
 
 async function waitMined(pc: PublicClient, hash: Hex): Promise<void> {
-  await pc.waitForTransactionReceipt({ hash });
+  // viem's default pollingInterval is 4s; a missed first poll blows Bun's 5s test timeout.
+  await pc.waitForTransactionReceipt({ hash, pollingInterval: 50, timeout: 30_000 });
 }
 
 function skipSiwe(): string | null {
