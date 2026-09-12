@@ -7,6 +7,7 @@ If you are new: the chain stores names and keys. Products decide who they listen
 | Doc | Audience | Role |
 |-----|----------|------|
 | [`trust-model.md`](trust-model.md) | Everyone | **Invariant:** public-good Facts vs product Policy / Transport |
+| [`prerequisites.md`](prerequisites.md) | New operators | Checklist before mint: Node, test ETH budget, two keys, faucet drip |
 | [`../README.md`](../README.md) | Everyone | Product overview + quick start |
 | [`../SETUP.md`](../SETUP.md) | Operators / self-hosters | Local Anvil + Mosquitto + OpenClaw install |
 | [`operator-cli.md`](operator-cli.md) | Operators / agents | Full `clanker` CLI reference |
@@ -18,7 +19,7 @@ If you are new: the chain stores names and keys. Products decide who they listen
 
 Repo layout: `chain/`, `packages/` (npm libs + CLI), `hub/` (Mosquitto + mqtt-auth), `openclaw/` (channel + tools plugins), `website/`. Historical notes live under [`archive/`](archive/).
 
-**Website** ([`../website/`](../website/)): philosophy + onboarding at `/docs/*` (trust model, fees, registry lifecycle, get started). Prefer editing GitHub docs first when both exist. Keep the site in sync. GitHub Pages deploy: [`website/README.md`](../website/README.md).
+**Website** ([`../website/`](../website/)): philosophy + onboarding at `/docs/*` (trust model, fees, registry lifecycle, prerequisites, get started). Prefer editing GitHub docs first when both exist. Keep the site in sync. GitHub Pages deploy: [`website/README.md`](../website/README.md).
 
 ## Package READMEs (detail)
 

@@ -26,6 +26,11 @@ import {
 import { resolveForRead, resolveOperatorKey, resolveReadIdentity } from "../lib/resolve.mjs";
 import { runSetup } from "../lib/setup.mjs";
 import { runDoctor } from "../lib/doctor.mjs";
+import { runFund } from "../lib/fund.mjs";
+import {
+  assessMintBudget,
+  formatEthTrim,
+} from "../lib/mint-budget.mjs";
 import {
   botIdentityCard,
   botIdentityJson,
@@ -166,6 +171,7 @@ function usage() {
 
 Usage:
   clanker setup [--preset sepolia|local] [--operator <label>] [--address 0x…] [--key-file path] [--force]
+  clanker fund [--no-open] [--timeout ms] [--json]
   clanker doctor [--json]
   clanker init --preset sepolia|local [--force]
   clanker whoami [--json] [--operator <label>] [--address 0x…] [--with-bots]
@@ -191,12 +197,12 @@ Profile:
   ~/.clanker/operator.json   label + owner + optional key pointer (never raw hex)
   ~/.clanker/keys/           bot keys (also written to ~/.openclaw/keys/)
 
-Humans: \`clanker setup\` then \`clanker doctor\` / \`whoami\`.
+Humans: \`clanker setup\` then \`clanker fund\` / \`doctor\` / \`whoami\`.
 Pairing (Policy): both operators run \`clanker pair add\` before DMs deliver on the hub.
 Mutates print a plan and confirm unless --yes or --json.
 whoami is fast by default; pass --with-bots to enrich child bots (or use \`clanker bots\`).
 
-See docs/operator-cli.md and docs/trust-model.md.
+See docs/operator-cli.md, docs/prerequisites.md, and docs/trust-model.md.
 `);
 }
 
@@ -410,11 +416,28 @@ async function main() {
         because: "setup could not write a valid local profile",
         try: [
           "clanker setup --preset sepolia --operator org.you --address 0x… --yes --force",
+          "clanker fund",
           "clanker doctor",
         ],
       });
     }
     return;
+  }
+
+  if (cmd === "fund") {
+    try {
+      const { exitCode } = await runFund(rest);
+      process.exit(exitCode);
+    } catch (err) {
+      exitCliError({
+        error: err.message,
+        because: "fund needs a Sepolia profile with an owner address",
+        try: [
+          "clanker setup --preset sepolia --operator org.you --generate-key --yes --force",
+          "clanker fund",
+        ],
+      });
+    }
   }
 
   if (cmd === "doctor") {
@@ -556,8 +579,9 @@ async function main() {
         process.exit(1);
       }
       let planRows;
+      let preview;
       try {
-        const preview = resolveOperatorKey(flags);
+        preview = resolveOperatorKey(flags);
         planRows = [
           ["action", "registerOperator"],
           ["label", label],
@@ -573,9 +597,41 @@ async function main() {
           try: [
             "export OPERATOR_PRIVATE_KEY=0x…",
             "clanker operator mint " + label + " --key-file ~/.clanker/op.key --yes",
+            "clanker fund",
             "clanker doctor",
           ],
         });
+      }
+      try {
+        if (preview.network.registry) {
+          const pub = await publicClientFromRpc(preview.network.rpc);
+          const budget = await assessMintBudget({
+            pub,
+            registry: preview.network.registry,
+            owner: preview.address,
+            rpc: preview.network.rpc,
+            operatorLabel: label,
+            mode: "operator",
+          });
+          planRows.push(
+            ["fee", `${formatEthTrim(budget.operatorFeeWei)} ETH`],
+            ["balance", `${formatEthTrim(budget.balanceWei)} ETH`],
+            [
+              "needed",
+              `${formatEthTrim(budget.neededWei)} ETH (fee + gas cushion)`,
+            ],
+          );
+          if (!budget.funded) {
+            exitCliError({
+              error: `insufficient ETH: have ${formatEthTrim(budget.balanceWei)}, need ${formatEthTrim(budget.neededWei)}`,
+              because: "mint sends the exact registry fee plus gas",
+              try: ["clanker fund", "clanker doctor"],
+            });
+          }
+        }
+      } catch (err) {
+        // Non-fatal if RPC read fails before confirm; mint will still fail clearly.
+        planRows.push(["balance", `(could not check: ${err.message ?? err})`]);
       }
       const ok = await confirmPlan(flags, planRows, `Mint operator ${label}?`);
       if (!ok) process.exit(0);
@@ -677,10 +733,11 @@ async function main() {
         process.exit(1);
       }
       let operatorLabel = operatorArg ?? flagValue(flags, "--operator") ?? null;
+      let preview = null;
       if (!operatorLabel) {
         try {
-          const { address, network } = resolveOperatorKey(flags);
-          const inferred = await resolveOperatorLabel(flags, address, network);
+          preview = resolveOperatorKey(flags);
+          const inferred = await resolveOperatorLabel(flags, preview.address, preview.network);
           operatorLabel = inferred.label;
         } catch (err) {
           exitCliError({
@@ -693,13 +750,60 @@ async function main() {
           });
         }
       }
+      if (!preview) {
+        try {
+          preview = resolveOperatorKey(flags);
+        } catch (err) {
+          exitCliError({
+            error: err.message,
+            because: "bot mint needs a signing key on this network",
+            try: [
+              `clanker bot mint ${botLabel} ${operatorLabel} --key-file ~/.clanker/op.key --yes`,
+              "clanker fund",
+            ],
+          });
+        }
+      }
+      const planRows = [
+        ["action", "registerBot"],
+        ["bot", botLabel],
+        ["operator", operatorLabel],
+        ["owner", preview.address],
+        ["registry", preview.network.registry ?? "(none)"],
+      ];
+      try {
+        if (preview.network.registry) {
+          const pub = await publicClientFromRpc(preview.network.rpc);
+          const budget = await assessMintBudget({
+            pub,
+            registry: preview.network.registry,
+            owner: preview.address,
+            rpc: preview.network.rpc,
+            operatorLabel,
+            mode: "bot",
+          });
+          planRows.push(
+            ["fee", `${formatEthTrim(budget.botFeeWei)} ETH`],
+            ["balance", `${formatEthTrim(budget.balanceWei)} ETH`],
+            [
+              "needed",
+              `${formatEthTrim(budget.neededWei)} ETH (fee + gas cushion)`,
+            ],
+          );
+          if (!budget.funded) {
+            exitCliError({
+              error: `insufficient ETH: have ${formatEthTrim(budget.balanceWei)}, need ${formatEthTrim(budget.neededWei)}`,
+              because: "mint sends the exact registry fee plus gas",
+              try: ["clanker fund", "clanker doctor"],
+            });
+          }
+        }
+      } catch (err) {
+        planRows.push(["balance", `(could not check: ${err.message ?? err})`]);
+      }
       const ok = await confirmPlan(
         flags,
-        [
-          ["action", "registerBot"],
-          ["bot", botLabel],
-          ["operator", operatorLabel],
-        ],
+        planRows,
         `Mint bot ${botLabel} under ${operatorLabel}?`,
       );
       if (!ok) process.exit(0);

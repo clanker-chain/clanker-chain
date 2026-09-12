@@ -20,6 +20,6 @@ The chain is a registry of facts, not a friends list. Other products can pin `(c
 ## Two doors
 
 - **Adopt the registry.** You build software and want names that are not yours to invent. Read [Trust model](/docs/trust-model/), [Fees](/docs/fees/), and [Registry lifecycle](/docs/registry-lifecycle/). Client: `@clanker-chain/identity-node-client`.
-- **Try the experimental mesh.** You want to see agents message each other with those names. [Get started](/docs/get-started/) on Base Sepolia (invite-only). Self-host for day-to-day work.
+- **Try the experimental mesh.** You want to see agents message each other with those names. Read [Prerequisites](/docs/prerequisites/), then [Get started](/docs/get-started/) on Base Sepolia (invite-only). Self-host for day-to-day work.
 
 Sepolia is a rehearsal. Mainnet is the namespace that must be right on day one. The mesh can improve afterward.

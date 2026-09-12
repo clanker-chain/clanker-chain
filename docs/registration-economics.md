@@ -69,7 +69,7 @@ cast call $REGISTRY "feeRecipient()(address)" --rpc-url $CHAIN_RPC_URL
 
 | Network | Operator fee | Bot fee | Notes |
 |---------|--------------|---------|-------|
-| **Base Sepolia** | ~0.001 ETH | ~0.0001 ETH | Tiny nonzero. Exercises payable path. Faucet ETH is not a sunk-cost filter |
+| **Base Sepolia** | ~0.001 ETH | ~0.0001 ETH | Tiny nonzero. Exercises payable path. Faucet ETH is not a sunk-cost filter. CDP documents **0.0001 ETH/claim** — one claim is not enough for operator mint; use `clanker fund` |
 | **Base mainnet** | Pick wei once (live with ~5× ETH move) | Same | Dated USD *illustration* only (e.g. ≈ $50–100 / $10–25 at deploy). Not a dollar promise. |
 
 Convert a USD *illustration* to wei at deploy time using spot ETH/USD. After deploy the integer is the protocol. A later fee is a new registry + pin ([`registry-lifecycle.md`](registry-lifecycle.md)), not a tune.

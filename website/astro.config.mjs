@@ -35,6 +35,7 @@ export default defineConfig({
         {
           label: "Use it",
           items: [
+            { label: "Prerequisites", slug: "docs/prerequisites" },
             { label: "Get started", slug: "docs/get-started" },
             { label: "Concepts", slug: "docs/concepts" },
             { label: "CLI", slug: "docs/cli" },

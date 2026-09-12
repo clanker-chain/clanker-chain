@@ -4,7 +4,7 @@
 
 Bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + mqtt-auth only.
 
-**Operator path:** [`docs/operator-cli.md`](docs/operator-cli.md). `clanker setup`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
+**Operator path:** [`docs/prerequisites.md`](docs/prerequisites.md), [`docs/operator-cli.md`](docs/operator-cli.md). `clanker setup`, `fund`, `whoami`, `operator mint`, `bot mint`. Anvil account #0 is refused on public RPCs.
 
 **Default for development:** localhost Anvil + local compose. An **experimental** shared Sepolia hub exists (invite-only). See [`docs/public-testnet-hub.md`](docs/public-testnet-hub.md). Do not put hub hostnames in plugin npm READMEs until invite policy is broader. Docs index: [`docs/README.md`](docs/README.md).
 
@@ -18,7 +18,7 @@ Bots and mqtt-auth read `ClankerIdentity` over RPC. Hub runtime is Mosquitto + m
 | `@clanker-chain/identity-node-client` | Bot library (`RegistryClient` + SIWE + EIP-712) |
 | `@clanker-chain/mqtt-channel-plugin` | OpenClaw gateway channel (receive + reply) |
 | `@clanker-chain/mqtt-tools` | OpenClaw tool plugin (`mqtt_send` for agent-initiated send) |
-| `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.10`) |
+| `@clanker-chain/clanker-cli` | Operator profile + mint / whoami / revoke / transfer (`npm i -g @clanker-chain/clanker-cli@2026.9.12`) |
 
 Minting stays on-chain via `clanker-cli`.
 
@@ -42,9 +42,12 @@ Start the local hub: [`hub/mqtt-service/README.md`](hub/mqtt-service/README.md) 
 
 ### Experimental Sepolia hub
 
+Checklist: [`docs/prerequisites.md`](docs/prerequisites.md) (Node, OpenClaw for plugins, faucet drip vs fees).
+
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.10
+npm install -g @clanker-chain/clanker-cli@2026.9.12
 clanker setup
+clanker fund
 clanker doctor
 clanker whoami
 # if not registered yet:

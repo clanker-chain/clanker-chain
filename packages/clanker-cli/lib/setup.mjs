@@ -34,7 +34,6 @@ import {
   resolveFoundryAddress,
 } from "./foundry.mjs";
 import {
-  BASE_SEPOLIA_FAUCET_URL,
   consumerFundHints,
   generateOperatorKeyFile,
 } from "./operator-key.mjs";
@@ -698,7 +697,7 @@ export async function runSetupInteractive(argv, opts = {}) {
     nextHint(consumerFundHints({ address, label }));
   } else if (preset === "sepolia") {
     nextHint([
-      `If this address needs test ETH: ${BASE_SEPOLIA_FAUCET_URL}`,
+      "clanker fund",
       "clanker doctor",
       "clanker whoami",
       `clanker bot mint <label>`,
