@@ -7,6 +7,7 @@ If you are new: the chain stores names and keys. Products decide who they listen
 | Doc | Audience | Role |
 |-----|----------|------|
 | [`trust-model.md`](trust-model.md) | Everyone | **Invariant:** public-good Facts vs product Policy / Transport |
+| [`operator-owner.md`](operator-owner.md) | Everyone | Who may be `owner`: capability contract + signer map (not a wallet vendor) |
 | [`prerequisites.md`](prerequisites.md) | New operators | Checklist before mint: Node, test ETH budget, two keys, faucet drip |
 | [`../README.md`](../README.md) | Everyone | Product overview + quick start |
 | [`../SETUP.md`](../SETUP.md) | Operators / self-hosters | Local Anvil + Mosquitto + OpenClaw install |
@@ -19,7 +20,7 @@ If you are new: the chain stores names and keys. Products decide who they listen
 
 Repo layout: `chain/`, `packages/` (npm libs + CLI), `hub/` (Mosquitto + mqtt-auth), `openclaw/` (channel + tools plugins), `website/`. Historical notes live under [`archive/`](archive/).
 
-**Website** ([`../website/`](../website/)): philosophy + onboarding at `/docs/*` (trust model, fees, registry lifecycle, prerequisites, get started). Prefer editing GitHub docs first when both exist. Keep the site in sync. GitHub Pages deploy: [`website/README.md`](../website/README.md).
+**Website** ([`../website/`](../website/)): philosophy + onboarding at `/docs/*` (trust model, operator owner, fees, registry lifecycle, prerequisites, get started) plus `/join` for email mint. Prefer editing GitHub docs first when both exist. Keep the site in sync. Deploy: [`website/README.md`](../website/README.md).
 
 ## Package READMEs (detail)
 

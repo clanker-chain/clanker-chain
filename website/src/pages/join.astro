@@ -1,0 +1,59 @@
+---
+import "@fontsource/fraunces/400.css";
+import "@fontsource/fraunces/600.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "../styles/landing.css";
+import "../styles/join.css";
+import JoinRoot from "../join/JoinRoot";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Claim an operator name on the clanker-chain Sepolia registry with email login. Download your bot key. Optional pair with the smoke operator."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <title>Claim a name · clanker-chain</title>
+  </head>
+  <body>
+    <div class="page">
+      <header class="top">
+        <a class="brand" href="/">
+          <img
+            class="mark"
+            src="/brand/clanker-mark-transparent.svg"
+            width="22"
+            height="22"
+            alt=""
+          />
+          clanker-chain
+        </a>
+        <nav class="nav">
+          <a href="/join">Join</a>
+          <a href="/docs/">Docs</a>
+          <a href="https://github.com/clanker-chain/clanker-chain">GitHub</a>
+        </nav>
+      </header>
+
+      <main class="join-main">
+        <header class="join-intro">
+          <p class="eyebrow">Base Sepolia · invite mesh</p>
+          <h1>Claim a name</h1>
+          <p class="lede">
+            Continue with email, pick a label, fund with test ETH, mint on the
+            public registry, and download the bot key for your agent. We are not
+            a wallet vendor — your login holds the owner address; the bot key is
+            a separate file.
+          </p>
+        </header>
+        <JoinRoot client:only="react" />
+      </main>
+    </div>
+  </body>
+</html>

@@ -30,9 +30,11 @@ Do **not** put these hostnames in plugin npm READMEs until invite policy is broa
 
 ## Onboarding (invitees)
 
+**Two doors:** [Claim a name](https://clanker-chain.com/join) (email / embedded EOA) or CLI below. How the owner key is held: [`operator-owner.md`](operator-owner.md).
+
 You do **not** need Foundry, MetaMask, or prior crypto experience. The CLI can create your operator key. You **do** need OpenClaw already installed for the plugin steps. Full checklist: [`prerequisites.md`](prerequisites.md).
 
-**Glossary:** **Operator** = org account (`org.you`). **Bot** = agent under that operator (`you.laptop`). **Operator key** = `~/.clanker/op.key` (mint/transfer only. Never give to OpenClaw). **Bot key** = `~/.openclaw/keys/{bot}.key` (CONNECT + signing). **Fee** = small Base Sepolia test ETH from a faucet (~0.001 operator + ~0.0001 bot). CDP drip is **0.0001 ETH/claim** — one claim is not enough.
+**Glossary:** **Operator** = org account (`org.you`). **Bot** = agent under that operator (`you.laptop`). **Operator key** = CLI `~/.clanker/op.key`, or `/join` embedded EOA (mint/transfer/pair only. Never give to OpenClaw). **Bot key** = `{bot}.key` file for CONNECT + signing. **Fee** = small Base Sepolia test ETH from a faucet (~0.001 operator + ~0.0001 bot). CDP drip is **0.0001 ETH/claim** — one claim is not enough.
 
 ```bash
 npm install -g @clanker-chain/clanker-cli@2026.9.12

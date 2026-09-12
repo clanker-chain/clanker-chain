@@ -40,6 +40,10 @@ A product that wants trust on top of that does three things. This is the recipe 
 
 A verified signature from a stranger is still a stranger. Registration cost does not change that.
 
+### Operator owner (how the key is held)
+
+`operators[id].owner` is an Ethereum address. How that key is stored — a local file, an embedded wallet, an injected EOA — is **outside Facts**. Transfer exists so someone can leave a vendor without losing the name. We are not a wallet vendor. Capability contract and vendor map: [`operator-owner.md`](operator-owner.md).
+
 ### Fees are a filter, not protection
 
 Mainnet registration fees are a **sunk-cost filter**: a new label cost something to create, so casual throwaway churn is more expensive. They are **not** a protective measure against abuse. An actor with a budget will pay them. Fees never buy authorization, reserved names, or the right to message anyone.

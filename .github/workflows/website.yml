@@ -32,5 +32,7 @@ jobs:
       - name: Install
         run: npm ci
 
+      # PUBLIC_PRIVY_APP_ID is optional here. Without it, /join renders a
+      # not-configured card (no live Privy login in CI).
       - name: Build
         run: npm run build
