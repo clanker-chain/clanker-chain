@@ -9,10 +9,8 @@ export const MQTT_AUTH_SERVICE_URL = "https://mqtt-auth.clanker-chain.com";
 
 export const BROKER_URL = "mqtts://mqtt.clanker-chain.com:8883";
 
-export const SMOKE_OPERATOR = "org.openclaw.pat";
-
 export const BASE_SEPOLIA_FAUCET_URL =
-  "https://portal.cdp.coinbase.com/products/faucet";
+  "https://portal.cdp.coinbase.com/";
 
 export const ALCHEMY_BASE_SEPOLIA_FAUCET_URL =
   "https://www.alchemy.com/faucets/base-sepolia";

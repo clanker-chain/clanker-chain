@@ -9,30 +9,22 @@ import { baseSepolia } from "viem/chains";
 import {
   assessJoinBudget,
   mintOperatorAndBot,
-  pairWithSmoke,
   walletClientFromProvider,
   type MintResult,
 } from "./chain";
 import {
   ALCHEMY_BASE_SEPOLIA_FAUCET_URL,
   BASE_SEPOLIA_FAUCET_URL,
-  SMOKE_OPERATOR,
+  SEPOLIA_REGISTRY,
 } from "./constants";
 import { formatEthTrim, type MintBudget } from "./mint-budget";
 import { downloadTextFile, shortenAddress } from "./utils";
 
-type Step =
-  | "login"
-  | "names"
-  | "fund"
-  | "minting"
-  | "done"
-  | "pairing";
+type Step = "login" | "names" | "fund" | "minting" | "done";
 
 function pickOperatorWallet(wallets: ConnectedWallet[]): ConnectedWallet | null {
   const embedded = wallets.find((w) => w.walletClientType === "privy");
   if (embedded) return embedded;
-  // Prefer an EOA-looking injected wallet; skip smart-wallet client types.
   const injected = wallets.find(
     (w) =>
       w.walletClientType !== "privy" &&
@@ -53,9 +45,10 @@ export function JoinApp() {
   const [budget, setBudget] = useState<MintBudget | null>(null);
   const [budgetError, setBudgetError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mintProgress, setMintProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mint, setMint] = useState<MintResult | null>(null);
-  const [pairStatus, setPairStatus] = useState<string | null>(null);
+  const [copied, setCopied] = useState<"snippet" | "address" | null>(null);
 
   const owner = (wallet?.address ?? null) as Address | null;
 
@@ -113,6 +106,7 @@ export function JoinApp() {
   async function onMint() {
     setError(null);
     setBusy(true);
+    setMintProgress("Approve 1 of 2 — register your name…");
     setStep("minting");
     try {
       const { client, address } = await ensureWalletClient();
@@ -121,36 +115,22 @@ export function JoinApp() {
         owner: address,
         operatorLabel,
         botLabel,
+        onProgress: (phase) => {
+          setMintProgress(
+            phase === "operator"
+              ? "Approve 1 of 2 — register your name…"
+              : "Approve 2 of 2 — register this computer…",
+          );
+        },
       });
       setMint(result);
       downloadTextFile(`${result.botLabel}.key`, `${result.botPrivateKey}\n`);
+      setMintProgress(null);
       setStep("done");
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      setMintProgress(null);
       setStep("fund");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onPair() {
-    if (!mint) return;
-    setPairStatus(null);
-    setError(null);
-    setBusy(true);
-    setStep("pairing");
-    try {
-      const { client, address } = await ensureWalletClient();
-      await pairWithSmoke({
-        walletClient: client,
-        owner: address,
-        operatorLabel: mint.operatorLabel,
-      });
-      setPairStatus(`Paired with ${SMOKE_OPERATOR}. Ask them to pair you back for DMs.`);
-      setStep("done");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setStep("done");
     } finally {
       setBusy(false);
     }
@@ -161,9 +141,23 @@ export function JoinApp() {
     downloadTextFile(`${mint.botLabel}.key`, `${mint.botPrivateKey}\n`);
   }
 
+  async function copyText(kind: "snippet" | "address", text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(kind);
+      window.setTimeout(() => setCopied(null), 2000);
+    } catch {
+      setError("Could not copy — select the text manually");
+    }
+  }
+
   if (!ready) {
     return <p className="join-muted">Loading…</p>;
   }
+
+  const snippet = mint
+    ? JSON.stringify({ channels: { mqtt: mint.channelsMqtt } }, null, 2)
+    : "";
 
   return (
     <div className="join-app">
@@ -171,8 +165,8 @@ export function JoinApp() {
         <section className="join-card">
           <h2>Continue with email</h2>
           <p>
-            We create a wallet for you when you sign in. That wallet becomes the
-            owner of the name you claim — not a “Clanker account.”
+            Sign in to create a wallet that will own the name you claim. That is
+            not a “Clanker account” — only an address on the public registry.
           </p>
           <button type="button" className="btn primary" onClick={() => login()}>
             Continue
@@ -199,16 +193,19 @@ export function JoinApp() {
 
       {authenticated && !wallet && (
         <p className="join-warn">
-          Waiting for your embedded wallet… If this hangs, refresh and try again.
+          Waiting for your wallet… If this hangs, refresh and try again.
         </p>
       )}
 
       {authenticated && wallet && (step === "names" || step === "login") && (
         <section className="join-card">
           <h2>Pick a name</h2>
-          <p>First-come on this test registry. Use dots, not spaces.</p>
+          <p>
+            First-come on this Base Sepolia registry. Use dots, not spaces.
+            The computer label is the agent that will run under your name.
+          </p>
           <label className="join-label">
-            Your operator name
+            Your name
             <input
               value={operatorLabel}
               onChange={(e) => setOperatorLabel(e.target.value)}
@@ -218,7 +215,7 @@ export function JoinApp() {
             />
           </label>
           <label className="join-label">
-            This computer
+            This computer / agent
             <input
               value={botLabel}
               onChange={(e) => setBotLabel(e.target.value)}
@@ -237,10 +234,21 @@ export function JoinApp() {
         <section className="join-card">
           <h2>Fund this address</h2>
           <p className="join-mono">{owner}</p>
+          <div className="join-actions">
+            <button
+              type="button"
+              className="btn ghost small"
+              onClick={() => owner && void copyText("address", owner)}
+            >
+              {copied === "address" ? "Copied" : "Copy address"}
+            </button>
+          </div>
           <p>
-            Claim <strong>{operatorLabel}</strong> and bot{" "}
-            <strong>{botLabel}</strong>. You need a little Base Sepolia ETH for
-            the name fee plus gas. One faucet drip is often not enough.
+            You are registering <strong>{operatorLabel}</strong> and{" "}
+            <strong>{botLabel}</strong> on the public phone book. That needs a
+            little Base Sepolia test ETH (name fee + gas). One faucet drip is
+            often not enough — copy the address into CDP →{" "}
+            <strong>Faucets</strong>, or try Alchemy.
           </p>
           {budgetError && <p className="join-error">{budgetError}</p>}
           {budget && (
@@ -264,8 +272,7 @@ export function JoinApp() {
                 </li>
                 <li>
                   Need about:{" "}
-                  <strong>{formatEthTrim(budget.neededWei)} ETH</strong> (fees +
-                  gas cushion)
+                  <strong>{formatEthTrim(budget.neededWei)} ETH</strong>
                 </li>
                 {!budget.funded && (
                   <li>
@@ -275,7 +282,7 @@ export function JoinApp() {
                       : ""}
                   </li>
                 )}
-                {budget.funded && <li className="join-ok">Funded — you can claim.</li>}
+                {budget.funded && <li className="join-ok">Funded — ready to register.</li>}
               </ul>
             </div>
           )}
@@ -286,7 +293,7 @@ export function JoinApp() {
               target="_blank"
               rel="noreferrer"
             >
-              Open CDP faucet
+              Open CDP portal
             </a>
             <a
               className="btn ghost"
@@ -310,8 +317,13 @@ export function JoinApp() {
             disabled={!budget?.funded || busy}
             onClick={() => void onMint()}
           >
-            {busy ? "Claiming…" : "Claim name"}
+            {busy ? "Registering…" : "Register on the registry"}
           </button>
+          {mintProgress && <p className="join-muted">{mintProgress}</p>}
+          <p className="join-fine">
+            Expect <strong>two</strong> approvals: your name, then this
+            computer. After “All done” on the first, approve the second.
+          </p>
           <button
             type="button"
             className="btn ghost small"
@@ -324,51 +336,84 @@ export function JoinApp() {
       )}
 
       {step === "done" && mint && (
-        <section className="join-card">
-          <h2>You claimed {mint.operatorLabel}</h2>
+        <section className="join-card join-done">
+          <p className="join-kicker">On the registry</p>
+          <h2>{mint.operatorLabel}</h2>
           <p>
-            Two keys, one job each: your <strong>login wallet</strong> owns the
-            name (mint / pair / transfer). The <strong>bot key file</strong> is
-            only for the agent to connect. Never put the bot key into your
-            login product — and never give the login wallet to OpenClaw.
+            Your name is recorded on the public Base Sepolia registry. Anyone
+            can look it up. Your login wallet (
+            <code>{shortenAddress(owner ?? "")}</code>) owns it — mint,
+            transfer, and revoke happen from that address.
           </p>
+          <ul className="join-facts">
+            <li>
+              <span>Name</span>
+              <code>{mint.operatorLabel}</code>
+            </li>
+            <li>
+              <span>Computer / agent</span>
+              <code>{mint.botLabel}</code>
+            </li>
+            <li>
+              <span>Owner</span>
+              <code>{owner}</code>
+            </li>
+            <li>
+              <span>Registry</span>
+              <code>{SEPOLIA_REGISTRY}</code>
+            </li>
+          </ul>
+
+          <h3>Save your agent key</h3>
           <p>
-            Your browser should have downloaded <code>{mint.botLabel}.key</code>.
-            Save it under <code>~/.openclaw/keys/{mint.botLabel}.key</code>.
+            The file <code>{mint.botLabel}.key</code> is the key for that agent
+            label — separate from your login. Keep it private. Your browser
+            should have downloaded it already.
           </p>
-          <button type="button" className="btn ghost" onClick={redownloadKey}>
-            Download bot key again
+          <button type="button" className="btn primary" onClick={redownloadKey}>
+            Download {mint.botLabel}.key again
           </button>
-          <h3>OpenClaw snippet</h3>
-          <p className="join-fine">
-            Merge into <code>~/.openclaw/openclaw.json</code> under{" "}
-            <code>channels.mqtt</code>, then install the MQTT plugins (see{" "}
-            <a href="/docs/plugins/">plugins</a>).
-          </p>
-          <pre className="join-pre">
-            {JSON.stringify({ channels: { mqtt: mint.channelsMqtt } }, null, 2)}
-          </pre>
-          <h3>Optional: pair with the smoke operator</h3>
+
+          <h3>What this is (and is not)</h3>
           <p>
-            Lets this hub’s Policy allow messages toward{" "}
-            <code>{SMOKE_OPERATOR}</code>. They still need to pair you back for
-            DMs.
+            You joined the <strong>registry</strong> — a phone book of names and
+            keys. That does not add you to a chat network or friend list. Other
+            products decide who they listen to.
           </p>
-          <button
-            type="button"
-            className="btn primary"
-            disabled={busy}
-            onClick={() => void onPair()}
-          >
-            {busy ? "Pairing…" : `Pair with ${SMOKE_OPERATOR}`}
-          </button>
-          {pairStatus && <p className="join-ok">{pairStatus}</p>}
-          <p className="join-fine">
-            You do <strong>not</strong> have <code>~/.clanker/op.key</code>. Use
-            this site (or transfer later) for pair / transfer. Read-only:{" "}
-            <code>clanker whoami --address {owner}</code>. More:{" "}
-            <a href="/docs/operator-owner/">Operator owner</a>.
-          </p>
+          <div className="join-actions">
+            <a className="btn ghost" href="/docs/trust-model/">
+              Trust model
+            </a>
+            <a className="btn ghost" href="/docs/operator-owner/">
+              Operator owner
+            </a>
+            <a className="btn ghost" href="/docs/">
+              Docs
+            </a>
+          </div>
+
+          <details className="join-details">
+            <summary>Later: experimental chat mesh (optional)</summary>
+            <p>
+              A separate product in this repo uses MQTT + OpenClaw so agents can
+              message with these names. It is invite-only and not required to
+              hold a registry name.
+            </p>
+            <p>
+              If you already run OpenClaw, save the key under{" "}
+              <code>~/.openclaw/keys/{mint.botLabel}.key</code>, then follow{" "}
+              <a href="/docs/get-started/">Get started</a> (mesh door) and{" "}
+              <a href="/docs/plugins/">plugins</a>.
+            </p>
+            <button
+              type="button"
+              className="btn ghost small"
+              onClick={() => void copyText("snippet", snippet)}
+            >
+              {copied === "snippet" ? "Copied" : "Copy OpenClaw snippet"}
+            </button>
+            <pre className="join-pre">{snippet}</pre>
+          </details>
         </section>
       )}
 

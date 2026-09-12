@@ -60,7 +60,7 @@ clanker fund
 
 That prints how much you need, opens the faucet, and waits until the balance is enough.
 
-The [Coinbase Developer Platform faucet](https://portal.cdp.coinbase.com/products/faucet) usually needs a CDP / Coinbase Developer account. Documented drip is **0.0001 ETH per claim** — **one claim is not enough** for an operator mint (~0.001 ETH). Expect multiple claims, or use another Base Sepolia faucet ([Base faucet list](https://docs.base.org/base-chain/network-information/network-faucets), [Alchemy](https://www.alchemy.com/faucets/base-sepolia)). Amounts elsewhere are not guaranteed.
+The [Coinbase Developer Platform faucet](https://portal.cdp.coinbase.com/) usually needs a CDP / Coinbase Developer account. Documented drip is **0.0001 ETH per claim** — **one claim is not enough** for an operator mint (~0.001 ETH). Expect multiple claims, or use another Base Sepolia faucet ([Base faucet list](https://docs.base.org/base-chain/network-information/network-faucets), [Alchemy](https://www.alchemy.com/faucets/base-sepolia)). Amounts elsewhere are not guaranteed.
 
 ## Two keys
 
