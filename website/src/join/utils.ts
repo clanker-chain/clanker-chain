@@ -8,13 +8,20 @@ import {
   SEPOLIA_REGISTRY,
 } from "./constants";
 
+/** Printable ASCII labels with dots — rejects Unicode lookalikes. */
+const LABEL_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
 export function labelToId(label: string): Hex {
   return keccak256(toBytes(label));
 }
 
-export function assertSafeBotLabel(label: string): void {
-  const s = String(label ?? "");
-  if (!s) throw new Error("Name this computer with a short label (no spaces).");
+function assertSafeLabel(label: string, kind: "operator" | "bot"): void {
+  const s = String(label ?? "").trim();
+  const what =
+    kind === "operator"
+      ? "Pick a name for your operator"
+      : "Name this computer with a short label (no spaces).";
+  if (!s) throw new Error(what);
   if (s.includes("\0")) throw new Error("Label must not contain NUL");
   if (s.includes("/") || s.includes("\\")) {
     throw new Error("Label must not contain path separators");
@@ -23,19 +30,25 @@ export function assertSafeBotLabel(label: string): void {
     throw new Error('Label must not contain ".."');
   }
   if (/\s/.test(s)) {
-    throw new Error("Use dots instead of spaces (example: you.laptop)");
+    throw new Error(
+      kind === "operator"
+        ? "Use dots instead of spaces (example: org.you)"
+        : "Use dots instead of spaces (example: you.laptop)",
+    );
+  }
+  if (!LABEL_RE.test(s)) {
+    throw new Error(
+      "Use ASCII letters, numbers, dots, underscores, or hyphens only",
+    );
   }
 }
 
+export function assertSafeBotLabel(label: string): void {
+  assertSafeLabel(label, "bot");
+}
+
 export function assertOperatorLabel(label: string): void {
-  const s = String(label ?? "").trim();
-  if (!s) throw new Error("Pick a name for your operator");
-  if (s.includes("\0") || s.includes("/") || s.includes("\\")) {
-    throw new Error("Name must not contain path separators");
-  }
-  if (/\s/.test(s)) {
-    throw new Error("Use dots instead of spaces (example: org.you)");
-  }
+  assertSafeLabel(label, "operator");
 }
 
 export function harnessSnippet(opts: {

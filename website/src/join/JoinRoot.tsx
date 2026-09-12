@@ -24,7 +24,8 @@ export default function JoinRoot() {
     <PrivyProvider
       appId={appId}
       config={{
-        loginMethods: ["email", "google", "passkey", "wallet"],
+        // No "wallet" — embedded EOA via email / Google / passkey only.
+        loginMethods: ["email", "google", "passkey"],
         appearance: {
           theme: "dark",
           accentColor: "#c4783a",
@@ -36,6 +37,8 @@ export default function JoinRoot() {
           ethereum: {
             createOnLogin: "users-without-wallets",
           },
+          // Never silent-sign mint — user must confirm in Privy UI.
+          showWalletUIs: true,
         },
         // EOA path only — do not default to smart wallets / Base Account.
       }}

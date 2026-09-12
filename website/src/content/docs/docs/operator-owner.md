@@ -41,7 +41,7 @@ We do **not** endorse one vendor as identity. Pick the signer that fits your pro
 - **[/join](/join)** — email / passkey, mint in the browser, download the bot key. No terminal required for the name itself. You still need OpenClaw (separately) to run the agent.
 - **CLI** — [Get started](/docs/get-started/) with `clanker setup` / `fund` / mint. You get `~/.clanker/op.key` on disk.
 
-If you minted on `/join`, you do **not** have `op.key`. Use the site (or transfer later) for pair / transfer. `clanker whoami --address 0x…` still reads Facts.
+If you minted on `/join`, you do **not** have `op.key` on disk. Pairing with this hub uses CLI `clanker pair` (operator signer must `personal_sign`). Lost the bot `.key` file? Mint another computer label under the same operator, or `clanker bot rotate`. `clanker whoami --address 0x…` still reads Facts.
 
 ## What this is not
 

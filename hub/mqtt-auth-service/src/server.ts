@@ -557,7 +557,7 @@ function jsonErr(status: number, code: string): Response {
   return json(status, { error: code });
 }
 
-/** Browser join page origins allowed to call public /pair* (Policy). */
+/** Site origins allowed to call public /pair* from a browser (Policy). */
 const PAIR_CORS_ORIGINS = new Set([
   "https://clanker-chain.com",
   "https://www.clanker-chain.com",
@@ -567,10 +567,7 @@ function pairCorsOrigin(request: Request): string | null {
   const origin = request.headers.get("origin");
   if (!origin) return null;
   if (PAIR_CORS_ORIGINS.has(origin)) return origin;
-  // Local Astro/dev previews of /join
-  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
-    return origin;
-  }
+  // No any-localhost allow on production — CLI /pair has no Origin header.
   return null;
 }
 
