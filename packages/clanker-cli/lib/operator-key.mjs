@@ -10,9 +10,8 @@ import { defaultOperatorKeyPath } from "./foundry.mjs";
 
 export { defaultOperatorKeyPath };
 
-/** Coinbase Developer Platform faucet UI (Base Sepolia). */
-export const BASE_SEPOLIA_FAUCET_URL =
-  "https://portal.cdp.coinbase.com/products/faucet";
+/** Coinbase Developer Platform portal (Faucets live in-nav; deep link /products/faucet 404s). */
+export const BASE_SEPOLIA_FAUCET_URL = "https://portal.cdp.coinbase.com/";
 
 /** Backup Base Sepolia faucet (amounts not guaranteed). */
 export const ALCHEMY_BASE_SEPOLIA_FAUCET_URL =

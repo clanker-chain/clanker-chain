@@ -12,9 +12,7 @@ import { baseSepolia } from "viem/chains";
 import { clankerIdentityAbi } from "./abi";
 import {
   CHAIN_RPC_URL,
-  MQTT_AUTH_SERVICE_URL,
   SEPOLIA_REGISTRY,
-  SMOKE_OPERATOR,
 } from "./constants";
 import { computeMintBudget, type MintBudget } from "./mint-budget";
 import {
@@ -82,7 +80,7 @@ export type MintResult = {
   botLabel: string;
   botPrivateKey: Hex;
   botAddress: Address;
-  operatorTx: Hex;
+  operatorTx: Hex | null;
   botTx: Hex;
   channelsMqtt: Record<string, unknown>;
 };
@@ -92,6 +90,7 @@ export async function mintOperatorAndBot(opts: {
   owner: Address;
   operatorLabel: string;
   botLabel: string;
+  onProgress?: (phase: "operator" | "bot") => void;
 }): Promise<MintResult> {
   assertOperatorLabel(opts.operatorLabel);
   assertSafeBotLabel(opts.botLabel);
@@ -106,7 +105,11 @@ export async function mintOperatorAndBot(opts: {
     functionName: "operators",
     args: [operatorId],
   });
-  if (existing[0] && existing[0].toLowerCase() !== ZERO) {
+  const existingOwner = existing[0]?.toLowerCase?.() ?? ZERO;
+  const ownerLower = opts.owner.toLowerCase();
+  const operatorAlreadyOurs =
+    existingOwner !== ZERO && existingOwner === ownerLower;
+  if (existingOwner !== ZERO && !operatorAlreadyOurs) {
     throw new Error(
       `That name is already taken on this registry. Pick another.`,
     );
@@ -140,17 +143,22 @@ export async function mintOperatorAndBot(opts: {
   const botPrivateKey = generatePrivateKey();
   const botAccount = privateKeyToAccount(botPrivateKey);
 
-  const operatorTx = await opts.walletClient.writeContract({
-    account: opts.owner,
-    chain: baseSepolia,
-    address: SEPOLIA_REGISTRY,
-    abi: clankerIdentityAbi,
-    functionName: "registerOperator",
-    args: [operatorLabel],
-    value: BigInt(operatorFee),
-  });
-  await waitOk(operatorTx);
+  let operatorTx: Hex | null = null;
+  if (!operatorAlreadyOurs) {
+    opts.onProgress?.("operator");
+    operatorTx = await opts.walletClient.writeContract({
+      account: opts.owner,
+      chain: baseSepolia,
+      address: SEPOLIA_REGISTRY,
+      abi: clankerIdentityAbi,
+      functionName: "registerOperator",
+      args: [operatorLabel],
+      value: BigInt(operatorFee),
+    });
+    await waitOk(operatorTx);
+  }
 
+  opts.onProgress?.("bot");
   const botTx = await opts.walletClient.writeContract({
     account: opts.owner,
     chain: baseSepolia,
@@ -174,47 +182,4 @@ export async function mintOperatorAndBot(opts: {
       operatorId: operatorLabel,
     }),
   };
-}
-
-export async function pairWithSmoke(opts: {
-  walletClient: WalletClient;
-  owner: Address;
-  operatorLabel: string;
-}): Promise<void> {
-  const base = MQTT_AUTH_SERVICE_URL.replace(/\/$/, "");
-  const nonceUrl = new URL("/pair-nonce", base);
-  nonceUrl.searchParams.set("operator_id", opts.operatorLabel);
-  nonceUrl.searchParams.set("action", "add");
-  nonceUrl.searchParams.set("peer_label", SMOKE_OPERATOR);
-
-  const nonceRes = await fetch(nonceUrl.toString());
-  const nonceBody = (await nonceRes.json()) as {
-    nonce?: string;
-    message?: string;
-    error?: string;
-  };
-  if (!nonceRes.ok || !nonceBody.nonce || !nonceBody.message) {
-    throw new Error(nonceBody.error || `pair-nonce failed (${nonceRes.status})`);
-  }
-
-  const signature = await opts.walletClient.signMessage({
-    account: opts.owner,
-    message: nonceBody.message,
-  });
-
-  const pairRes = await fetch(new URL("/pair", base).toString(), {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      operator_id: opts.operatorLabel,
-      peer_label: SMOKE_OPERATOR,
-      action: "add",
-      nonce: nonceBody.nonce,
-      signature,
-    }),
-  });
-  const pairBody = (await pairRes.json()) as { error?: string };
-  if (!pairRes.ok) {
-    throw new Error(pairBody.error || `pair failed (${pairRes.status})`);
-  }
 }

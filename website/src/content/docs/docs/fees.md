@@ -40,6 +40,6 @@ A later fee is a [new registry pin](/docs/registry-lifecycle/), not a tune. Succ
 
 ### Faucet drip vs fee (Sepolia)
 
-The [CDP faucet](https://portal.cdp.coinbase.com/products/faucet) documents **0.0001 ETH per claim**. That is **less than** the Sepolia operator fee. One claim cannot fund `clanker operator mint`. Use `clanker fund` (it estimates how many claims you need) or another Base Sepolia faucet. Details: [Prerequisites](/docs/prerequisites/).
+The [CDP faucet](https://portal.cdp.coinbase.com/) documents **0.0001 ETH per claim**. That is **less than** the Sepolia operator fee. One claim cannot fund `clanker operator mint`. Use `clanker fund` (it estimates how many claims you need) or another Base Sepolia faucet. Details: [Prerequisites](/docs/prerequisites/).
 
 Full fee table and deploy invariants: [docs/registration-economics.md](https://github.com/clanker-chain/clanker-chain/blob/main/docs/registration-economics.md).

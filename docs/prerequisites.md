@@ -47,7 +47,7 @@ After `clanker setup` (CLI) or after login on `/join`:
 clanker fund
 ```
 
-That prints the budget, opens the [CDP faucet](https://portal.cdp.coinbase.com/products/faucet), and polls until the balance covers one operator mint + one bot mint + gas. On `/join`, the same budget math is shown in the browser.
+That prints the budget, opens the [CDP faucet](https://portal.cdp.coinbase.com/), and polls until the balance covers one operator mint + one bot mint + gas. On `/join`, the same budget math is shown in the browser.
 
 CDP usually needs a Coinbase Developer account. Documented drip is **0.0001 ETH per claim** — **one claim is not enough** for an operator mint. Expect multiple claims, or use another Base Sepolia faucet ([Base faucet list](https://docs.base.org/base-chain/network-information/network-faucets), [Alchemy](https://www.alchemy.com/faucets/base-sepolia)). Other faucets’ amounts are not guaranteed.
 
