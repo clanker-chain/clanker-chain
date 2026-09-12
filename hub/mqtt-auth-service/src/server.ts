@@ -557,24 +557,72 @@ function jsonErr(status: number, code: string): Response {
   return json(status, { error: code });
 }
 
+/** Browser join page origins allowed to call public /pair* (Policy). */
+const PAIR_CORS_ORIGINS = new Set([
+  "https://clanker-chain.com",
+  "https://www.clanker-chain.com",
+]);
+
+function pairCorsOrigin(request: Request): string | null {
+  const origin = request.headers.get("origin");
+  if (!origin) return null;
+  if (PAIR_CORS_ORIGINS.has(origin)) return origin;
+  // Local Astro/dev previews of /join
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)) {
+    return origin;
+  }
+  return null;
+}
+
+function withPairCors(request: Request, response: Response): Response {
+  const origin = pairCorsOrigin(request);
+  if (!origin) return response;
+  const headers = new Headers(response.headers);
+  headers.set("Access-Control-Allow-Origin", origin);
+  headers.set("Vary", "Origin");
+  headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  headers.set("Access-Control-Allow-Headers", "content-type");
+  headers.set("Access-Control-Max-Age", "86400");
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+function isPairPath(path: string): boolean {
+  return path === "/pair" || path === "/pair-nonce";
+}
+
 const server = Bun.serve({
   port: PORT,
   async fetch(request: Request) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/$/, "") || "/";
 
+    if (isPairPath(path) && request.method === "OPTIONS") {
+      return withPairCors(request, new Response(null, { status: 204 }));
+    }
+
     if (path === "/nonce") {
       return handleNonce(request);
     }
 
     if (path === "/pair-nonce") {
-      return handlePairNonce(request);
+      return withPairCors(request, await handlePairNonce(request));
     }
 
     if (path === "/pair") {
-      if (request.method === "POST") return handlePairPost(request);
-      if (request.method === "GET") return handlePairGet(request);
-      return new Response("Method Not Allowed", { status: 405 });
+      if (request.method === "POST") {
+        return withPairCors(request, await handlePairPost(request));
+      }
+      if (request.method === "GET") {
+        return withPairCors(request, await handlePairGet(request));
+      }
+      return withPairCors(
+        request,
+        new Response("Method Not Allowed", { status: 405 }),
+      );
     }
 
     if (path === "/auth") {

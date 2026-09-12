@@ -1,11 +1,13 @@
 // @ts-check
 import { defineConfig } from "astro/config";
+import react from "@astrojs/react";
 import starlight from "@astrojs/starlight";
 
 // https://astro.build/config
 export default defineConfig({
   site: "https://clanker-chain.com",
   integrations: [
+    react(),
     starlight({
       title: "clanker-chain",
       logo: {
@@ -28,6 +30,7 @@ export default defineConfig({
           items: [
             { label: "What this is", slug: "docs" },
             { label: "Trust model", slug: "docs/trust-model" },
+            { label: "Operator owner", slug: "docs/operator-owner" },
             { label: "Fees", slug: "docs/fees" },
             { label: "Registry lifecycle", slug: "docs/registry-lifecycle" },
           ],
