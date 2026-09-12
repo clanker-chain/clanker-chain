@@ -109,9 +109,10 @@ export function JoinApp() {
   }, [owner, operatorAlreadyOurs]);
 
   // After login: look up owned names before showing pick-a-name.
+  // Depend on owner address (string), not step — setStep("loading") used to
+  // re-run this effect, cancel the in-flight lookup, and leave the UI stuck.
   useEffect(() => {
-    if (!authenticated || !wallet || !owner) return;
-    if (step !== "login") return;
+    if (!authenticated || !owner) return;
 
     let cancelled = false;
     setStep("loading");
@@ -132,7 +133,7 @@ export function JoinApp() {
     return () => {
       cancelled = true;
     };
-  }, [authenticated, wallet, owner, step, refreshOwned]);
+  }, [authenticated, owner, refreshOwned]);
 
   useEffect(() => {
     if (step === "fund" && owner) {
@@ -367,8 +368,24 @@ export function JoinApp() {
           <h2>Looking up names…</h2>
           <p className="join-muted">
             Checking the Base Sepolia registry for names this address already
-            owns.
+            owns. Usually about 10–20 seconds.
           </p>
+          {ownedError && (
+            <p className="join-warn" role="status">
+              {ownedError}
+            </p>
+          )}
+          <button
+            type="button"
+            className="btn ghost small"
+            onClick={() => {
+              setNamesMode("new");
+              setOperatorAlreadyOurs(false);
+              setStep("names");
+            }}
+          >
+            Skip — register a name
+          </button>
         </section>
       )}
 
