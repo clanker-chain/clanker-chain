@@ -18,6 +18,11 @@ import {
   SEPOLIA_REGISTRY,
 } from "./constants";
 import { formatEthTrim, type MintBudget } from "./mint-budget";
+import {
+  clearPendingBotKey,
+  hasPendingBotKey,
+  peekPendingBotKey,
+} from "./pending-key";
 import { downloadTextFile, shortenAddress } from "./utils";
 
 type Step = "login" | "names" | "fund" | "minting" | "done";
@@ -48,6 +53,7 @@ export function JoinApp() {
   const [mintProgress, setMintProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mint, setMint] = useState<MintResult | null>(null);
+  const [keyStillPending, setKeyStillPending] = useState(false);
   const [copied, setCopied] = useState<"snippet" | "address" | null>(null);
 
   const owner = (wallet?.address ?? null) as Address | null;
@@ -77,6 +83,15 @@ export function JoinApp() {
     }
   }, [step, owner, refreshBudget]);
 
+  // Wipe pending hex on tab close while still in memory (not on visibilitychange).
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      if (hasPendingBotKey()) clearPendingBotKey();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
   async function ensureWalletClient(): Promise<{
     client: WalletClient;
     address: Address;
@@ -88,6 +103,14 @@ export function JoinApp() {
       await wallet.switchChain(baseSepolia.id);
     }
     const provider = await wallet.getEthereumProvider();
+    // Re-read from the provider after switch — do not trust stale React chainId.
+    const chainIdHex = await provider.request({ method: "eth_chainId" });
+    const chainId = Number.parseInt(String(chainIdHex), 16);
+    if (chainId !== baseSepolia.id) {
+      throw new Error(
+        "Still not on Base Sepolia — switch network in the wallet UI and try again",
+      );
+    }
     const client = await walletClientFromProvider(provider, owner);
     return { client, address: owner };
   }
@@ -124,7 +147,11 @@ export function JoinApp() {
         },
       });
       setMint(result);
-      downloadTextFile(`${result.botLabel}.key`, `${result.botPrivateKey}\n`);
+      const pending = peekPendingBotKey();
+      if (pending) {
+        downloadTextFile(`${pending.label}.key`, `${pending.key}\n`);
+        setKeyStillPending(true);
+      }
       setMintProgress(null);
       setStep("done");
     } catch (e) {
@@ -137,8 +164,22 @@ export function JoinApp() {
   }
 
   function redownloadKey() {
-    if (!mint) return;
-    downloadTextFile(`${mint.botLabel}.key`, `${mint.botPrivateKey}\n`);
+    const pending = peekPendingBotKey();
+    if (!pending) return;
+    downloadTextFile(`${pending.label}.key`, `${pending.key}\n`);
+  }
+
+  function confirmKeySaved() {
+    clearPendingBotKey();
+    setKeyStillPending(false);
+  }
+
+  async function onSignOut() {
+    clearPendingBotKey();
+    setKeyStillPending(false);
+    setMint(null);
+    setStep("login");
+    await logout();
   }
 
   async function copyText(kind: "snippet" | "address", text: string) {
@@ -185,7 +226,11 @@ export function JoinApp() {
             {user?.email?.address ? ` as ${user.email.address}` : ""}
             {owner ? ` · ${shortenAddress(owner)}` : ""}
           </span>
-          <button type="button" className="btn ghost small" onClick={() => logout()}>
+          <button
+            type="button"
+            className="btn ghost small"
+            onClick={() => void onSignOut()}
+          >
             Sign out
           </button>
         </div>
@@ -202,7 +247,8 @@ export function JoinApp() {
           <h2>Pick a name</h2>
           <p>
             First-come on this Base Sepolia registry. Use dots, not spaces.
-            The computer label is the agent that will run under your name.
+            ASCII letters and numbers only (no lookalike Unicode). The computer
+            label is the agent that will run under your name.
           </p>
           <label className="join-label">
             Your name
@@ -224,7 +270,11 @@ export function JoinApp() {
               spellCheck={false}
             />
           </label>
-          <button type="button" className="btn primary" onClick={() => void onContinueNames()}>
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => void onContinueNames()}
+          >
             Next — fund
           </button>
         </section>
@@ -250,6 +300,10 @@ export function JoinApp() {
             often not enough — copy the address into CDP →{" "}
             <strong>Faucets</strong>, or try Alchemy.
           </p>
+          <p className="join-fine">
+            Registry contract (check this in the approval UI):{" "}
+            <code className="join-mono">{SEPOLIA_REGISTRY}</code>
+          </p>
           {budgetError && <p className="join-error">{budgetError}</p>}
           {budget && (
             <div className="join-budget">
@@ -268,7 +322,8 @@ export function JoinApp() {
               </div>
               <ul>
                 <li>
-                  Balance: <strong>{formatEthTrim(budget.balanceWei)} ETH</strong>
+                  Balance:{" "}
+                  <strong>{formatEthTrim(budget.balanceWei)} ETH</strong>
                 </li>
                 <li>
                   Need about:{" "}
@@ -282,7 +337,9 @@ export function JoinApp() {
                       : ""}
                   </li>
                 )}
-                {budget.funded && <li className="join-ok">Funded — ready to register.</li>}
+                {budget.funded && (
+                  <li className="join-ok">Funded — ready to register.</li>
+                )}
               </ul>
             </div>
           )}
@@ -322,7 +379,7 @@ export function JoinApp() {
           {mintProgress && <p className="join-muted">{mintProgress}</p>}
           <p className="join-fine">
             Expect <strong>two</strong> approvals: your name, then this
-            computer. After “All done” on the first, approve the second.
+            computer. Confirm the registry address above in each approval.
           </p>
           <button
             type="button"
@@ -365,14 +422,45 @@ export function JoinApp() {
           </ul>
 
           <h3>Save your agent key</h3>
-          <p>
-            The file <code>{mint.botLabel}.key</code> is the key for that agent
-            label — separate from your login. Keep it private. Your browser
-            should have downloaded it already.
-          </p>
-          <button type="button" className="btn primary" onClick={redownloadKey}>
-            Download {mint.botLabel}.key again
-          </button>
+          {keyStillPending ? (
+            <>
+              <p>
+                The file <code>{mint.botLabel}.key</code> is the key for that
+                agent label — separate from your login. Keep it private. Your
+                browser should have downloaded it already. Download again only
+                works until you confirm below.
+              </p>
+              <div className="join-actions">
+                <button
+                  type="button"
+                  className="btn primary"
+                  onClick={redownloadKey}
+                >
+                  Download {mint.botLabel}.key again
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={confirmKeySaved}
+                >
+                  I saved this key
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p>
+                This tab no longer holds the private key. If you still have{" "}
+                <code>{mint.botLabel}.key</code>, keep it somewhere safe.
+              </p>
+              <p className="join-fine">
+                Lost the file? Mint another computer label under the same
+                operator name, or use CLI{" "}
+                <code>clanker bot rotate</code> — see{" "}
+                <a href="/docs/operator-owner/">operator owner</a>.
+              </p>
+            </>
+          )}
 
           <h3>What this is (and is not)</h3>
           <p>
@@ -403,7 +491,8 @@ export function JoinApp() {
               If you already run OpenClaw, save the key under{" "}
               <code>~/.openclaw/keys/{mint.botLabel}.key</code>, then follow{" "}
               <a href="/docs/get-started/">Get started</a> (mesh door) and{" "}
-              <a href="/docs/plugins/">plugins</a>.
+              <a href="/docs/plugins/">plugins</a>. Pair with{" "}
+              <code>clanker pair</code> — not this page.
             </p>
             <button
               type="button"
@@ -417,7 +506,11 @@ export function JoinApp() {
         </section>
       )}
 
-      {error && <p className="join-error" role="alert">{error}</p>}
+      {error && (
+        <p className="join-error" role="alert">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

@@ -30,8 +30,8 @@ export const clankerIdentityAbi = [
     name: "bots",
     inputs: [{ name: "", type: "bytes32" }],
     outputs: [
-      { name: "botKey", type: "address" },
       { name: "operatorId", type: "bytes32" },
+      { name: "botKey", type: "address" },
       { name: "registeredAt", type: "uint64" },
       { name: "revokedAt", type: "uint64" },
     ],

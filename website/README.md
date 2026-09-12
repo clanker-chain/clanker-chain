@@ -28,18 +28,19 @@ export PUBLIC_PRIVY_APP_ID=clxxxxxxxx # from Privy dashboard
 cd website && npm run build
 ```
 
-### Privy dashboard checklist
+### Privy dashboard checklist (apply in dashboard — not code)
 
-1. Create an app in the [Privy dashboard](https://dashboard.privy.io/).
-2. Enable **email** (and optional Google / passkey). External wallets optional; prefer **EOA**, not smart wallets / Base Account (this hub’s pair path needs 65-byte ECDSA today).
-3. Turn on **embedded wallets** for Ethereum; create on login for users without a wallet.
-4. Add allowed domains: `clanker-chain.com`, `www.clanker-chain.com`, and `localhost:4321` for local preview.
-5. Set the default chain to **Base Sepolia** (`84532`) so mint txs land on the rehearsal registry.
-6. Optional: gas sponsorship for **gas only**. Do **not** sponsor `msg.value` registration fees from a Clanker hot wallet.
+1. Create an app in the [Privy dashboard](https://dashboard.privy.io/) (use a **separate** app id for local `localhost:4321` if you need one).
+2. Login methods: **email**, optional Google / passkey. **Do not** enable external wallet login on the production app (site code also omits `wallet` from `loginMethods`).
+3. Embedded wallets: **Ethereum EOA**, create-on-login for users without wallets. **No** smart wallets / Base Account.
+4. **Confirmation UIs on** (`showWalletUIs` is also pinned `true` in code). Wallet export off unless you document a transfer flow.
+5. Allowed origins (production app): `https://clanker-chain.com` and `https://www.clanker-chain.com` **only** — drop wildcard / localhost on this app id.
+6. Default chain: **Base Sepolia** (`84532`).
+7. Optional: gas sponsorship for **gas only**. Never sponsor `msg.value` registration fees.
 
 CI builds without `PUBLIC_PRIVY_APP_ID`; `/join` then renders a “not configured” card (no live login in `website.yml`).
 
-Put `PUBLIC_PRIVY_APP_ID=…` in `hub/mqtt-service/.env` on the hub host so [`deploy-website.sh`](../hub/mqtt-service/scripts/deploy-website.sh) exports it into the Astro build.
+Put `PUBLIC_PRIVY_APP_ID=…` in `hub/mqtt-service/.env` on the hub host. [`deploy-website.sh`](../hub/mqtt-service/scripts/deploy-website.sh) parses **only** that variable into the Astro build (it does not source the full hub `.env` into the website build).
 
 ## Deploy
 
@@ -52,7 +53,7 @@ On the hub host, after `git pull`:
 bash hub/mqtt-service/scripts/deploy-website.sh
 ```
 
-Browser pairing from `/join` also needs mqtt-auth CORS on `/pair*` (deploy the mqtt-auth service with the site when that changes).
+Caddy serves site-wide security headers (CSP with `frame-ancestors 'none'`, HSTS, nosniff). mqtt-auth `/pair*` CORS is locked to the site origins (CLI pair needs no Origin).
 
 DNS (registrar): apex **A** (and optional `www`) to the **same address as `mqtt.clanker-chain.com`**. Caddy obtains the HTTPS cert once that name resolves here.
 

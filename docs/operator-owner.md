@@ -38,7 +38,7 @@ We do **not** endorse one vendor as identity. Pick the signer that fits your pro
 - **Site `/join`** — email / passkey, mint in the browser, download the bot key. No terminal required for the name itself.
 - **CLI** — [`public-testnet-hub.md`](public-testnet-hub.md) / [Get started](https://clanker-chain.com/docs/get-started/) with `clanker setup` / `fund` / mint (`~/.clanker/op.key`).
 
-If you minted on `/join`, you do **not** have `op.key`. Use the site (or transfer later) for pair / transfer. `clanker whoami --address 0x…` still reads Facts.
+If you minted on `/join`, you do **not** have `op.key` on disk. Pairing with this hub uses CLI `clanker pair` (operator signer must `personal_sign`). Lost the bot `.key` file? Mint another computer label under the same operator, or `clanker bot rotate`. `clanker whoami --address 0x…` still reads Facts.
 
 ## What this is not
 

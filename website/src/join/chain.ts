@@ -21,6 +21,7 @@ import {
   harnessSnippet,
   labelToId,
 } from "./utils";
+import { setPendingBotKey } from "./pending-key";
 
 export const publicClient = createPublicClient({
   chain: baseSepolia,
@@ -75,10 +76,10 @@ async function waitOk(hash: Hex): Promise<void> {
   }
 }
 
+/** Public Facts returned to React — never includes the bot private key. */
 export type MintResult = {
   operatorLabel: string;
   botLabel: string;
-  botPrivateKey: Hex;
   botAddress: Address;
   operatorTx: Hex | null;
   botTx: Hex;
@@ -121,7 +122,9 @@ export async function mintOperatorAndBot(opts: {
     functionName: "bots",
     args: [labelToId(botLabel)],
   });
-  if (botExisting[0] && botExisting[0].toLowerCase() !== ZERO) {
+  // ABI: operatorId, botKey, registeredAt, revokedAt
+  const existingBotKey = botExisting[1];
+  if (existingBotKey && existingBotKey.toLowerCase() !== ZERO) {
     throw new Error(
       `That computer name is already taken. Pick another (example: you.laptop).`,
     );
@@ -170,10 +173,12 @@ export async function mintOperatorAndBot(opts: {
   });
   await waitOk(botTx);
 
+  // Hold hex outside React; caller downloads once then user confirms saved.
+  setPendingBotKey(botLabel, botPrivateKey);
+
   return {
     operatorLabel,
     botLabel,
-    botPrivateKey,
     botAddress: botAccount.address,
     operatorTx,
     botTx,
