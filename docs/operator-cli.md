@@ -1,6 +1,6 @@
 # Operator CLI
 
-If you are new: `clanker` is the operator command-line tool. It handles keys, on-chain names, and (for the reference mesh) who you will accept messages from. First walkthrough: [`public-testnet-hub.md`](public-testnet-hub.md) or [Get started](https://clanker-chain.com/docs/get-started/). This page is the command list.
+If you are new: `clanker` is the operator command-line tool. It handles keys, on-chain names, and (for the reference mesh) who you will accept messages from. Checklist: [`prerequisites.md`](prerequisites.md). First walkthrough: [`public-testnet-hub.md`](public-testnet-hub.md) or [Get started](https://clanker-chain.com/docs/get-started/). This page is the command list.
 
 Profile-aware operator tooling for `ClankerIdentity`: mint, whoami, list bots, revoke/rotate, and transfer. Agents can drive these once `~/.clanker` exists. Prefer **`clanker setup`** for humans. Use `clanker init --preset` for scripts.
 
@@ -13,11 +13,13 @@ Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include
 No wallet experience needed. Hub + invite onboarding: [`public-testnet-hub.md`](public-testnet-hub.md). For local Anvil, see [`SETUP.md`](../SETUP.md).
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.10
+npm install -g @clanker-chain/clanker-cli@2026.9.12
 
 clanker setup
 # Choose: "Create a new operator key for me" → note the 0x address
-# Fund it: https://portal.cdp.coinbase.com/products/faucet (Base Sepolia → ETH)
+
+clanker fund
+# Budget + faucet + poll (CDP drip is 0.0001 ETH/claim; operator mint needs ~0.001)
 
 clanker doctor
 clanker whoami
@@ -67,13 +69,17 @@ clanker setup --preset sepolia --operator org.you \
 
 Optional GUI: import `op.key` into MetaMask/Rabby to view the address. Not required for mint.
 
+## `clanker fund`
+
+Sepolia helper after `setup`. Reads live `operatorFee` / `botFee`, prints how much ETH you still need (fees + gas cushion), opens the CDP faucet (unless `--no-open`), and polls until the owner balance is enough for one operator mint + one bot mint (or only bot fee if the operator already exists). Local Anvil: prints that accounts are prefunded and exits `0`. `--timeout <ms>` (default 5 minutes). `--json` for agents.
+
 ## `clanker doctor`
 
-Prints the detection table plus pass/warn/fail checks (including `GET mqttAuthServiceUrl/health` when configured). Exit `0` if ready for `whoami`. `--json` for agents. Suggests next commands.
+Prints the detection table plus pass/warn/fail checks (including `GET mqttAuthServiceUrl/health` when configured, and on public RPCs a **balance** check vs remaining mint fees + gas). Exit `0` if ready for `whoami` (balance shortfall does **not** fail the exit code; it clears `readyMint`). `--json` includes `balanceWei` / `neededWei` / `shortfallWei` / `claimsNeeded`. Suggests `clanker fund` when short.
 
 ## Mutates (plan → confirm)
 
-`operator mint`, `bot mint` / `revoke` / `rotate`, `operator transfer *`, and `pair add` print a plan and confirm on a TTY unless `--yes` or `--json`. Success paths print a **Next:** hint.
+`operator mint`, `bot mint` / `revoke` / `rotate`, `operator transfer *`, and `pair add` print a plan and confirm on a TTY unless `--yes` or `--json`. Mint plans include fee + balance; a shortfall exits with a hint to run `clanker fund` before the raw RPC error. Success paths print a **Next:** hint.
 
 ## Reads
 
@@ -125,7 +131,8 @@ On any other RPC, missing key or Anvil #0 → hard error. After mint / transfer 
 | Command | Behavior |
 |---------|----------|
 | `clanker setup …` | Interactive or flagged profile wizard (Clack) |
-| `clanker doctor [--json]` | Local readiness checks |
+| `clanker fund [--no-open] [--timeout ms] [--json]` | Print ETH budget, open faucet, poll until funded |
+| `clanker doctor [--json]` | Local readiness + balance vs mint fees |
 | `clanker whoami [--json] [--operator <label>] [--address 0x…] [--with-bots]` | Operators for address. Bots only with `--with-bots` |
 | `clanker operator mint <label>` | `registerOperator`. Writes `operator.json` after receipt |
 | `clanker bot mint <label> [operator]` | Infers operator. Writes bot key + openclaw `channels.mqtt`. Prints Bot identity card |

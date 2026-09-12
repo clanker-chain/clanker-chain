@@ -36,7 +36,7 @@ Git tags must match `package.json` exactly:
 | `@clanker-chain/mqtt-node-client` | `mqtt-node-client-v2026.9.10` |
 | `@clanker-chain/mqtt-channel-plugin` | `mqtt-channel-plugin-v2026.9.10` |
 | `@clanker-chain/mqtt-tools` | `mqtt-tools-plugin-v2026.9.10` |
-| `@clanker-chain/clanker-cli` | `clanker-cli-v2026.9.10` |
+| `@clanker-chain/clanker-cli` | `clanker-cli-v2026.9.12` |
 
 **Deprecated packages (npm only. Source removed):** `@clanker-chain/mqtt-plugin`, `@clanker-chain/identity-plugin`. Use channel + tools + `identity-node-client` instead.
 
@@ -59,7 +59,7 @@ Pin **exact** CalVer (including micro when used):
 2. `@clanker-chain/mqtt-node-client`. **`2026.9.10`** (`dm/{a}::{b}` topic helpers)
 3. `@clanker-chain/mqtt-channel-plugin`. **`2026.9.10`** (pins `identity-node-client@2026.9.10`, `mqtt-node-client@2026.9.10`. `allowOperators` / `dmPolicy`)
 4. `@clanker-chain/mqtt-tools`. **`2026.9.10`** (pins channel + node clients. `mqtt_send`)
-5. `@clanker-chain/clanker-cli`. **`2026.9.10`** (`clanker pair` Policy UX)
+5. `@clanker-chain/clanker-cli`. **`2026.9.12`** (`clanker fund` + doctor balance; pairing Policy UX)
 
 Wait for npm registry propagation between steps when installing published deps in CI.
 

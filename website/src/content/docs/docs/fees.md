@@ -20,6 +20,10 @@ It is **not**:
 
 Who you accept is [Policy](/docs/trust-model/). Whether traffic is delivered is Transport.
 
+## Fee vs gas
+
+The registry fee is only part of what leaves your wallet. The network also charges **gas** (postage) for the transaction. Both come from the same ETH balance. `clanker fund` and `clanker doctor` budget fee(s) plus a small gas cushion. [Prerequisites](/docs/prerequisites/).
+
 ## Wei, not dollars
 
 The contract stores an integer. `$50` in the docs is only a **dated illustration** at deploy. ETH/USD moves in months. USD inflation moves in years. People will experience “it costs 0.05 ETH to take a name,” not “it costs $50 of trust.”
@@ -28,10 +32,14 @@ A later fee is a [new registry pin](/docs/registry-lifecycle/), not a tune. Succ
 
 ## Networks
 
-| Network | Role |
-|---------|------|
-| **Anvil / local** | Tiny or zero fees for development |
-| **Base Sepolia** | Tiny nonzero fees. Faucet ETH, **not** a real filter |
-| **Base mainnet** (not deployed) | Pick wei once. Live with a large ETH move. Document ETH amounts. |
+| Network | Operator fee | Bot fee | Notes |
+|---------|--------------|---------|-------|
+| **Anvil / local** | Tiny or zero | Tiny or zero | Prefunded accounts; no faucet |
+| **Base Sepolia** | ~**0.001 ETH** | ~**0.0001 ETH** | Faucet ETH, **not** a real filter. Live values from the contract |
+| **Base mainnet** (not deployed) | Pick wei once | Same | Dated USD *illustration* only at deploy. Not a dollar promise |
+
+### Faucet drip vs fee (Sepolia)
+
+The [CDP faucet](https://portal.cdp.coinbase.com/products/faucet) documents **0.0001 ETH per claim**. That is **less than** the Sepolia operator fee. One claim cannot fund `clanker operator mint`. Use `clanker fund` (it estimates how many claims you need) or another Base Sepolia faucet. Details: [Prerequisites](/docs/prerequisites/).
 
 Full fee table and deploy invariants: [docs/registration-economics.md](https://github.com/clanker-chain/clanker-chain/blob/main/docs/registration-economics.md).

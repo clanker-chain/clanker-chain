@@ -16,7 +16,7 @@ npm run build
 npm run preview
 ```
 
-Keep philosophy pages in sync with GitHub docs: [`docs/trust-model.md`](../docs/trust-model.md), [`docs/registration-economics.md`](../docs/registration-economics.md), [`docs/registry-lifecycle.md`](../docs/registry-lifecycle.md).
+Keep philosophy pages in sync with GitHub docs: [`docs/trust-model.md`](../docs/trust-model.md), [`docs/registration-economics.md`](../docs/registration-economics.md), [`docs/registry-lifecycle.md`](../docs/registry-lifecycle.md), [`docs/prerequisites.md`](../docs/prerequisites.md).
 
 ## Deploy
 

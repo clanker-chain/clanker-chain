@@ -11,10 +11,25 @@ import {
   clankerHome,
 } from "./profile.mjs";
 import { detectSetupHints, formatSetupDetectTable } from "./setup-detect.mjs";
+import { publicClientFromRpc } from "./identity-query.mjs";
+import {
+  assessMintBudget,
+  budgetToJson,
+  formatBudgetSummary,
+} from "./mint-budget.mjs";
 import { c, nextHint } from "./ui.mjs";
 
 /**
- * @param {{ home?: string, env?: NodeJS.ProcessEnv, openclawDir?: string, castBin?: string, spawn?: Function, fetchImpl?: typeof fetch }} [opts]
+ * @param {{
+ *   home?: string,
+ *   env?: NodeJS.ProcessEnv,
+ *   openclawDir?: string,
+ *   castBin?: string,
+ *   spawn?: Function,
+ *   fetchImpl?: typeof fetch,
+ *   publicClient?: { readContract: Function, getBalance: Function },
+ *   skipBalance?: boolean,
+ * }} [opts]
  */
 export async function runDoctorChecks(opts = {}) {
   const env = opts.env ?? process.env;
@@ -103,6 +118,59 @@ export async function runDoctorChecks(opts = {}) {
       : "Foundry cast not on PATH (optional)",
   });
 
+  /** @type {object|null} */
+  let budget = null;
+
+  const canCheckBalance =
+    !opts.skipBalance &&
+    hasOwner &&
+    registry &&
+    /^0x[0-9a-fA-F]{40}$/.test(registry) &&
+    rpc;
+
+  if (canCheckBalance) {
+    try {
+      if (isLocalRpc(rpc)) {
+        budget = await assessMintBudget({
+          pub: { readContract: async () => 0n, getBalance: async () => 0n },
+          registry,
+          owner: getAddress(operator.owner),
+          rpc,
+          operatorLabel: operator.label,
+        });
+        checks.push({
+          id: "balance",
+          ok: true,
+          level: "pass",
+          message: formatBudgetSummary(budget),
+        });
+      } else {
+        const pub =
+          opts.publicClient ?? (await publicClientFromRpc(rpc));
+        budget = await assessMintBudget({
+          pub,
+          registry,
+          owner: getAddress(operator.owner),
+          rpc,
+          operatorLabel: operator.label,
+        });
+        checks.push({
+          id: "balance",
+          ok: budget.funded,
+          level: budget.funded ? "pass" : "fail",
+          message: formatBudgetSummary(budget),
+        });
+      }
+    } catch (err) {
+      checks.push({
+        id: "balance",
+        ok: false,
+        level: "warn",
+        message: `balance check skipped: ${err.message ?? err}`,
+      });
+    }
+  }
+
   const authUrl = config?.mqttAuthServiceUrl;
   if (authUrl && typeof fetchImpl === "function") {
     const healthUrl = `${String(authUrl).replace(/\/$/, "")}/health`;
@@ -146,8 +214,12 @@ export async function runDoctorChecks(opts = {}) {
   const readyWhoami = checks
     .filter((ch) => ch.id === "config" || ch.id === "registry" || ch.id === "operator")
     .every((ch) => ch.ok);
-  const readyMint = readyWhoami && hasKey &&
-    !checks.some((ch) => ch.id === "anvil_public" && !ch.ok);
+  const balanceOk = !checks.some((ch) => ch.id === "balance" && ch.level === "fail");
+  const readyMint =
+    readyWhoami &&
+    hasKey &&
+    !checks.some((ch) => ch.id === "anvil_public" && !ch.ok) &&
+    balanceOk;
 
   return {
     home,
@@ -156,17 +228,19 @@ export async function runDoctorChecks(opts = {}) {
     readyWhoami,
     readyMint,
     ok: readyWhoami,
+    budget,
   };
 }
 
 /**
  * @param {string[]} argv
- * @param {{ home?: string, env?: NodeJS.ProcessEnv }} [opts]
+ * @param {{ home?: string, env?: NodeJS.ProcessEnv, publicClient?: object, skipBalance?: boolean }} [opts]
  * @returns {Promise<{ exitCode: number, report: object }>}
  */
 export async function runDoctor(argv = [], opts = {}) {
   const json = argv.includes("--json");
   const report = await runDoctorChecks(opts);
+  const budgetJson = report.budget ? budgetToJson(report.budget) : null;
 
   if (json) {
     console.log(
@@ -177,6 +251,15 @@ export async function runDoctor(argv = [], opts = {}) {
           readyMint: report.readyMint,
           home: report.home,
           checks: report.checks,
+          ...(budgetJson
+            ? {
+                balanceWei: budgetJson.balanceWei,
+                neededWei: budgetJson.neededWei,
+                shortfallWei: budgetJson.shortfallWei,
+                claimsNeeded: budgetJson.claimsNeeded,
+                budget: budgetJson,
+              }
+            : {}),
         },
         null,
         2,
@@ -207,12 +290,16 @@ export async function runDoctor(argv = [], opts = {}) {
   }
   if (report.readyMint) {
     console.log(c.green("Ready for: clanker operator mint / bot mint"));
+  } else if (report.budget && !report.budget.funded && !report.budget.local) {
+    console.log(c.dim("Mint: fund the operator address first (clanker fund)"));
   } else {
     console.log(c.dim("Mint/revoke: need signing key (and non-Anvil owner on public RPC)"));
   }
 
   if (!report.readyWhoami) {
     nextHint(["clanker setup"]);
+  } else if (report.budget && !report.budget.funded && !report.budget.local) {
+    nextHint(["clanker fund", "clanker doctor"]);
   } else if (!report.readyMint) {
     nextHint([
       "clanker whoami",

@@ -14,6 +14,13 @@ export { defaultOperatorKeyPath };
 export const BASE_SEPOLIA_FAUCET_URL =
   "https://portal.cdp.coinbase.com/products/faucet";
 
+/** Backup Base Sepolia faucet (amounts not guaranteed). */
+export const ALCHEMY_BASE_SEPOLIA_FAUCET_URL =
+  "https://www.alchemy.com/faucets/base-sepolia";
+
+/** Documented CDP ETH drip per claim on Base Sepolia. */
+export const CDP_FAUCET_DRIP_ETH = "0.0001";
+
 /**
  * Generate a new secp256k1 key and write it to destPath (mode 0o600).
  * Does not print the key.
@@ -42,7 +49,8 @@ export function generateOperatorKeyFile(destPath, opts = {}) {
 export function consumerFundHints(opts) {
   const mintLabel = opts.label ? ` ${opts.label}` : "";
   return [
-    `Your operator address is ${opts.address} — fund it with Base Sepolia ETH: ${BASE_SEPOLIA_FAUCET_URL}`,
+    `Your operator address is ${opts.address} — fund it with Base Sepolia ETH`,
+    "clanker fund",
     "clanker doctor",
     `clanker operator mint${mintLabel} --yes`,
     "clanker bot mint <bot_label> --yes",

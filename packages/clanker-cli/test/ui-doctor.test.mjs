@@ -67,6 +67,7 @@ describe("doctor", () => {
       env: {},
       spawn: () => ({ status: 1, error: new Error("no cast") }),
       fetchImpl: async () => ({ ok: true, status: 200 }),
+      skipBalance: true,
     });
     assert.equal(report.readyWhoami, false);
     assert.equal(report.ok, false);
@@ -88,6 +89,7 @@ describe("doctor", () => {
       env: {},
       spawn: () => ({ status: 0, stdout: "", error: null }),
       fetchImpl: async () => ({ ok: true, status: 200 }),
+      skipBalance: true,
     });
     assert.equal(report.readyWhoami, true);
     assert.equal(report.readyMint, false);
@@ -103,6 +105,7 @@ describe("doctor", () => {
         home,
         env: {},
         fetchImpl: async () => ({ ok: true, status: 200 }),
+        skipBalance: true,
       });
       assert.equal(exitCode, 0);
       const parsed = JSON.parse(printed.trim());
@@ -110,6 +113,88 @@ describe("doctor", () => {
     } finally {
       console.log = orig;
     }
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  it("balance shortfall clears readyMint but keeps whoami ok", async () => {
+    const home = mkdtempSync(join(tmpdir(), "clanker-doc3-"));
+    initProfile("sepolia", { home });
+    writeOperator(
+      {
+        label: "org.you",
+        owner: "0x07e8CFD171E63915A441B0E8ff9E3CC2Cd27c4B4",
+        key: { type: "keyFile", value: "/tmp/op.key" },
+      },
+      home,
+    );
+    const { parseEther } = await import("viem");
+    const opFee = parseEther("0.001");
+    const botFee = parseEther("0.0001");
+    const pub = {
+      readContract: async ({ functionName }) => {
+        if (functionName === "operatorFee") return opFee;
+        if (functionName === "botFee") return botFee;
+        if (functionName === "operators") {
+          return ["0x0000000000000000000000000000000000000000", 0n, 0n];
+        }
+        throw new Error(functionName);
+      },
+      getBalance: async () => 0n,
+    };
+    const report = await runDoctorChecks({
+      home,
+      env: {},
+      spawn: () => ({ status: 1, error: new Error("no cast") }),
+      fetchImpl: async () => ({ ok: true, status: 200 }),
+      publicClient: pub,
+    });
+    assert.equal(report.readyWhoami, true);
+    assert.equal(report.ok, true);
+    assert.equal(report.readyMint, false);
+    const bal = report.checks.find((ch) => ch.id === "balance");
+    assert.ok(bal);
+    assert.equal(bal.level, "fail");
+    assert.equal(report.budget.funded, false);
+    assert.ok(report.budget.claimsNeeded > 0);
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  it("funded balance keeps readyMint when key present", async () => {
+    const home = mkdtempSync(join(tmpdir(), "clanker-doc4-"));
+    initProfile("sepolia", { home });
+    writeOperator(
+      {
+        label: "org.you",
+        owner: "0x07e8CFD171E63915A441B0E8ff9E3CC2Cd27c4B4",
+        key: { type: "keyFile", value: "/tmp/op.key" },
+      },
+      home,
+    );
+    const { parseEther } = await import("viem");
+    const { MINT_GAS_RESERVE_WEI } = await import("../lib/mint-budget.mjs");
+    const opFee = parseEther("0.001");
+    const botFee = parseEther("0.0001");
+    const pub = {
+      readContract: async ({ functionName }) => {
+        if (functionName === "operatorFee") return opFee;
+        if (functionName === "botFee") return botFee;
+        if (functionName === "operators") {
+          return ["0x0000000000000000000000000000000000000000", 0n, 0n];
+        }
+        throw new Error(functionName);
+      },
+      getBalance: async () => opFee + botFee + MINT_GAS_RESERVE_WEI,
+    };
+    const report = await runDoctorChecks({
+      home,
+      env: {},
+      spawn: () => ({ status: 1, error: new Error("no cast") }),
+      fetchImpl: async () => ({ ok: true, status: 200 }),
+      publicClient: pub,
+    });
+    assert.equal(report.readyMint, true);
+    const bal = report.checks.find((ch) => ch.id === "balance");
+    assert.equal(bal.level, "pass");
     rmSync(home, { recursive: true, force: true });
   });
 });

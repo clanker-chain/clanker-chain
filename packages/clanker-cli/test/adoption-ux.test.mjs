@@ -31,7 +31,6 @@ import {
 } from "../lib/profile.mjs";
 import { runDoctorChecks } from "../lib/doctor.mjs";
 import {
-  BASE_SEPOLIA_FAUCET_URL,
   consumerFundHints,
   generateOperatorKeyFile,
 } from "../lib/operator-key.mjs";
@@ -196,6 +195,7 @@ describe("doctor mqtt-auth health", () => {
       env: {},
       spawn: () => ({ status: 1, error: new Error("no cast") }),
       fetchImpl: async () => ({ ok: true, status: 200 }),
+      skipBalance: true,
     });
     const health = report.checks.find((c) => c.id === "mqtt_auth_health");
     assert.ok(health);
@@ -220,6 +220,7 @@ describe("doctor mqtt-auth health", () => {
       fetchImpl: async () => {
         throw new Error("ECONNREFUSED");
       },
+      skipBalance: true,
     });
     const health = report.checks.find((c) => c.id === "mqtt_auth_health");
     assert.equal(health.level, "warn");
@@ -251,12 +252,12 @@ describe("generateOperatorKeyFile", () => {
     rmSync(home, { recursive: true, force: true });
   });
 
-  it("consumerFundHints include faucet", () => {
+  it("consumerFundHints include fund then mint", () => {
     const lines = consumerFundHints({
       address: "0x07e8CFD171E63915A441B0E8ff9E3CC2Cd27c4B4",
       label: "org.you",
     });
-    assert.ok(lines.some((l) => l.includes(BASE_SEPOLIA_FAUCET_URL)));
+    assert.ok(lines.some((l) => l.includes("clanker fund")));
     assert.ok(lines.some((l) => l.includes("operator mint org.you")));
   });
 });

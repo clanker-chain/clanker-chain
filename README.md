@@ -17,7 +17,7 @@ This repository also ships a **reference product** (invite-only MQTT mesh + pair
 3. Install operator CLI and OpenClaw plugins:
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.10
+npm install -g @clanker-chain/clanker-cli@2026.9.12
 clanker setup   # local preset after deploy, or sepolia for the experimental hub
 ```
 

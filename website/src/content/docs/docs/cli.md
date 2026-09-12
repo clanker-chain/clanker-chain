@@ -1,14 +1,14 @@
 ---
 title: CLI
-description: Profile-aware clanker setup, doctor, and mint commands.
+description: Profile-aware clanker setup, fund, doctor, and mint commands.
 ---
 
-If you are new: `clanker` is the operator command-line tool. It creates keys, registers names on the registry, and (for the reference mesh) records who you will accept messages from. Prefer the [Get started](/docs/get-started/) walkthrough the first time. This page is the command list.
+If you are new: `clanker` is the operator command-line tool. It creates keys, registers names on the registry, and (for the reference mesh) records who you will accept messages from. Prefer [Prerequisites](/docs/prerequisites/) then [Get started](/docs/get-started/) the first time. This page is the command list.
 
 Install:
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.10
+npm install -g @clanker-chain/clanker-cli@2026.9.12
 ```
 
 Prefer **`clanker setup`** for humans. Agents/scripts can use flags with `--yes`.
@@ -20,7 +20,9 @@ Mint commands write **Facts** on the public-good registry. Pairing is this produ
 ```bash
 clanker setup
 # Create a new operator key → note the 0x address
-# Fund: https://portal.cdp.coinbase.com/products/faucet (Base Sepolia → ETH)
+
+clanker fund
+# Prints budget, opens faucet, waits until balance covers mint + gas
 
 clanker doctor
 clanker whoami
@@ -28,14 +30,15 @@ clanker operator mint org.you --yes
 clanker bot mint you.laptop --yes
 ```
 
-`bot mint` prints a **Bot identity** card (bot key path, openclaw config) and plugin / peer checklist. See [Get started](/docs/get-started/).
+`clanker fund` is for **Base Sepolia**. Local Anvil is prefunded. `doctor` checks profile readiness **and** whether your ETH balance can cover remaining mint fees (+ gas). `bot mint` prints a **Bot identity** card (bot key path, openclaw config) and plugin / peer checklist. See [Get started](/docs/get-started/).
 
 ## Useful commands
 
 | Command | What it does |
 |---------|----------------|
 | `clanker setup` | Network + operator profile. Can generate `~/.clanker/op.key` |
-| `clanker doctor [--json]` | Local readiness + mqtt-auth `/health` when configured |
+| `clanker fund [--no-open] [--timeout ms]` | Print ETH budget, open faucet, poll until funded |
+| `clanker doctor [--json]` | Local readiness + balance vs fees + mqtt-auth `/health` |
 | `clanker whoami` | Operators for your owner address |
 | `clanker operator mint <label>` | Register operator on-chain |
 | `clanker bot mint <label>` | Register bot, write bot key, wire OpenClaw `channels.mqtt` |
