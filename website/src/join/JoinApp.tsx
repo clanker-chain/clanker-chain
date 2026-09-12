@@ -9,6 +9,7 @@ import { baseSepolia } from "viem/chains";
 import {
   assessJoinBudget,
   mintOperatorAndBot,
+  publicClient,
   walletClientFromProvider,
   type MintResult,
 } from "./chain";
@@ -19,13 +20,28 @@ import {
 } from "./constants";
 import { formatEthTrim, type MintBudget } from "./mint-budget";
 import {
+  loadOwnedIdentities,
+  mergeMintIntoOwned,
+  type OwnedOperator,
+} from "./owned";
+import {
   clearPendingBotKey,
   hasPendingBotKey,
   peekPendingBotKey,
 } from "./pending-key";
 import { downloadTextFile, shortenAddress } from "./utils";
 
-type Step = "login" | "names" | "fund" | "minting" | "done";
+type Step =
+  | "login"
+  | "loading"
+  | "home"
+  | "names"
+  | "fund"
+  | "minting"
+  | "done";
+
+/** names mode: full new name+bot, or bot under an existing operator */
+type NamesMode = "new" | "add-bot";
 
 function pickOperatorWallet(wallets: ConnectedWallet[]): ConnectedWallet | null {
   const embedded = wallets.find((w) => w.walletClientType === "privy");
@@ -45,8 +61,12 @@ export function JoinApp() {
   const wallet = useMemo(() => pickOperatorWallet(wallets), [wallets]);
 
   const [step, setStep] = useState<Step>("login");
+  const [namesMode, setNamesMode] = useState<NamesMode>("new");
   const [operatorLabel, setOperatorLabel] = useState("");
   const [botLabel, setBotLabel] = useState("");
+  const [operatorAlreadyOurs, setOperatorAlreadyOurs] = useState(false);
+  const [owned, setOwned] = useState<OwnedOperator[]>([]);
+  const [ownedError, setOwnedError] = useState<string | null>(null);
   const [budget, setBudget] = useState<MintBudget | null>(null);
   const [budgetError, setBudgetError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -58,22 +78,61 @@ export function JoinApp() {
 
   const owner = (wallet?.address ?? null) as Address | null;
 
+  const refreshOwned = useCallback(async (): Promise<OwnedOperator[]> => {
+    if (!owner) return [];
+    const result = await loadOwnedIdentities(publicClient, owner);
+    if (result.status === "error") {
+      setOwnedError(
+        result.message.includes("timed out")
+          ? result.message
+          : "Couldn’t load your names from the registry",
+      );
+    } else {
+      setOwnedError(null);
+    }
+    setOwned(result.operators);
+    return result.operators;
+  }, [owner]);
+
   const refreshBudget = useCallback(async () => {
     if (!owner) return;
     setBudgetError(null);
     try {
-      const next = await assessJoinBudget(owner);
+      const next = await assessJoinBudget(owner, {
+        needOperatorFee: !operatorAlreadyOurs,
+        needBotFee: true,
+      });
       setBudget(next);
     } catch (e) {
       setBudgetError(e instanceof Error ? e.message : String(e));
     }
-  }, [owner]);
+  }, [owner, operatorAlreadyOurs]);
 
+  // After login: look up owned names before showing pick-a-name.
   useEffect(() => {
-    if (authenticated && wallet && step === "login") {
-      setStep("names");
-    }
-  }, [authenticated, wallet, step]);
+    if (!authenticated || !wallet || !owner) return;
+    if (step !== "login") return;
+
+    let cancelled = false;
+    setStep("loading");
+    setError(null);
+
+    void (async () => {
+      const operators = await refreshOwned();
+      if (cancelled) return;
+      if (operators.length > 0) {
+        setStep("home");
+      } else {
+        setNamesMode("new");
+        setOperatorAlreadyOurs(false);
+        setStep("names");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated, wallet, owner, step, refreshOwned]);
 
   useEffect(() => {
     if (step === "fund" && owner) {
@@ -83,7 +142,6 @@ export function JoinApp() {
     }
   }, [step, owner, refreshBudget]);
 
-  // Wipe pending hex on tab close while still in memory (not on visibilitychange).
   useEffect(() => {
     const onBeforeUnload = () => {
       if (hasPendingBotKey()) clearPendingBotKey();
@@ -103,7 +161,6 @@ export function JoinApp() {
       await wallet.switchChain(baseSepolia.id);
     }
     const provider = await wallet.getEthereumProvider();
-    // Re-read from the provider after switch — do not trust stale React chainId.
     const chainIdHex = await provider.request({ method: "eth_chainId" });
     const chainId = Number.parseInt(String(chainIdHex), 16);
     if (chainId !== baseSepolia.id) {
@@ -115,11 +172,46 @@ export function JoinApp() {
     return { client, address: owner };
   }
 
+  function startNewName() {
+    setError(null);
+    setNamesMode("new");
+    setOperatorAlreadyOurs(false);
+    setOperatorLabel("");
+    setBotLabel("");
+    setStep("names");
+  }
+
+  function startAddComputer(opLabel: string) {
+    setError(null);
+    setNamesMode("add-bot");
+    setOperatorAlreadyOurs(true);
+    setOperatorLabel(opLabel);
+    setBotLabel("");
+    setStep("names");
+  }
+
+  async function goHome() {
+    setError(null);
+    setMint(null);
+    setStep("loading");
+    const operators = await refreshOwned();
+    setStep(operators.length > 0 ? "home" : "names");
+    if (operators.length === 0) {
+      setNamesMode("new");
+      setOperatorAlreadyOurs(false);
+    }
+  }
+
   async function onContinueNames() {
     setError(null);
     const op = operatorLabel.trim();
     const bot = botLabel.trim();
-    if (!op || !bot) {
+    if (namesMode === "add-bot") {
+      if (!op || !bot) {
+        setError("Pick a computer label");
+        return;
+      }
+    } else if (!op || !bot) {
       setError("Pick both a name and a computer label");
       return;
     }
@@ -129,7 +221,12 @@ export function JoinApp() {
   async function onMint() {
     setError(null);
     setBusy(true);
-    setMintProgress("Approve 1 of 2 — register your name…");
+    const needOp = !operatorAlreadyOurs;
+    setMintProgress(
+      needOp
+        ? "Approve 1 of 2 — register your name…"
+        : "Approve — register this computer…",
+    );
     setStep("minting");
     try {
       const { client, address } = await ensureWalletClient();
@@ -139,14 +236,21 @@ export function JoinApp() {
         operatorLabel,
         botLabel,
         onProgress: (phase) => {
-          setMintProgress(
-            phase === "operator"
-              ? "Approve 1 of 2 — register your name…"
-              : "Approve 2 of 2 — register this computer…",
-          );
+          if (phase === "operator") {
+            setMintProgress("Approve 1 of 2 — register your name…");
+          } else {
+            setMintProgress(
+              needOp
+                ? "Approve 2 of 2 — register this computer…"
+                : "Approve — register this computer…",
+            );
+          }
         },
       });
       setMint(result);
+      if (owner) {
+        setOwned((prev) => mergeMintIntoOwned(prev, result, owner));
+      }
       const pending = peekPendingBotKey();
       if (pending) {
         downloadTextFile(`${pending.label}.key`, `${pending.key}\n`);
@@ -178,6 +282,12 @@ export function JoinApp() {
     clearPendingBotKey();
     setKeyStillPending(false);
     setMint(null);
+    setOwned([]);
+    setOwnedError(null);
+    setOperatorLabel("");
+    setBotLabel("");
+    setNamesMode("new");
+    setOperatorAlreadyOurs(false);
     setStep("login");
     await logout();
   }
@@ -199,6 +309,16 @@ export function JoinApp() {
   const snippet = mint
     ? JSON.stringify({ channels: { mqtt: mint.channelsMqtt } }, null, 2)
     : "";
+
+  const backFromFund = () => {
+    if (owned.length > 0 && namesMode === "add-bot") {
+      setStep("home");
+    } else if (owned.length > 0 && namesMode === "new") {
+      setStep("names");
+    } else {
+      setStep("names");
+    }
+  };
 
   return (
     <div className="join-app">
@@ -242,34 +362,172 @@ export function JoinApp() {
         </p>
       )}
 
-      {authenticated && wallet && (step === "names" || step === "login") && (
+      {authenticated && wallet && step === "loading" && (
         <section className="join-card">
-          <h2>Pick a name</h2>
-          <p>
-            First-come on this Base Sepolia registry. Use dots, not spaces.
-            ASCII letters and numbers only (no lookalike Unicode). The computer
-            label is the agent that will run under your name.
+          <h2>Looking up names…</h2>
+          <p className="join-muted">
+            Checking the Base Sepolia registry for names this address already
+            owns.
           </p>
-          <label className="join-label">
-            Your name
-            <input
-              value={operatorLabel}
-              onChange={(e) => setOperatorLabel(e.target.value)}
-              placeholder="org.you"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </label>
-          <label className="join-label">
-            This computer / agent
-            <input
-              value={botLabel}
-              onChange={(e) => setBotLabel(e.target.value)}
-              placeholder="you.laptop"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </label>
+        </section>
+      )}
+
+      {authenticated && wallet && step === "home" && (
+        <section className="join-card">
+          <p className="join-kicker">On this registry</p>
+          <h2>Your names</h2>
+          <p>
+            This wallet already owns the labels below. Keep each agent{" "}
+            <code>.key</code> file private. Mint another computer under a name,
+            or claim a new name.
+          </p>
+          {ownedError && (
+            <p className="join-warn" role="status">
+              {ownedError}
+            </p>
+          )}
+          <ul className="join-owned">
+            {owned.map((op) => (
+              <li key={op.id} className="join-owned-op">
+                <div className="join-owned-head">
+                  <code>{op.label}</code>
+                  <button
+                    type="button"
+                    className="btn ghost small"
+                    onClick={() => startAddComputer(op.label)}
+                  >
+                    Register another computer
+                  </button>
+                </div>
+                {op.bots.length === 0 ? (
+                  <p className="join-fine">No computers registered yet.</p>
+                ) : (
+                  <ul className="join-owned-bots">
+                    {op.bots.map((b) => (
+                      <li key={b.id}>
+                        <code>{b.label}</code>
+                        <span className="join-muted">
+                          {shortenAddress(b.botKey)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          <h3>Next steps</h3>
+          <ul className="join-next">
+            <li>
+              Keep each <code>.key</code> file somewhere safe — this page does
+              not store it.
+            </li>
+            <li>
+              Lost a key? Mint another computer label, or use CLI{" "}
+              <code>clanker bot rotate</code> — see{" "}
+              <a href="/docs/operator-owner/">operator owner</a>.
+            </li>
+            <li>
+              Experimental mesh pairing is CLI <code>clanker pair</code>, not
+              this page.
+            </li>
+          </ul>
+
+          <div className="join-actions">
+            <button
+              type="button"
+              className="btn primary"
+              onClick={startNewName}
+            >
+              Register another name
+            </button>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => void goHome()}
+            >
+              Refresh
+            </button>
+            <a className="btn ghost" href="/docs/operator-owner/">
+              Operator owner
+            </a>
+            <a className="btn ghost" href="/docs/get-started/">
+              Get started
+            </a>
+          </div>
+        </section>
+      )}
+
+      {authenticated && wallet && step === "names" && (
+        <section className="join-card">
+          {namesMode === "add-bot" ? (
+            <>
+              <h2>Register a computer</h2>
+              <p>
+                Add another agent under <strong>{operatorLabel}</strong>. ASCII
+                letters and numbers only (no lookalike Unicode).
+              </p>
+              {ownedError && owned.length === 0 && (
+                <p className="join-warn" role="status">
+                  {ownedError}
+                </p>
+              )}
+              <label className="join-label">
+                Your name
+                <input
+                  value={operatorLabel}
+                  readOnly
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </label>
+              <label className="join-label">
+                This computer / agent
+                <input
+                  value={botLabel}
+                  onChange={(e) => setBotLabel(e.target.value)}
+                  placeholder="you.laptop"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </label>
+            </>
+          ) : (
+            <>
+              <h2>Pick a name</h2>
+              <p>
+                First-come on this Base Sepolia registry. Use dots, not spaces.
+                ASCII letters and numbers only (no lookalike Unicode). The
+                computer label is the agent that will run under your name.
+              </p>
+              {ownedError && (
+                <p className="join-warn" role="status">
+                  {ownedError}
+                </p>
+              )}
+              <label className="join-label">
+                Your name
+                <input
+                  value={operatorLabel}
+                  onChange={(e) => setOperatorLabel(e.target.value)}
+                  placeholder="org.you"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </label>
+              <label className="join-label">
+                This computer / agent
+                <input
+                  value={botLabel}
+                  onChange={(e) => setBotLabel(e.target.value)}
+                  placeholder="you.laptop"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </label>
+            </>
+          )}
           <button
             type="button"
             className="btn primary"
@@ -277,6 +535,15 @@ export function JoinApp() {
           >
             Next — fund
           </button>
+          {owned.length > 0 && (
+            <button
+              type="button"
+              className="btn ghost small"
+              onClick={() => setStep("home")}
+            >
+              Back to your names
+            </button>
+          )}
         </section>
       )}
 
@@ -294,11 +561,21 @@ export function JoinApp() {
             </button>
           </div>
           <p>
-            You are registering <strong>{operatorLabel}</strong> and{" "}
-            <strong>{botLabel}</strong> on the public phone book. That needs a
-            little Base Sepolia test ETH (name fee + gas). One faucet drip is
-            often not enough — copy the address into CDP →{" "}
-            <strong>Faucets</strong>, or try Alchemy.
+            {operatorAlreadyOurs ? (
+              <>
+                You are registering computer <strong>{botLabel}</strong> under{" "}
+                <strong>{operatorLabel}</strong> (you already own that name).
+                That needs a little Base Sepolia test ETH (computer fee + gas).
+              </>
+            ) : (
+              <>
+                You are registering <strong>{operatorLabel}</strong> and{" "}
+                <strong>{botLabel}</strong> on the public phone book. That needs
+                a little Base Sepolia test ETH (name fee + gas). One faucet drip
+                is often not enough — copy the address into CDP →{" "}
+                <strong>Faucets</strong>, or try Alchemy.
+              </>
+            )}
           </p>
           <p className="join-fine">
             Registry contract (check this in the approval UI):{" "}
@@ -378,13 +655,22 @@ export function JoinApp() {
           </button>
           {mintProgress && <p className="join-muted">{mintProgress}</p>}
           <p className="join-fine">
-            Expect <strong>two</strong> approvals: your name, then this
-            computer. Confirm the registry address above in each approval.
+            {operatorAlreadyOurs ? (
+              <>
+                Expect <strong>one</strong> approval for this computer. Confirm
+                the registry address above.
+              </>
+            ) : (
+              <>
+                Expect <strong>two</strong> approvals: your name, then this
+                computer. Confirm the registry address above in each approval.
+              </>
+            )}
           </p>
           <button
             type="button"
             className="btn ghost small"
-            onClick={() => setStep("names")}
+            onClick={backFromFund}
             disabled={busy}
           >
             Back
@@ -462,21 +748,19 @@ export function JoinApp() {
             </>
           )}
 
-          <h3>What this is (and is not)</h3>
-          <p>
-            You joined the <strong>registry</strong> — a phone book of names and
-            keys. That does not add you to a chat network or friend list. Other
-            products decide who they listen to.
-          </p>
           <div className="join-actions">
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => void goHome()}
+            >
+              Your names
+            </button>
             <a className="btn ghost" href="/docs/trust-model/">
               Trust model
             </a>
             <a className="btn ghost" href="/docs/operator-owner/">
               Operator owner
-            </a>
-            <a className="btn ghost" href="/docs/">
-              Docs
             </a>
           </div>
 

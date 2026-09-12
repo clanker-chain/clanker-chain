@@ -30,7 +30,12 @@ export const publicClient = createPublicClient({
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 
-export async function assessJoinBudget(owner: Address): Promise<MintBudget> {
+export async function assessJoinBudget(
+  owner: Address,
+  opts?: { needOperatorFee?: boolean; needBotFee?: boolean },
+): Promise<MintBudget> {
+  const needOperatorFee = opts?.needOperatorFee ?? true;
+  const needBotFee = opts?.needBotFee ?? true;
   const [operatorFee, botFee, balance] = await Promise.all([
     publicClient.readContract({
       address: SEPOLIA_REGISTRY,
@@ -49,8 +54,8 @@ export async function assessJoinBudget(owner: Address): Promise<MintBudget> {
     operatorFee: BigInt(operatorFee),
     botFee: BigInt(botFee),
     balance: BigInt(balance),
-    needOperatorFee: true,
-    needBotFee: true,
+    needOperatorFee,
+    needBotFee,
   });
 }
 

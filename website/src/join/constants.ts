@@ -20,3 +20,9 @@ export const CDP_FAUCET_DRIP_ETH = "0.0001";
 
 /** Fixed gas cushion for one operator mint + one bot mint. */
 export const MINT_GAS_RESERVE_ETH = "0.00005";
+
+/**
+ * Default Sepolia fromBlock for public-RPC getLogs (same floor as CLI
+ * SEPOLIA_FAST_FROM_BLOCK). Faster than scanning from genesis.
+ */
+export const SEPOLIA_FAST_FROM_BLOCK = 46_000_000n;
