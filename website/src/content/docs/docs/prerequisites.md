@@ -5,12 +5,13 @@ description: What you need before minting an operator or bot — especially if y
 
 If you are new: this page is the checklist. [Get started](/docs/get-started/) is the walkthrough. You do **not** need Foundry, MetaMask, or prior crypto experience.
 
-**Two doors:**
+**Two doors + attach:**
 
-| Door | What you need |
+| Path | What you need |
 |------|----------------|
 | **[/join](/join)** (email) | A browser, a little Base Sepolia ETH, then OpenClaw for the agent. No `op.key` file. |
 | **CLI** | A terminal, Node, `~/.clanker/op.key` (CLI can create it), test ETH, OpenClaw for the mesh |
+| **Attach** (after `/join` or any existing `0x`) | Same CLI install; `setup --address … --skip-key` — read Facts / fund without a local owner key |
 
 How the owner address is held is outside Facts: [Operator owner](/docs/operator-owner/).
 
@@ -29,7 +30,7 @@ How the owner address is held is outside Facts: [Operator owner](/docs/operator-
 | Word | Meaning |
 |------|---------|
 | **Address** | A public account id that starts with `0x…`. Anyone can send ETH to it. |
-| **Operator key** | A secret file (`~/.clanker/op.key`). Proves you own the operator for mint / transfer / pair. |
+| **Operator key** | CLI: `~/.clanker/op.key`. `/join`: embedded EOA from login. Proves ownership for mint / transfer / pair. |
 | **Mint** | Register a label on the public on-chain phone book (pays a small fee). |
 | **Base Sepolia** | A test network. ETH here is play money from a faucet, not real value. |
 
@@ -56,9 +57,10 @@ After `clanker setup`, fund your printed `0x…` address with **Base Sepolia ETH
 
 ```bash
 clanker fund
+# or before setup: clanker fund --address 0x…
 ```
 
-That prints how much you need, opens the faucet, and waits until the balance is enough.
+That prints how much you need, opens the faucet, and waits until the balance is enough. On [/join](/join), the same budget math is shown in the browser.
 
 The [Coinbase Developer Platform faucet](https://portal.cdp.coinbase.com/) usually needs a CDP / Coinbase Developer account. Documented drip is **0.0001 ETH per claim** — **one claim is not enough** for an operator mint (~0.001 ETH). Expect multiple claims, or use another Base Sepolia faucet ([Base faucet list](https://docs.base.org/base-chain/network-information/network-faucets), [Alchemy](https://www.alchemy.com/faucets/base-sepolia)). Amounts elsewhere are not guaranteed.
 
@@ -69,7 +71,7 @@ The [Coinbase Developer Platform faucet](https://portal.cdp.coinbase.com/) usual
 | **Operator** | CLI: `~/.clanker/op.key`. `/join`: held by your login / embedded EOA | Mint, transfer, pair. **Never** give this to OpenClaw. |
 | **Bot** | Download `{bot}.key` (CLI also writes `~/.openclaw/keys/{bot}.key`) | MQTT CONNECT and message signing |
 
-Losing the operator signer without a backup or transfer means losing control of the name. Treat a local `op.key` like a password file (mode `0600`).
+Losing the operator signer without a backup or transfer means losing control of the name. A read-only CLI attach (`--skip-key`) can read Facts and run `fund` against the address; it cannot pair or rotate. Treat a local `op.key` like a password file (mode `0600`).
 
 ## Labels
 
@@ -79,7 +81,7 @@ Losing the operator signer without a backup or transfer means losing control of 
 
 ## Next
 
-1. [/join](/join) — claim a name with email, or [Get started](/docs/get-started/) for the CLI door.
-2. [Operator owner](/docs/operator-owner/) — who may be `owner`.
-3. [Concepts](/docs/concepts/) — glossary and identity handoff.
-4. [CLI](/docs/cli/) — `clanker fund`, `doctor`, mint commands.
+- [Get started](/docs/get-started/)
+- [Operator owner](/docs/operator-owner/)
+- [CLI](/docs/cli/)
+- [Fees](/docs/fees/)

@@ -8,7 +8,7 @@ If you are new: `clanker` is the operator command-line tool. It creates keys, re
 Install:
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.12
+npm install -g @clanker-chain/clanker-cli@2026.9.12-1
 ```
 
 Prefer **`clanker setup`** for humans. Agents/scripts can use flags with `--yes`.
@@ -19,25 +19,40 @@ Mint commands write **Facts** on the public-good registry. Pairing is this produ
 
 ```bash
 clanker setup
-# Create a new operator key → note the 0x address
+# Prefer: "I already have an owner address" (attach /join or any 0x), or
+# "Create a new operator key for me" → note the 0x address
 
 clanker fund
 # Prints budget, opens faucet, waits until balance covers mint + gas
+# Optional before setup: clanker fund --address 0x…
 
 clanker doctor
 clanker whoami
-clanker operator mint org.you --yes
+clanker operator mint org.you --yes   # needs a signing key
 clanker bot mint you.laptop --yes
 ```
 
+Attach after [/join](/join) (read-only — no `op.key`):
+
+```bash
+clanker setup --preset sepolia \
+  --operator org.you \
+  --address 0x… \
+  --skip-key --yes --force
+clanker fund
+clanker whoami
+```
+
 `clanker fund` is for **Base Sepolia**. Local Anvil is prefunded. `doctor` checks profile readiness **and** whether your ETH balance can cover remaining mint fees (+ gas). `bot mint` prints a **Bot identity** card (bot key path, openclaw config) and plugin / peer checklist. See [Get started](/docs/get-started/).
+
+**Read vs sign:** `whoami` / `bots` / `fund` / `doctor` work with an owner address only. Mint / pair / rotate / transfer need a signing key (or stay on [/join](/join) for that owner).
 
 ## Useful commands
 
 | Command | What it does |
 |---------|----------------|
-| `clanker setup` | Network + operator profile. Can generate `~/.clanker/op.key` |
-| `clanker fund [--no-open] [--timeout ms]` | Print ETH budget, open faucet, poll until funded |
+| `clanker setup` | Network + operator profile. Attach an address or generate `~/.clanker/op.key` |
+| `clanker fund [--address 0x…] [--no-open] [--timeout ms]` | Print ETH budget, open faucet, poll until funded |
 | `clanker doctor [--json]` | Local readiness + balance vs fees + mqtt-auth `/health` |
 | `clanker whoami` | Operators for your owner address |
 | `clanker operator mint <label>` | Register operator on-chain |

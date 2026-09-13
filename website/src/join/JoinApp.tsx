@@ -438,18 +438,62 @@ export function JoinApp() {
           <ul className="join-next">
             <li>
               Keep each <code>.key</code> file somewhere safe — this page does
-              not store it.
+              not store it. Lost a key? Mint another computer here (not CLI
+              rotate).
             </li>
             <li>
-              Lost a key? Mint another computer label, or use CLI{" "}
-              <code>clanker bot rotate</code> — see{" "}
-              <a href="/docs/operator-owner/">operator owner</a>.
+              More computers or names: stay on this page — your login still
+              signs.
             </li>
             <li>
-              Experimental mesh pairing is CLI <code>clanker pair</code>, not
-              this page.
+              Pair / rotate / transfer need the <strong>owner signer</strong>.
+              A read-only CLI profile cannot do those yet. Later: transfer to a
+              local <code>op.key</code>.
             </li>
           </ul>
+
+          {owner && owned[0] && (
+            <>
+              <h3>Attach the CLI (read Facts)</h3>
+              <p className="join-fine">
+                Owner address: <code className="join-mono">{owner}</code>
+              </p>
+              <div className="join-actions">
+                <button
+                  type="button"
+                  className="btn ghost small"
+                  onClick={() => void copyText("address", owner)}
+                >
+                  {copied === "address" ? "Copied" : "Copy owner address"}
+                </button>
+                <button
+                  type="button"
+                  className="btn ghost small"
+                  onClick={() =>
+                    void copyText(
+                      "snippet",
+                      [
+                        `clanker setup --preset sepolia --operator ${owned[0].label} --address ${owner} --skip-key --yes`,
+                        "clanker fund",
+                        "clanker whoami",
+                      ].join("\n"),
+                    )
+                  }
+                >
+                  {copied === "snippet" ? "Copied" : "Copy attach commands"}
+                </button>
+              </div>
+              <pre className="join-pre">{`clanker setup --preset sepolia --operator ${owned[0].label} --address ${owner} --skip-key --yes
+clanker fund
+clanker whoami`}</pre>
+              <p className="join-fine">
+                That writes a read-only profile (no <code>op.key</code>). Put
+                your downloaded <code>.key</code> under{" "}
+                <code>~/.openclaw/keys/</code> when you run the agent. Details:{" "}
+                <a href="/docs/get-started/">Get started</a>.
+              </p>
+            </>
+          )}
 
           <div className="join-actions">
             <button
@@ -758,8 +802,7 @@ export function JoinApp() {
               </p>
               <p className="join-fine">
                 Lost the file? Mint another computer label under the same
-                operator name, or use CLI{" "}
-                <code>clanker bot rotate</code> — see{" "}
+                operator name on this page — see{" "}
                 <a href="/docs/operator-owner/">operator owner</a>.
               </p>
             </>

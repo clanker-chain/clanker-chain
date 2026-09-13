@@ -105,8 +105,8 @@ export async function runDoctorChecks(opts = {}) {
     ok: true,
     level: hasKey ? "pass" : "warn",
     message: hasKey
-      ? "signing key pointer available (mint/revoke OK)"
-      : "read-only profile — whoami/bots OK; mint needs --key-file or OPERATOR_PRIVATE_KEY",
+      ? "signing key pointer available (mint/pair/rotate OK)"
+      : "read-only profile — whoami/bots/fund OK; mint/pair/rotate need a key pointer or the /join owner",
   });
 
   checks.push({
@@ -293,7 +293,11 @@ export async function runDoctor(argv = [], opts = {}) {
   } else if (report.budget && !report.budget.funded && !report.budget.local) {
     console.log(c.dim("Mint: fund the operator address first (clanker fund)"));
   } else {
-    console.log(c.dim("Mint/revoke: need signing key (and non-Anvil owner on public RPC)"));
+    console.log(
+      c.dim(
+        "Mint/pair/rotate: need a signing key or stay on /join (non-Anvil owner on public RPC)",
+      ),
+    );
   }
 
   if (!report.readyWhoami) {
@@ -303,7 +307,8 @@ export async function runDoctor(argv = [], opts = {}) {
   } else if (!report.readyMint) {
     nextHint([
       "clanker whoami",
-      "clanker setup --key-file ~/.clanker/op.key --force   # to enable mint",
+      "clanker bots",
+      "mint/pair/rotate need --key-file / OPERATOR_PRIVATE_KEY or stay on /join",
     ]);
   } else {
     nextHint(["clanker whoami", "clanker bots"]);

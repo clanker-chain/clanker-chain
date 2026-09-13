@@ -170,8 +170,8 @@ function usage() {
   console.log(`clanker - clanker-chain helper CLI
 
 Usage:
-  clanker setup [--preset sepolia|local] [--operator <label>] [--address 0x…] [--key-file path] [--force]
-  clanker fund [--no-open] [--timeout ms] [--json]
+  clanker setup [--preset sepolia|local] [--operator <label>] [--address 0x…] [--skip-key] [--bot-key path] [--key-file path] [--force]
+  clanker fund [--address 0x…] [--no-open] [--timeout ms] [--json]
   clanker doctor [--json]
   clanker init --preset sepolia|local [--force]
   clanker whoami [--json] [--operator <label>] [--address 0x…] [--with-bots]

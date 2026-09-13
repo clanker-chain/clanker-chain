@@ -3,7 +3,14 @@
  */
 
 import { stdin as input } from "node:process";
-import { existsSync } from "node:fs";
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+} from "node:fs";
+import { homedir } from "node:os";
+import { basename, join } from "node:path";
 import { getAddress } from "viem";
 import * as clack from "@clack/prompts";
 import {
@@ -37,8 +44,8 @@ import {
   consumerFundHints,
   generateOperatorKeyFile,
 } from "./operator-key.mjs";
+import { wireOpenClawMqtt } from "./openclaw-wire.mjs";
 import { c, nextHint } from "./ui.mjs";
-import { join } from "node:path";
 
 /**
  * @param {string[]} argv
@@ -57,6 +64,7 @@ export function parseSetupFlags(argv) {
   let foundryAccount = null;
   let exportKey = false;
   let generateKey = false;
+  let botKey = null;
 
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
@@ -67,6 +75,7 @@ export function parseSetupFlags(argv) {
     else if (a === "--key-env" && argv[i + 1]) keyEnv = argv[++i];
     else if (a === "--from-block" && argv[i + 1]) fromBlock = BigInt(argv[++i]);
     else if (a === "--foundry-account" && argv[i + 1]) foundryAccount = argv[++i];
+    else if (a === "--bot-key" && argv[i + 1]) botKey = argv[++i];
     else if (a === "--export-key") exportKey = true;
     else if (a === "--generate-key") generateKey = true;
     else if (a === "--force") force = true;
@@ -89,6 +98,7 @@ export function parseSetupFlags(argv) {
     foundryAccount,
     exportKey,
     generateKey,
+    botKey,
   };
 }
 
@@ -160,6 +170,39 @@ export function buildKeyPointer({ keyFile, keyEnv, skipKey, env = process.env })
     return { type: "env", value: "OPERATOR_PRIVATE_KEY" };
   }
   return null;
+}
+
+/**
+ * Copy a downloaded bot key into ~/.openclaw/keys and wire channels.mqtt.
+ * @param {string} botKeyPath
+ * @param {{
+ *   operatorLabel: string,
+ *   network: { rpc: string, registry: string|null, brokerUrl?: string, mqttAuthServiceUrl?: string },
+ *   openclawHome?: string,
+ * }} opts
+ */
+export function attachBotKeyFile(botKeyPath, opts) {
+  if (!existsSync(botKeyPath)) {
+    throw new Error(`Bot key file not found: ${botKeyPath}`);
+  }
+  const botId = basename(botKeyPath).replace(/\.key$/i, "");
+  if (!botId || botId.includes("/") || botId.includes("..")) {
+    throw new Error(`Invalid bot key basename: ${botKeyPath}`);
+  }
+  const openclawHome = opts.openclawHome ?? join(homedir(), ".openclaw");
+  const destDir = join(openclawHome, "keys");
+  mkdirSync(destDir, { recursive: true });
+  const dest = join(destDir, `${botId}.key`);
+  copyFileSync(botKeyPath, dest);
+  chmodSync(dest, 0o600);
+  const wired = wireOpenClawMqtt({
+    botId,
+    operatorId: opts.operatorLabel,
+    network: opts.network,
+    keyPath: dest,
+    openclawHome,
+  });
+  return { botId, keyPath: dest, openclawPath: wired.path };
 }
 
 /**
@@ -299,7 +342,7 @@ export async function runSetupNonInteractive(argv, opts = {}) {
     }
   }
 
-  return applySetup(
+  const result = applySetup(
     {
       preset: flags.preset,
       force: flags.force || flags.yes,
@@ -311,6 +354,34 @@ export async function runSetupNonInteractive(argv, opts = {}) {
     },
     { home, env },
   );
+  return finishSetupResult(result, flags, { ...opts, quiet: true });
+}
+
+/**
+ * @param {object} result
+ * @param {{ botKey?: string|null, operator?: string|null }} flags
+ * @param {{ openclawHome?: string, quiet?: boolean }} [opts]
+ */
+async function finishSetupResult(result, flags, opts = {}) {
+  if (flags.botKey) {
+    const attached = attachBotKeyFile(flags.botKey, {
+      operatorLabel: result.operator?.label ?? flags.operator,
+      network: {
+        rpc: result.config.chainRpcUrl,
+        registry: result.config.registryAddress,
+        brokerUrl: result.config.brokerUrl,
+        mqttAuthServiceUrl: result.config.mqttAuthServiceUrl,
+      },
+      openclawHome: opts.openclawHome,
+    });
+    result.botKey = attached;
+    if (!opts.quiet) {
+      clack.log.success(
+        `Bot key → ${attached.keyPath}; wired ${attached.openclawPath}`,
+      );
+    }
+  }
+  return result;
 }
 
 /**
@@ -334,7 +405,7 @@ export async function runSetupInteractive(argv, opts = {}) {
   );
   clack.log.message(
     c.dim(
-      "New here? Create a key file — no wallet app or Foundry required. Mint needs a little test ETH later.",
+      "Attach an existing owner address (/join or any 0x), or create ~/.clanker/op.key. Mint needs test ETH later.",
     ),
   );
   clack.log.message(c.dim(`Profile: ${home}`));
@@ -441,9 +512,14 @@ export async function runSetupInteractive(argv, opts = {}) {
   if (!address) {
     const options = [
       {
+        value: "__paste__",
+        label: "I already have an owner address",
+        hint: "/join or any 0x — usually read-only",
+      },
+      {
         value: "__generate__",
         label: "Create a new operator key for me",
-        hint: "writes ~/.clanker/op.key (recommended)",
+        hint: "writes ~/.clanker/op.key",
       },
       {
         value: "__keyfile__",
@@ -466,20 +542,16 @@ export async function runSetupInteractive(argv, opts = {}) {
         hint: "advanced — install Foundry first",
       });
     }
-    options.push({
-      value: "__paste__",
-      label: "Paste an address…",
-      hint: "read-only unless you add a key later",
-    });
 
     const pick = cancelIf(
       await clack.select({
         message: "How do you want to set your operator identity?",
         options,
-        initialValue: "__generate__",
+        initialValue: "__paste__",
       }),
     );
 
+    let attachReadOnly = false;
     if (pick === "__generate__") {
       const dest = defaultOperatorKeyPath(home);
       let forceGen = flags.force;
@@ -526,15 +598,17 @@ export async function runSetupInteractive(argv, opts = {}) {
             /^0x[0-9a-fA-F]{40}$/.test(v || "") ? undefined : "Need 0x + 40 hex",
         }),
       );
+      attachReadOnly = true;
     } else if (pick === "__paste__") {
       address = cancelIf(
         await clack.text({
-          message: "Operator owner address",
+          message: "Owner address (from /join or any EOA)",
           placeholder: "0x…",
           validate: (v) =>
             /^0x[0-9a-fA-F]{40}$/.test(v || "") ? undefined : "Need 0x + 40 hex",
         }),
       );
+      attachReadOnly = true;
     } else {
       foundryAccountUsed = pick;
       try {
@@ -556,6 +630,9 @@ export async function runSetupInteractive(argv, opts = {}) {
           }),
         );
       }
+    }
+    if (attachReadOnly) {
+      flags.skipKey = true;
     }
   }
   address = getAddress(address);
@@ -687,11 +764,14 @@ export async function runSetupInteractive(argv, opts = {}) {
     { home, env },
   );
 
+  await finishSetupResult(result, { ...flags, operator: label }, opts);
+
   clack.outro(c.green(`Wrote ${result.configPath}\nWrote ${result.operatorPath}`));
   if (!key) {
     nextHint([
+      "clanker fund",
       "clanker whoami",
-      "clanker setup — choose Create a new operator key when you need mint",
+      "mint/pair/rotate need a signing key or stay on /join",
     ]);
   } else if (preset === "sepolia" && generatedKeyFile) {
     nextHint(consumerFundHints({ address, label }));
