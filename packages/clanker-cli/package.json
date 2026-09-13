@@ -1,6 +1,6 @@
 {
   "name": "@clanker-chain/clanker-cli",
-  "version": "2026.9.12-1",
+  "version": "2026.9.13",
   "description": "CLI for wiring clanker-chain identity and MQTT into OpenClaw and other agentic stacks.",
   "type": "module",
   "bin": {
@@ -24,6 +24,11 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.8.0",
+    "@hpke/chacha20poly1305": "^1.8.0",
+    "@hpke/core": "^1.9.0",
+    "@noble/curves": "^1.9.7",
+    "@noble/hashes": "^1.8.0",
+    "canonicalize": "^2.1.0",
     "picocolors": "^1.1.1",
     "viem": "^2.56.3"
   },

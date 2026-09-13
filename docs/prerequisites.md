@@ -8,7 +8,7 @@ If you are new: this page is the checklist before minting. The gentler site twin
 |------|----------------|
 | **Site `/join`** (email) | A browser, a little Base Sepolia ETH, then OpenClaw for the agent. No `op.key` file. |
 | **CLI** | A terminal, Node, `~/.clanker/op.key` (CLI can create it), test ETH, OpenClaw for the mesh |
-| **Attach** (after `/join` or any existing `0x`) | Same CLI install; `setup --address … --skip-key` — read Facts / fund without a local owner key |
+| **Attach** (after `/join` or any existing `0x`) | Same CLI install; `clanker login` unlocks mint/pair for that email vault, or `setup --address … --skip-key` for read-only |
 
 How the owner address is held is outside Facts: [`operator-owner.md`](operator-owner.md).
 
@@ -60,7 +60,7 @@ CDP usually needs a Coinbase Developer account. Documented drip is **0.0001 ETH 
 | **Operator** | CLI: `~/.clanker/op.key`. `/join`: held by login / embedded EOA | Mint, transfer, pair. **Never** give this to OpenClaw. |
 | **Bot** | Download `{bot}.key` (CLI also writes `~/.openclaw/keys/{bot}.key`) | MQTT CONNECT and message signing |
 
-Losing the operator signer without a backup or transfer means losing control of the name. A read-only CLI attach (`--skip-key`) can read Facts and run `fund` against the address; it cannot pair or rotate.
+Losing the operator signer without a backup or transfer means losing control of the name. Prefer `clanker login` (email vault) over a hex file when you can. A read-only CLI attach (`--skip-key` without login) can read Facts and run `fund` against the address; it cannot pair or rotate until you login or add a key.
 
 ## Labels
 

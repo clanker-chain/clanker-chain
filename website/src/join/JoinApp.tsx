@@ -454,7 +454,7 @@ export function JoinApp() {
 
           {owner && owned[0] && (
             <>
-              <h3>Attach the CLI (read Facts)</h3>
+              <h3>Unlock the CLI (same email vault)</h3>
               <p className="join-fine">
                 Owner address: <code className="join-mono">{owner}</code>
               </p>
@@ -473,23 +473,27 @@ export function JoinApp() {
                     void copyText(
                       "snippet",
                       [
-                        `clanker setup --preset sepolia --operator ${owned[0].label} --address ${owner} --skip-key --yes`,
+                        "clanker login",
+                        `clanker setup --preset sepolia --operator ${owned[0].label} --yes --force`,
                         "clanker fund",
                         "clanker whoami",
+                        "clanker pair add org.openclaw.pat --yes",
                       ].join("\n"),
                     )
                   }
                 >
-                  {copied === "snippet" ? "Copied" : "Copy attach commands"}
+                  {copied === "snippet" ? "Copied" : "Copy CLI commands"}
                 </button>
               </div>
-              <pre className="join-pre">{`clanker setup --preset sepolia --operator ${owned[0].label} --address ${owner} --skip-key --yes
+              <pre className="join-pre">{`clanker login
+clanker setup --preset sepolia --operator ${owned[0].label} --yes --force
 clanker fund
-clanker whoami`}</pre>
+clanker whoami
+clanker pair add org.openclaw.pat --yes`}</pre>
               <p className="join-fine">
-                That writes a read-only profile (no <code>op.key</code>). Put
-                your downloaded <code>.key</code> under{" "}
-                <code>~/.openclaw/keys/</code> when you run the agent. Details:{" "}
+                Approve on <a href="/authorize">/authorize</a> with this same
+                login — no <code>op.key</code> download. Put your bot{" "}
+                <code>.key</code> under <code>~/.openclaw/keys/</code>. Details:{" "}
                 <a href="/docs/get-started/">Get started</a>.
               </p>
             </>

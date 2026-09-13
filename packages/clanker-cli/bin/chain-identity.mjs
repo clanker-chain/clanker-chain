@@ -3,40 +3,13 @@
  * On-chain identity commands (ClankerIdentity contract).
  */
 
-import {
-  createPublicClient,
-  createWalletClient,
-  defineChain,
-  http,
-} from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { clankerIdentityAbi } from "../lib/clanker-identity-abi.mjs";
 import { assertSafeBotLabel, writeBotKeyFiles } from "../lib/keys.mjs";
 import { harnessSnippet, writeOperator } from "../lib/profile.mjs";
 import { labelToId } from "../lib/identity-query.mjs";
+import { resolveOperatorSigner } from "../lib/operator-signer.mjs";
 import { resolveOperatorKey } from "../lib/resolve.mjs";
-
-async function chainFromRpc(rpc) {
-  const publicClient = createPublicClient({ transport: http(rpc) });
-  const id = await publicClient.getChainId();
-  return defineChain({
-    id,
-    name: `clanker-chain-${id}`,
-    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-    rpcUrls: { default: { http: [rpc] } },
-  });
-}
-
-async function walletFromKey(rpc, key) {
-  const account = privateKeyToAccount(key);
-  const transport = http(rpc);
-  const chain = await chainFromRpc(rpc);
-  return {
-    account,
-    public: createPublicClient({ chain, transport }),
-    wallet: createWalletClient({ account, chain, transport }),
-  };
-}
 
 async function waitOk(pub, hash) {
   const receipt = await pub.waitForTransactionReceipt({ hash });
@@ -48,6 +21,7 @@ async function waitOk(pub, hash) {
 
 /**
  * Shared resolve for mutating chain commands (Anvil-guarded).
+ * Prefer resolveOperatorSigner for Privy + local.
  * @param {string[]} argv
  */
 export function resolveForWrite(argv) {
@@ -55,15 +29,15 @@ export function resolveForWrite(argv) {
 }
 
 export async function chainMintOperator(label, argv, opts = {}) {
-  const { key, address, network, keyPointer } = resolveOperatorKey(argv, opts);
-  const { public: pub, wallet } = await walletFromKey(network.rpc, key);
+  const signer = await resolveOperatorSigner(argv, opts);
+  const pub = signer.publicClient;
   const operatorFee = await pub.readContract({
-    address: network.registry,
+    address: signer.network.registry,
     abi: clankerIdentityAbi,
     functionName: "operatorFee",
   });
-  const hash = await wallet.writeContract({
-    address: network.registry,
+  const hash = await signer.writeContract({
+    address: signer.network.registry,
     abi: clankerIdentityAbi,
     functionName: "registerOperator",
     args: [label],
@@ -72,23 +46,27 @@ export async function chainMintOperator(label, argv, opts = {}) {
   await waitOk(pub, hash);
 
   writeOperator(
-    { label, owner: address, key: opts.keyPointer ?? keyPointer },
-    opts.home ?? network.home,
+    {
+      label,
+      owner: signer.address,
+      key: opts.keyPointer ?? signer.keyPointer,
+    },
+    opts.home ?? signer.network.home,
   );
 
   return {
     ok: true,
     label,
     operator_id: labelToId(label),
-    owner: address,
+    owner: signer.address,
     tx: hash,
   };
 }
 
 export async function chainMintBot(botLabel, operatorLabel, argv, opts = {}) {
   assertSafeBotLabel(botLabel);
-  const { key, network } = resolveOperatorKey(argv, opts);
-  const { public: pub, wallet } = await walletFromKey(network.rpc, key);
+  const signer = await resolveOperatorSigner(argv, opts);
+  const pub = signer.publicClient;
   let botPrivateKey;
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
@@ -114,12 +92,12 @@ export async function chainMintBot(botLabel, operatorLabel, argv, opts = {}) {
   );
 
   const botFee = await pub.readContract({
-    address: network.registry,
+    address: signer.network.registry,
     abi: clankerIdentityAbi,
     functionName: "botFee",
   });
-  const hash = await wallet.writeContract({
-    address: network.registry,
+  const hash = await signer.writeContract({
+    address: signer.network.registry,
     abi: clankerIdentityAbi,
     functionName: "registerBot",
     args: [operatorIdBytes, botLabel, botAccount.address],
@@ -130,7 +108,7 @@ export async function chainMintBot(botLabel, operatorLabel, argv, opts = {}) {
   const channelsMqtt = harnessSnippet({
     botId: botLabel,
     operatorId: operatorLabel,
-    network,
+    network: signer.network,
   });
 
   return {
@@ -146,11 +124,11 @@ export async function chainMintBot(botLabel, operatorLabel, argv, opts = {}) {
 }
 
 export async function chainRotateBotKey(botLabel, newKey, argv, opts = {}) {
-  const { key, network } = resolveOperatorKey(argv, opts);
-  const { public: pub, wallet } = await walletFromKey(network.rpc, key);
+  const signer = await resolveOperatorSigner(argv, opts);
+  const pub = signer.publicClient;
   const botIdBytes = labelToId(botLabel);
-  const hash = await wallet.writeContract({
-    address: network.registry,
+  const hash = await signer.writeContract({
+    address: signer.network.registry,
     abi: clankerIdentityAbi,
     functionName: "rotateBotKey",
     args: [botIdBytes, newKey],
@@ -160,11 +138,11 @@ export async function chainRotateBotKey(botLabel, newKey, argv, opts = {}) {
 }
 
 export async function chainRevokeBot(botLabel, argv, opts = {}) {
-  const { key, network } = resolveOperatorKey(argv, opts);
-  const { public: pub, wallet } = await walletFromKey(network.rpc, key);
+  const signer = await resolveOperatorSigner(argv, opts);
+  const pub = signer.publicClient;
   const botIdBytes = labelToId(botLabel);
-  const hash = await wallet.writeContract({
-    address: network.registry,
+  const hash = await signer.writeContract({
+    address: signer.network.registry,
     abi: clankerIdentityAbi,
     functionName: "revokeBot",
     args: [botIdBytes],
@@ -174,11 +152,11 @@ export async function chainRevokeBot(botLabel, argv, opts = {}) {
 }
 
 export async function chainProposeOperatorTransfer(label, newOwner, argv, opts = {}) {
-  const { key, network } = resolveOperatorKey(argv, opts);
-  const { public: pub, wallet } = await walletFromKey(network.rpc, key);
+  const signer = await resolveOperatorSigner(argv, opts);
+  const pub = signer.publicClient;
   const id = labelToId(label);
-  const hash = await wallet.writeContract({
-    address: network.registry,
+  const hash = await signer.writeContract({
+    address: signer.network.registry,
     abi: clankerIdentityAbi,
     functionName: "proposeOperatorTransfer",
     args: [id, newOwner],
@@ -188,11 +166,11 @@ export async function chainProposeOperatorTransfer(label, newOwner, argv, opts =
 }
 
 export async function chainAcceptOperatorTransfer(label, argv, opts = {}) {
-  const { key, address, network, keyPointer } = resolveOperatorKey(argv, opts);
-  const { public: pub, wallet } = await walletFromKey(network.rpc, key);
+  const signer = await resolveOperatorSigner(argv, opts);
+  const pub = signer.publicClient;
   const id = labelToId(label);
-  const hash = await wallet.writeContract({
-    address: network.registry,
+  const hash = await signer.writeContract({
+    address: signer.network.registry,
     abi: clankerIdentityAbi,
     functionName: "acceptOperatorTransfer",
     args: [id],
@@ -201,12 +179,12 @@ export async function chainAcceptOperatorTransfer(label, argv, opts = {}) {
   writeOperator(
     {
       label,
-      owner: address,
-      key: opts.keyPointer ?? keyPointer,
+      owner: signer.address,
+      key: opts.keyPointer ?? signer.keyPointer,
     },
-    opts.home ?? network.home,
+    opts.home ?? signer.network.home,
   );
-  return { ok: true, label, owner: address, tx: hash };
+  return { ok: true, label, owner: signer.address, tx: hash };
 }
 
 export { labelToId };

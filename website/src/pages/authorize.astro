@@ -1,0 +1,60 @@
+---
+import "@fontsource/fraunces/400.css";
+import "@fontsource/fraunces/600.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "../styles/landing.css";
+import "../styles/join.css";
+import AuthorizeRoot from "../join/AuthorizeRoot";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Approve clanker CLI access to your operator wallet (Privy device authorization)."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <title>Authorize CLI · clanker-chain</title>
+  </head>
+  <body>
+    <div class="page">
+      <header class="top">
+        <a class="brand" href="/">
+          <img
+            class="mark"
+            src="/brand/clanker-mark-transparent.svg"
+            width="22"
+            height="22"
+            alt=""
+          />
+          clanker-chain
+        </a>
+        <nav class="nav">
+          <a href="/join">Join</a>
+          <a href="/docs/">Docs</a>
+          <a href="https://github.com/clanker-chain/clanker-chain">GitHub</a>
+        </nav>
+      </header>
+
+      <main class="join-main">
+        <header class="join-intro">
+          <p class="eyebrow">CLI · operator vault</p>
+          <h1>Authorize CLI</h1>
+          <p class="lede">
+            Approve a <code>clanker login</code> request so the terminal can ask
+            your login wallet to sign mint / pair / rotate — without downloading
+            an operator key file.
+          </p>
+        </header>
+        <div class="join-app">
+          <AuthorizeRoot client:only="react" />
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

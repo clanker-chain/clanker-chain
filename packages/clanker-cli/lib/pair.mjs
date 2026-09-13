@@ -6,10 +6,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { privateKeyToAccount } from "viem/accounts";
 import { loadOperator } from "./profile.mjs";
 import { openclawConfigPath } from "./openclaw-wire.mjs";
-import { resolveOperatorKey } from "./resolve.mjs";
+import { resolveOperatorSigner } from "./operator-signer.mjs";
 
 /**
  * @param {string} baseUrl
@@ -159,11 +158,11 @@ export function resolveOpenclawHome(argv) {
  * @param {string|null} peerLabel
  */
 export async function runPairAction(argv, action, peerLabel) {
-  const resolved = resolveOperatorKey(argv, { requireRegistry: true });
+  const signer = await resolveOperatorSigner(argv, { requireRegistry: true });
   const operator =
-    loadOperator(resolved.network.home) ??
-    (resolved.network.operatorLabel
-      ? { label: resolved.network.operatorLabel }
+    loadOperator(signer.network.home) ??
+    (signer.network.operatorLabel
+      ? { label: signer.network.operatorLabel }
       : null);
   const operatorId =
     argv.includes("--operator") && argv[argv.indexOf("--operator") + 1]
@@ -175,15 +174,14 @@ export async function runPairAction(argv, action, peerLabel) {
     );
   }
 
-  const authUrl = resolvePairAuthUrl(argv, resolved.network);
-  const account = privateKeyToAccount(resolved.key);
+  const authUrl = resolvePairAuthUrl(argv, signer.network);
 
   if (action === "list" || action === "status") {
     const { nonce, message } = await fetchPairNonce(authUrl, {
       operatorId,
       action: "list",
     });
-    const signature = await account.signMessage({ message });
+    const signature = await signer.signMessage({ message });
     const listed = await getPairList(authUrl, {
       operatorId,
       nonce,
@@ -191,16 +189,6 @@ export async function runPairAction(argv, action, peerLabel) {
     });
     if (action === "status") {
       if (!peerLabel) throw new Error("Usage: clanker pair status <operator-label>");
-      // Resolve peer by scanning allows — mutual flag is per peer_operator_id;
-      // we match by requesting add-style peer label via a second pair-nonce is heavy.
-      // Instead: check if any allow entry is mutual when peer label hashes match… we
-      // only have peer_operator_id hex. Re-fetch is unnecessary: call add-path status
-      // by computing whether peer is in allow list via a dedicated pair status using
-      // the peer label through POST-less approach — GET list doesn't include labels.
-      // Best effort: show mutual if we can add then remove? No.
-      // Call /pair-nonce + post with action that doesn't mutate? Use list + ask user.
-      // Simpler: after list, for status we POST nothing — check if peer's keccak is in list.
-      // We need peer id: keccak of peerLabel.
       const { keccak256, toBytes } = await import("viem");
       const peerId = keccak256(toBytes(peerLabel)).toLowerCase();
       const hit = (listed.allows ?? []).find(
@@ -228,7 +216,7 @@ export async function runPairAction(argv, action, peerLabel) {
     action,
     peerLabel,
   });
-  const signature = await account.signMessage({ message });
+  const signature = await signer.signMessage({ message });
   const result = await postPair(authUrl, {
     operatorId,
     peerLabel,
