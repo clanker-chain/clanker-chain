@@ -11,7 +11,7 @@ If you are new: this page is the checklist. [Get started](/docs/get-started/) is
 |------|----------------|
 | **[/join](/join)** (email) | A browser, a little Base Sepolia ETH, then OpenClaw for the agent. No `op.key` file. |
 | **CLI** | A terminal, Node, `~/.clanker/op.key` (CLI can create it), test ETH, OpenClaw for the mesh |
-| **Attach** (after `/join` or any existing `0x`) | Same CLI install; `setup --address … --skip-key` — read Facts / fund without a local owner key |
+| **Attach** (after `/join` or any existing `0x`) | Same CLI install; `clanker login` unlocks mint/pair for that email vault, or `setup --address … --skip-key` for read-only |
 
 How the owner address is held is outside Facts: [Operator owner](/docs/operator-owner/).
 
@@ -71,7 +71,7 @@ The [Coinbase Developer Platform faucet](https://portal.cdp.coinbase.com/) usual
 | **Operator** | CLI: `~/.clanker/op.key`. `/join`: held by your login / embedded EOA | Mint, transfer, pair. **Never** give this to OpenClaw. |
 | **Bot** | Download `{bot}.key` (CLI also writes `~/.openclaw/keys/{bot}.key`) | MQTT CONNECT and message signing |
 
-Losing the operator signer without a backup or transfer means losing control of the name. A read-only CLI attach (`--skip-key`) can read Facts and run `fund` against the address; it cannot pair or rotate. Treat a local `op.key` like a password file (mode `0600`).
+Losing the operator signer without a backup or transfer means losing control of the name. Prefer `clanker login` (email vault) over a hex file when you can. A read-only CLI attach (`--skip-key` without login) can read Facts and run `fund` against the address; it cannot pair or rotate until you login or add a key. Treat a local `op.key` like a password file (mode `0600`).
 
 ## Labels
 

@@ -13,10 +13,10 @@ Low-level aliases (`clanker chain mint-*`) remain. This CLI does **not** include
 No wallet experience needed. Hub + invite onboarding: [`public-testnet-hub.md`](public-testnet-hub.md). For local Anvil, see [`SETUP.md`](../SETUP.md).
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.12-1
+npm install -g @clanker-chain/clanker-cli@2026.9.13
 
 clanker setup
-# Prefer: "I already have an owner address" (attach /join or any 0x), or
+# Prefer: "Sign in (email — recommended)", or
 # "Create a new operator key for me" → note the 0x address
 
 clanker fund
@@ -25,21 +25,22 @@ clanker fund
 
 clanker doctor
 clanker whoami
-clanker operator mint org.you --yes   # needs a signing key
+clanker operator mint org.you --yes
 clanker bot mint you.laptop --yes
-# Both sides before DMs deliver (signing key required):
+# Both sides before DMs deliver:
 clanker pair add org.openclaw.pat --yes
 ```
 
-Attach after `/join` (read-only — no `op.key`):
+After `/join`, unlock the same wallet (no `op.key`):
 
 ```bash
+clanker login
 clanker setup --preset sepolia \
   --operator org.you \
-  --address 0x… \
-  --skip-key --yes --force
+  --yes --force
 clanker fund
 clanker whoami
+clanker pair add org.openclaw.pat --yes
 ```
 
 Non-interactive (agents / CI) with a new local key:
@@ -63,14 +64,18 @@ Interactive (TTY) wizard powered by **`@clack/prompts`** + **`picocolors`**:
 
 1. Detects existing `config.json` / `operator.json`, env key (address only), Foundry accounts, and OpenClaw bot key basenames (table).
 2. Chooses preset (`sepolia` / `local`). Sepolia defaults `fromBlock` to **46000000**.
-3. **Owner identity.** Prefer **I already have an owner address** (attach `/join` or any `0x`, usually read-only). Also: create `~/.clanker/op.key`, existing key file, or Foundry (advanced).
+3. **Owner identity.** Prefer **Sign in (email — recommended)** (`clanker login` / Privy vault). Also: create `~/.clanker/op.key`, attach an address (read-only until login), existing key file, or Foundry (advanced).
 4. Operator **label** (e.g. `org.you`).
 5. Verifies on-chain: refuses Anvil `#0` on public RPC. Refuses saving if the label’s current owner ≠ chosen address.
-6. Stores a signing **pointer** (`keyFile` or `OPERATOR_PRIVATE_KEY`) when a key was chosen. Read-only profiles omit `key`.
+6. Stores a signing **pointer** (`privy` wallet id, `keyFile`, or `OPERATOR_PRIVATE_KEY`). Read-only profiles omit `key`.
 
-Never stores raw hex keys inside JSON. Flag parity: `--preset`, `--operator`, `--generate-key`, `--address`, `--key-file`, `--foundry-account`, `--export-key`, `--skip-key`, `--yes`, `--force`.
+Never stores raw hex keys inside JSON. Flag parity: `--preset`, `--operator`, `--generate-key`, `--address`, `--key-file`, `--foundry-account`, `--export-key`, `--skip-key`, `--bot-key`, `--yes`, `--force`.
 
-**Read vs sign:** `whoami` / `bots` / `fund` / `doctor` work with an owner address only. Mint / pair / rotate / transfer need a signing key (or stay on `/join` for that owner).
+**Read vs sign:** `whoami` / `bots` / `fund` / `doctor` work with an owner address only. Mint / pair / rotate / transfer need `clanker login` or a local signing key.
+
+### `clanker login` / `logout`
+
+Device-authorization against the same email vault as `/join`. Opens `/authorize`, stores OAuth tokens (Keychain or `~/.clanker/privy-session.json`), never the operator hex. `logout` clears the session (and drops a `privy` key pointer from `operator.json`).
 
 ### Advanced: Foundry / existing wallet
 
@@ -146,6 +151,8 @@ On any other RPC, missing key or Anvil #0 → hard error. After mint / transfer 
 | Command | Behavior |
 |---------|----------|
 | `clanker setup …` | Interactive or flagged profile wizard (Clack) |
+| `clanker login [--no-open] [--json]` | Privy device grant — email vault for mint/pair |
+| `clanker logout [--json]` | Clear Privy CLI session |
 | `clanker fund [--address 0x…] [--no-open] [--timeout ms] [--json]` | Print ETH budget, open faucet, poll until funded |
 | `clanker doctor [--json]` | Local readiness + balance vs mint fees |
 | `clanker whoami [--json] [--operator <label>] [--address 0x…] [--with-bots]` | Operators for address. Bots only with `--with-bots` |

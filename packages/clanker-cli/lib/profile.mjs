@@ -127,7 +127,7 @@ export function loadOperator(home = clankerHome()) {
 /**
  * Write operator profile (label + owner + optional key pointer). Never stores hex keys.
  * Omit `key` (or pass null) for a read-only profile; mint/revoke still need a pointer later.
- * @param {{ label: string, owner: string, key?: { type: 'env'|'keyFile', value?: string }|null }} op
+ * @param {{ label: string, owner: string, key?: { type: 'env'|'keyFile'|'privy', value?: string }|null }} op
  * @param {string} [home]
  */
 export function writeOperator(op, home = clankerHome()) {

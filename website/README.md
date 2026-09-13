@@ -10,6 +10,7 @@ npm run dev
 
 - Landing: http://localhost:4321/
 - Join: http://localhost:4321/join
+- Authorize CLI: http://localhost:4321/authorize
 - Docs: http://localhost:4321/docs/
 
 ```bash
@@ -36,7 +37,8 @@ cd website && npm run build
 4. **Confirmation UIs on** (`showWalletUIs` is also pinned `true` in code). Wallet export off unless you document a transfer flow.
 5. Allowed origins (production app): `https://clanker-chain.com` and `https://www.clanker-chain.com` **only** — drop wildcard / localhost on this app id.
 6. Default chain: **Base Sepolia** (`84532`).
-7. Optional: gas sponsorship for **gas only**. Never sponsor `msg.value` registration fees.
+7. **CLI / agent access:** Authentication → Advanced → **Enable for CLI and agent access**. Set **Verification URI** to `https://clanker-chain.com/authorize` (same page as [`/authorize`](/authorize); local: `http://localhost:4321/authorize`). Required for `clanker login`.
+8. Optional: gas sponsorship for **gas only**. Never sponsor `msg.value` registration fees.
 
 CI builds without `PUBLIC_PRIVY_APP_ID`; `/join` then renders a “not configured” card (no live login in `website.yml`).
 

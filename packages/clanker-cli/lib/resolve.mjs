@@ -80,7 +80,8 @@ export function keyPointerFromSource(opts) {
 
 /** Honest error when mint/pair/rotate/transfer have no owner signer. */
 export const OWNER_SIGNER_REQUIRED =
-  "Owner actions need a signing key (--key-file / OPERATOR_PRIVATE_KEY) or the browser door that created this address. A read-only profile can still run whoami, bots, fund, and doctor.";
+  "Owner actions need clanker login (email vault), or a signing key (--key-file / OPERATOR_PRIVATE_KEY). " +
+  "A read-only profile can still run whoami, bots, fund, and doctor.";
 
 /**
  * Resolve the operator signing key with Anvil guard.
@@ -217,7 +218,7 @@ export function resolveReadIdentity(argv = [], opts = {}) {
   } catch (err) {
     const msg = err?.message ?? String(err);
     if (
-      !/private key required|Owner actions need a signing key|Anvil account #0|Key file not found|Profile keyFile/i.test(
+      !/private key required|Owner actions need|clanker login|Anvil account #0|Key file not found|Profile keyFile/i.test(
         msg,
       )
     ) {

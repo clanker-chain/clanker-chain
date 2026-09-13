@@ -45,6 +45,7 @@ import {
   generateOperatorKeyFile,
 } from "./operator-key.mjs";
 import { wireOpenClawMqtt } from "./openclaw-wire.mjs";
+import { runLogin } from "./login.mjs";
 import { c, nextHint } from "./ui.mjs";
 
 /**
@@ -405,7 +406,7 @@ export async function runSetupInteractive(argv, opts = {}) {
   );
   clack.log.message(
     c.dim(
-      "Attach an existing owner address (/join or any 0x), or create ~/.clanker/op.key. Mint needs test ETH later.",
+      "Sign in with email (recommended), attach an existing 0x, or create ~/.clanker/op.key.",
     ),
   );
   clack.log.message(c.dim(`Profile: ${home}`));
@@ -466,6 +467,7 @@ export async function runSetupInteractive(argv, opts = {}) {
   let address = flags.address ?? null;
   let foundryAccountUsed = null;
   let generatedKeyFile = null;
+  let privyKeyPointer = null;
   if (!address && flags.generateKey) {
     const dest = flags.keyFile || defaultOperatorKeyPath(home);
     let forceGen = flags.force;
@@ -512,14 +514,19 @@ export async function runSetupInteractive(argv, opts = {}) {
   if (!address) {
     const options = [
       {
+        value: "__login__",
+        label: "Sign in (email — recommended)",
+        hint: "Privy vault — no op.key on disk",
+      },
+      {
         value: "__paste__",
         label: "I already have an owner address",
-        hint: "/join or any 0x — usually read-only",
+        hint: "/join or any 0x — usually read-only until login",
       },
       {
         value: "__generate__",
         label: "Create a new operator key for me",
-        hint: "writes ~/.clanker/op.key",
+        hint: "writes ~/.clanker/op.key (self-custody)",
       },
       {
         value: "__keyfile__",
@@ -547,12 +554,22 @@ export async function runSetupInteractive(argv, opts = {}) {
       await clack.select({
         message: "How do you want to set your operator identity?",
         options,
-        initialValue: "__paste__",
+        initialValue: "__login__",
       }),
     );
 
     let attachReadOnly = false;
-    if (pick === "__generate__") {
+    if (pick === "__login__") {
+      clack.log.step("Opening browser for clanker login…");
+      const logged = await runLogin([], {
+        home,
+        env,
+      });
+      address = logged.address;
+      privyKeyPointer = { type: "privy", value: logged.walletId };
+      flags.skipKey = true;
+      clack.log.success(`Signed in as ${address}`);
+    } else if (pick === "__generate__") {
       const dest = defaultOperatorKeyPath(home);
       let forceGen = flags.force;
       if (existsSync(dest) && !forceGen) {
@@ -722,7 +739,9 @@ export async function runSetupInteractive(argv, opts = {}) {
     }
   }
 
-  const key = buildKeyPointer({ keyFile, keyEnv, skipKey, env });
+  const key =
+    privyKeyPointer ||
+    buildKeyPointer({ keyFile, keyEnv, skipKey, env });
   if (key?.type === "keyFile") {
     const fromKey = getAddress(addressFromKeyFile(key.value));
     if (fromKey !== address) {
@@ -767,11 +786,18 @@ export async function runSetupInteractive(argv, opts = {}) {
   await finishSetupResult(result, { ...flags, operator: label }, opts);
 
   clack.outro(c.green(`Wrote ${result.configPath}\nWrote ${result.operatorPath}`));
-  if (!key) {
+  if (privyKeyPointer) {
     nextHint([
       "clanker fund",
       "clanker whoami",
-      "mint/pair/rotate need a signing key or stay on /join",
+      "clanker pair add <peer> --yes",
+      "clanker operator mint <label> --yes   # if not minted yet",
+    ]);
+  } else if (!key) {
+    nextHint([
+      "clanker login   # to enable mint/pair with the email vault",
+      "clanker fund",
+      "clanker whoami",
     ]);
   } else if (preset === "sepolia" && generatedKeyFile) {
     nextHint(consumerFundHints({ address, label }));

@@ -24,9 +24,11 @@ import {
   resolvePreferredOperator,
 } from "../lib/identity-query.mjs";
 import { resolveForRead, resolveOperatorKey, resolveReadIdentity } from "../lib/resolve.mjs";
+import { resolveOperatorSigner } from "../lib/operator-signer.mjs";
 import { runSetup } from "../lib/setup.mjs";
 import { runDoctor } from "../lib/doctor.mjs";
 import { runFund } from "../lib/fund.mjs";
+import { runLogin, runLogout } from "../lib/login.mjs";
 import {
   assessMintBudget,
   formatEthTrim,
@@ -171,6 +173,8 @@ function usage() {
 
 Usage:
   clanker setup [--preset sepolia|local] [--operator <label>] [--address 0x…] [--skip-key] [--bot-key path] [--key-file path] [--force]
+  clanker login [--no-open] [--operator <label>] [--json]
+  clanker logout [--json]
   clanker fund [--address 0x…] [--no-open] [--timeout ms] [--json]
   clanker doctor [--json]
   clanker init --preset sepolia|local [--force]
@@ -197,7 +201,7 @@ Profile:
   ~/.clanker/operator.json   label + owner + optional key pointer (never raw hex)
   ~/.clanker/keys/           bot keys (also written to ~/.openclaw/keys/)
 
-Humans: \`clanker setup\` then \`clanker fund\` / \`doctor\` / \`whoami\`.
+Humans: \`clanker login\` (email vault) or \`clanker setup --generate-key\`, then \`fund\` / \`doctor\` / \`whoami\`.
 Pairing (Policy): both operators run \`clanker pair add\` before DMs deliver on the hub.
 Mutates print a plan and confirm unless --yes or --json.
 whoami is fast by default; pass --with-bots to enrich child bots (or use \`clanker bots\`).
@@ -415,13 +419,44 @@ async function main() {
         error: err.message,
         because: "setup could not write a valid local profile",
         try: [
-          "clanker setup --preset sepolia --operator org.you --address 0x… --yes --force",
+          "clanker login",
+          "clanker setup --preset sepolia --operator org.you --yes --force",
           "clanker fund",
           "clanker doctor",
         ],
       });
     }
     return;
+  }
+
+  if (cmd === "login") {
+    try {
+      const { exitCode } = await runLogin(rest);
+      process.exit(exitCode);
+    } catch (err) {
+      exitCliError({
+        error: err.message,
+        because: "login needs Privy CLI access enabled and /authorize approval",
+        try: [
+          "Open the printed URL and Approve",
+          "Privy dashboard: Enable CLI and agent access → Verification URI https://clanker-chain.com/authorize",
+          "clanker setup --generate-key   # local key door instead",
+        ],
+      });
+    }
+  }
+
+  if (cmd === "logout") {
+    try {
+      const { exitCode } = await runLogout(rest);
+      process.exit(exitCode);
+    } catch (err) {
+      exitCliError({
+        error: err.message,
+        because: "logout could not clear the Privy session",
+        try: ["clanker logout"],
+      });
+    }
   }
 
   if (cmd === "fund") {
@@ -581,21 +616,21 @@ async function main() {
       let planRows;
       let preview;
       try {
-        preview = resolveOperatorKey(flags);
+        preview = await resolveOperatorSigner(flags);
         planRows = [
           ["action", "registerOperator"],
           ["label", label],
           ["owner", preview.address],
           ["rpc", preview.network.rpc],
           ["registry", preview.network.registry ?? "(none)"],
-          ["key", preview.source],
+          ["signer", preview.source],
         ];
       } catch (err) {
         exitCliError({
           error: err.message,
-          because: "operator mint needs a signing key on this network",
+          because: "operator mint needs a signer on this network",
           try: [
-            "export OPERATOR_PRIVATE_KEY=0x…",
+            "clanker login",
             "clanker operator mint " + label + " --key-file ~/.clanker/op.key --yes",
             "clanker fund",
             "clanker doctor",
@@ -736,14 +771,15 @@ async function main() {
       let preview = null;
       if (!operatorLabel) {
         try {
-          preview = resolveOperatorKey(flags);
+          preview = await resolveOperatorSigner(flags);
           const inferred = await resolveOperatorLabel(flags, preview.address, preview.network);
           operatorLabel = inferred.label;
         } catch (err) {
           exitCliError({
             error: err.message,
-            because: "bot mint needs an operator label or a resolvable signing key",
+            because: "bot mint needs an operator label or a resolvable signer",
             try: [
+              "clanker login",
               `clanker bot mint ${botLabel} <operator_label> --yes`,
               "clanker setup",
             ],
@@ -752,12 +788,13 @@ async function main() {
       }
       if (!preview) {
         try {
-          preview = resolveOperatorKey(flags);
+          preview = await resolveOperatorSigner(flags);
         } catch (err) {
           exitCliError({
             error: err.message,
-            because: "bot mint needs a signing key on this network",
+            because: "bot mint needs a signer on this network",
             try: [
+              "clanker login",
               `clanker bot mint ${botLabel} ${operatorLabel} --key-file ~/.clanker/op.key --yes`,
               "clanker fund",
             ],
@@ -770,6 +807,7 @@ async function main() {
         ["operator", operatorLabel],
         ["owner", preview.address],
         ["registry", preview.network.registry ?? "(none)"],
+        ["signer", preview.source],
       ];
       try {
         if (preview.network.registry) {

@@ -124,7 +124,7 @@ describe("Anvil guard in resolveOperatorKey", () => {
           home,
           env: {},
         }),
-      /Owner actions need a signing key/,
+      /Owner actions need|clanker login/,
     );
   });
 

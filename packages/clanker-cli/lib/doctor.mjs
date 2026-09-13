@@ -12,6 +12,7 @@ import {
 } from "./profile.mjs";
 import { detectSetupHints, formatSetupDetectTable } from "./setup-detect.mjs";
 import { publicClientFromRpc } from "./identity-query.mjs";
+import { loadPrivySession } from "./privy-session.mjs";
 import {
   assessMintBudget,
   budgetToJson,
@@ -96,17 +97,24 @@ export async function runDoctorChecks(opts = {}) {
     });
   }
 
+  const privySession = loadPrivySession(home);
+  const hasPrivy =
+    Boolean(operator?.key?.type === "privy" && operator.key.value) ||
+    Boolean(privySession?.accessToken && privySession?.walletId);
   const hasKey =
     Boolean(operator?.key?.type === "keyFile" && operator.key.value) ||
     Boolean(operator?.key?.type === "env" && operator.key.value) ||
-    Boolean(env.OPERATOR_PRIVATE_KEY);
+    Boolean(env.OPERATOR_PRIVATE_KEY) ||
+    hasPrivy;
   checks.push({
     id: "signing",
     ok: true,
     level: hasKey ? "pass" : "warn",
-    message: hasKey
-      ? "signing key pointer available (mint/pair/rotate OK)"
-      : "read-only profile — whoami/bots/fund OK; mint/pair/rotate need a key pointer or the /join owner",
+    message: hasPrivy
+      ? "Privy session available (mint/pair/rotate via email vault)"
+      : hasKey
+        ? "signing key pointer available (mint/pair/rotate OK)"
+        : "read-only profile — whoami/bots/fund OK; mint/pair/rotate need clanker login or a key pointer",
   });
 
   checks.push({
@@ -295,20 +303,20 @@ export async function runDoctor(argv = [], opts = {}) {
   } else {
     console.log(
       c.dim(
-        "Mint/pair/rotate: need a signing key or stay on /join (non-Anvil owner on public RPC)",
+        "Mint/pair/rotate: need clanker login or a signing key (non-Anvil owner on public RPC)",
       ),
     );
   }
 
   if (!report.readyWhoami) {
-    nextHint(["clanker setup"]);
+    nextHint(["clanker setup", "clanker login"]);
   } else if (report.budget && !report.budget.funded && !report.budget.local) {
     nextHint(["clanker fund", "clanker doctor"]);
   } else if (!report.readyMint) {
     nextHint([
+      "clanker login",
       "clanker whoami",
-      "clanker bots",
-      "mint/pair/rotate need --key-file / OPERATOR_PRIVATE_KEY or stay on /join",
+      "mint/pair/rotate need login or --key-file",
     ]);
   } else {
     nextHint(["clanker whoami", "clanker bots"]);

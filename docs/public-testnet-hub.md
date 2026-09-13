@@ -22,7 +22,7 @@ Same broker/auth/registry values are written by `clanker setup --preset sepolia`
 
 Published packages (CalVer **`2026.9.10`**):
 
-- `@clanker-chain/clanker-cli@2026.9.12-1`
+- `@clanker-chain/clanker-cli@2026.9.13`
 - `@clanker-chain/mqtt-channel-plugin@2026.9.10`
 - `@clanker-chain/mqtt-tools@2026.9.10`
 
@@ -37,7 +37,7 @@ You do **not** need Foundry, MetaMask, or prior crypto experience. The CLI can c
 **Glossary:** **Operator** = org account (`org.you`). **Bot** = agent under that operator (`you.laptop`). **Operator key** = CLI `~/.clanker/op.key`, or `/join` embedded EOA (mint/transfer/pair only. Never give to OpenClaw). **Bot key** = `{bot}.key` file for CONNECT + signing. **Fee** = small Base Sepolia test ETH from a faucet (~0.001 operator + ~0.0001 bot). CDP drip is **0.0001 ETH/claim** — one claim is not enough.
 
 ```bash
-npm install -g @clanker-chain/clanker-cli@2026.9.12-1
+npm install -g @clanker-chain/clanker-cli@2026.9.13
 
 clanker setup
 # Choose: "Create a new operator key for me"

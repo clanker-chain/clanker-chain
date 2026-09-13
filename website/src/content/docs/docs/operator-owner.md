@@ -28,14 +28,15 @@ How the owner key is stored is **outside Facts**. Operator transfer exists so so
 | Kind | Commands | Needs |
 |------|----------|--------|
 | **Read / fund** | `whoami`, `bots`, `fund`, `doctor` | Owner **address** in the profile (or `--address`) |
-| **Sign** | mint, pair, rotate, revoke, transfer | Owner **private key** (`op.key` / `OPERATOR_PRIVATE_KEY`) or the browser door that created the address |
+| **Sign** | mint, pair, rotate, revoke, transfer | **`clanker login`** (email vault) **or** local `op.key` / `OPERATOR_PRIVATE_KEY` |
 
 ## Compatible signers (today)
 
 | Implementation | Mint | Pair (this hub) | Who it is for |
 |----------------|------|-----------------|---------------|
-| Local `~/.clanker/op.key` | Yes | Yes | CLI / terminal invitees |
-| [Privy](https://docs.privy.io/) embedded EOA | Yes (on [/join](/join)) | Yes *if* that EOA can `personal_sign` in a product that holds the key | [/join](/join) email login |
+| `clanker login` (email vault) | Yes | Yes | Recommended CLI path — same wallet as [/join](/join) |
+| Local `~/.clanker/op.key` | Yes | Yes | Self-custody / offline |
+| Embedded EOA on [/join](/join) | Yes (browser) | Yes via `clanker login` | Email / passkey in the browser |
 | [CDP](https://docs.cdp.coinbase.com/embedded-wallets/welcome) user wallet (EOA) | Yes | Yes | Adopters already on Coinbase Developer Platform |
 | CDP API-key / [Turnkey](https://docs.turnkey.com/) | Yes | Yes if it can `personal_sign` | Backends / later CLI without a hex file |
 | Injected EOA (MetaMask, Rabby) | Yes | Yes | People who already have a wallet |
@@ -46,22 +47,27 @@ We do **not** endorse one vendor as identity. Pick the signer that fits your pro
 ## Two doors for humans
 
 - **[/join](/join)** — email / passkey, mint in the browser, download the bot key. No terminal required for the name itself. You still need OpenClaw (separately) to run the agent.
-- **CLI** — [Get started](/docs/get-started/) with `clanker setup` / `fund` / mint. You get `~/.clanker/op.key` on disk.
+- **CLI** — [Get started](/docs/get-started/) with `clanker login` (recommended) or a local key, then `fund` / mint / pair.
 
-### After `/join` (attach)
+### After `/join`
 
-You do **not** have `op.key` on disk. Attach a read-only CLI profile so Facts and funding work:
+Unlock the same operator wallet in the terminal (no `op.key` export):
 
 ```bash
-clanker setup --preset sepolia --operator org.you --address 0x… --skip-key --yes
+clanker login
+clanker setup --preset sepolia --operator org.you --yes --force
 clanker fund
 clanker whoami
+clanker pair add org.openclaw.pat --yes
 ```
 
-Mint more computers or names on [/join](/join) (login still signs). Pair / rotate / transfer need an owner signer — not available on a read-only profile. Later product: transfer the name to a local `op.key`. Lost the bot `.key` file? Mint another computer label under the same operator on `/join`.
+Approve on [/authorize](/authorize) with the same email. Lost the bot `.key` file? Mint another computer label under the same operator on `/join`.
+
+Address-only attach (`--skip-key` without login) still works for `whoami` / `fund` / `doctor`, but cannot pair or mint until you `clanker login` or add a local key.
 
 ## What this is not
 
 - Not a friends list or a login database on chain
 - Not permission to message anyone (Policy stays in products)
 - Not a promise that every smart wallet works with this hub’s pairing today
+- Not Clanker custody — `login` is user-authorized vault access; we do not hold an app key that can move your name while you are offline
