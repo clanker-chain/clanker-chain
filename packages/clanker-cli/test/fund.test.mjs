@@ -13,12 +13,30 @@ describe("fund flags", () => {
     const d = parseFundFlags([]);
     assert.equal(d.noOpen, false);
     assert.equal(d.json, false);
+    assert.equal(d.address, null);
     assert.ok(d.timeoutMs > 0);
-    const o = parseFundFlags(["--no-open", "--json", "--timeout", "1000", "--poll", "200"]);
+    const o = parseFundFlags([
+      "--no-open",
+      "--json",
+      "--timeout",
+      "1000",
+      "--poll",
+      "200",
+      "--address",
+      "0x07e8CFD171E63915A441B0E8ff9E3CC2Cd27c4B4",
+    ]);
     assert.equal(o.noOpen, true);
     assert.equal(o.json, true);
     assert.equal(o.timeoutMs, 1000);
     assert.equal(o.pollMs, 200);
+    assert.equal(
+      o.address.toLowerCase(),
+      "0x07e8cfd171e63915a441b0e8ff9e3cc2cd27c4b4",
+    );
+  });
+
+  it("rejects bad --address", () => {
+    assert.throws(() => parseFundFlags(["--address", "not-an-address"]), /--address/);
   });
 });
 
@@ -167,6 +185,42 @@ describe("runFund", () => {
       assert.equal(out.funded, false);
       assert.equal(out.timedOut, true);
       assert.match(printed, /timedOut/);
+    } finally {
+      console.log = orig;
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it("funds --address without a profile (sepolia defaults)", async () => {
+    const home = mkdtempSync(join(tmpdir(), "clanker-fund-addr-"));
+    const owner = "0x07e8CFD171E63915A441B0E8ff9E3CC2Cd27c4B4";
+    const opFee = parseEther("0.001");
+    const botFee = parseEther("0.0001");
+    const pub = {
+      readContract: async ({ functionName }) => {
+        if (functionName === "operatorFee") return opFee;
+        if (functionName === "botFee") return botFee;
+        if (functionName === "operators") {
+          return ["0x0000000000000000000000000000000000000000", 0n, 0n];
+        }
+        throw new Error(functionName);
+      },
+      getBalance: async () => opFee + botFee + MINT_GAS_RESERVE_WEI,
+    };
+    let printed = "";
+    const orig = console.log;
+    console.log = (...a) => {
+      printed += a.join(" ") + "\n";
+    };
+    try {
+      const out = await runFund(["--address", owner, "--no-open", "--json"], {
+        home,
+        env: {},
+        publicClient: pub,
+      });
+      assert.equal(out.exitCode, 0);
+      assert.equal(out.funded, true);
+      assert.match(printed, /"funded": true/);
     } finally {
       console.log = orig;
       rmSync(home, { recursive: true, force: true });

@@ -124,7 +124,7 @@ describe("Anvil guard in resolveOperatorKey", () => {
           home,
           env: {},
         }),
-      /Operator private key required/,
+      /Owner actions need a signing key/,
     );
   });
 

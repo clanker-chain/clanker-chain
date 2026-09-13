@@ -2,12 +2,13 @@
 
 If you are new: this page is the checklist before minting. The gentler site twin is [Prerequisites](https://clanker-chain.com/docs/prerequisites/). The walkthrough is [Get started](https://clanker-chain.com/docs/get-started/) or [`public-testnet-hub.md`](public-testnet-hub.md).
 
-**Two doors:**
+**Two doors + attach:**
 
-| Door | What you need |
+| Path | What you need |
 |------|----------------|
 | **Site `/join`** (email) | A browser, a little Base Sepolia ETH, then OpenClaw for the agent. No `op.key` file. |
 | **CLI** | A terminal, Node, `~/.clanker/op.key` (CLI can create it), test ETH, OpenClaw for the mesh |
+| **Attach** (after `/join` or any existing `0x`) | Same CLI install; `setup --address … --skip-key` — read Facts / fund without a local owner key |
 
 How the owner address is held is outside Facts: [`operator-owner.md`](operator-owner.md).
 
@@ -45,6 +46,7 @@ After `clanker setup` (CLI) or after login on `/join`:
 
 ```bash
 clanker fund
+# or before setup: clanker fund --address 0x…
 ```
 
 That prints the budget, opens the [CDP faucet](https://portal.cdp.coinbase.com/), and polls until the balance covers one operator mint + one bot mint + gas. On `/join`, the same budget math is shown in the browser.
@@ -58,7 +60,7 @@ CDP usually needs a Coinbase Developer account. Documented drip is **0.0001 ETH 
 | **Operator** | CLI: `~/.clanker/op.key`. `/join`: held by login / embedded EOA | Mint, transfer, pair. **Never** give this to OpenClaw. |
 | **Bot** | Download `{bot}.key` (CLI also writes `~/.openclaw/keys/{bot}.key`) | MQTT CONNECT and message signing |
 
-Losing the operator signer without a backup or transfer means losing control of the name.
+Losing the operator signer without a backup or transfer means losing control of the name. A read-only CLI attach (`--skip-key`) can read Facts and run `fund` against the address; it cannot pair or rotate.
 
 ## Labels
 

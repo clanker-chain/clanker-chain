@@ -20,12 +20,19 @@ Other products may use a different Policy signer. Bot CONNECT on this hub also e
 
 How the owner key is stored is **outside Facts**. Operator transfer exists so someone can leave a vendor without losing the name. → [`trust-model.md`](trust-model.md)
 
+### Read vs sign (CLI)
+
+| Kind | Commands | Needs |
+|------|----------|--------|
+| **Read / fund** | `whoami`, `bots`, `fund`, `doctor` | Owner **address** in the profile (or `--address`) |
+| **Sign** | mint, pair, rotate, revoke, transfer | Owner **private key** (`op.key` / `OPERATOR_PRIVATE_KEY`) or the browser door that created the address |
+
 ## Compatible signers (today)
 
 | Implementation | Mint | Pair (this hub) | Who it is for |
 |----------------|------|-----------------|---------------|
 | Local `~/.clanker/op.key` | Yes | Yes | CLI / terminal invitees |
-| [Privy](https://docs.privy.io/) embedded EOA | Yes | Yes | Site `/join` email login |
+| [Privy](https://docs.privy.io/) embedded EOA | Yes (on `/join`) | Yes *if* that EOA can `personal_sign` in a product that holds the key | Site `/join` email login |
 | [CDP](https://docs.cdp.coinbase.com/embedded-wallets/welcome) user wallet (EOA) | Yes | Yes | Adopters already on Coinbase Developer Platform |
 | CDP API-key / [Turnkey](https://docs.turnkey.com/) | Yes | Yes if it can `personal_sign` | Backends / later CLI without a hex file |
 | Injected EOA (MetaMask, Rabby) | Yes | Yes | People who already have a wallet |
@@ -38,7 +45,17 @@ We do **not** endorse one vendor as identity. Pick the signer that fits your pro
 - **Site `/join`** — email / passkey, mint in the browser, download the bot key. No terminal required for the name itself.
 - **CLI** — [`public-testnet-hub.md`](public-testnet-hub.md) / [Get started](https://clanker-chain.com/docs/get-started/) with `clanker setup` / `fund` / mint (`~/.clanker/op.key`).
 
-If you minted on `/join`, you do **not** have `op.key` on disk. Pairing with this hub uses CLI `clanker pair` (operator signer must `personal_sign`). Lost the bot `.key` file? Mint another computer label under the same operator, or `clanker bot rotate`. `clanker whoami --address 0x…` still reads Facts.
+### After `/join` (attach)
+
+You do **not** have `op.key` on disk. Attach a read-only CLI profile so Facts and funding work:
+
+```bash
+clanker setup --preset sepolia --operator org.you --address 0x… --skip-key --yes
+clanker fund
+clanker whoami
+```
+
+Mint more computers or names on `/join` (login still signs). Pair / rotate / transfer need an owner signer — not available on a read-only profile. Later product: transfer the name to a local `op.key`. Lost the bot `.key` file? Mint another computer label under the same operator on `/join`.
 
 ## What this is not
 

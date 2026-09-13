@@ -30,9 +30,12 @@ import {
 import {
   applySetup,
   assertSetupIdentity,
+  attachBotKeyFile,
   buildKeyPointer,
+  parseSetupFlags,
   runSetupNonInteractive,
 } from "../lib/setup.mjs";
+import { openclawConfigPath } from "../lib/openclaw-wire.mjs";
 
 describe("formatSetupDetectTable", () => {
   it("renders aligned What/Value columns", () => {
@@ -345,6 +348,72 @@ describe("writeOperator omit key", () => {
     );
     const raw = JSON.parse(readFileSync(join(home, "operator.json"), "utf8"));
     assert.equal("key" in raw, false);
+    rmSync(home, { recursive: true, force: true });
+  });
+});
+
+describe("attach / bot-key", () => {
+  it("parseSetupFlags reads --bot-key and --skip-key", () => {
+    const f = parseSetupFlags([
+      "--preset",
+      "sepolia",
+      "--operator",
+      "org.you",
+      "--address",
+      "0x07e8CFD171E63915A441B0E8ff9E3CC2Cd27c4B4",
+      "--skip-key",
+      "--bot-key",
+      "/tmp/you.laptop.key",
+    ]);
+    assert.equal(f.skipKey, true);
+    assert.equal(f.botKey, "/tmp/you.laptop.key");
+  });
+
+  it("runSetupNonInteractive writes read-only profile", async () => {
+    const home = mkdtempSync(join(tmpdir(), "clanker-attach-"));
+    const owner = "0x07e8CFD171E63915A441B0E8ff9E3CC2Cd27c4B4";
+    const result = await runSetupNonInteractive(
+      [
+        "--preset",
+        "sepolia",
+        "--operator",
+        "org.you",
+        "--address",
+        owner,
+        "--skip-key",
+        "--yes",
+        "--force",
+        "--skip-chain-check",
+      ],
+      { home, env: {} },
+    );
+    const op = loadOperator(home);
+    assert.equal(op.owner.toLowerCase(), owner.toLowerCase());
+    assert.equal(op.key, undefined);
+    assert.equal(result.operator.key, undefined);
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  it("attachBotKeyFile copies into openclaw keys and wires mqtt", () => {
+    const home = mkdtempSync(join(tmpdir(), "clanker-botkey-"));
+    const ocHome = join(home, "openclaw");
+    const src = join(home, "you.laptop.key");
+    writeFileSync(src, "0x1111111111111111111111111111111111111111111111111111111111111111\n");
+    const attached = attachBotKeyFile(src, {
+      operatorLabel: "org.you",
+      network: {
+        rpc: "https://sepolia.base.org",
+        registry: SEPOLIA_REGISTRY,
+        brokerUrl: "mqtts://mqtt.clanker-chain.com:8883",
+        mqttAuthServiceUrl: "https://mqtt-auth.clanker-chain.com",
+      },
+      openclawHome: ocHome,
+    });
+    assert.equal(attached.botId, "you.laptop");
+    assert.equal(existsSync(attached.keyPath), true);
+    const cfg = JSON.parse(readFileSync(openclawConfigPath(ocHome), "utf8"));
+    assert.equal(cfg.channels.mqtt.privateKeyFile, attached.keyPath);
+    assert.equal(cfg.channels.mqtt.botId, "you.laptop");
     rmSync(home, { recursive: true, force: true });
   });
 });

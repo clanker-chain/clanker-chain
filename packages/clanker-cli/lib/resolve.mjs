@@ -78,6 +78,10 @@ export function keyPointerFromSource(opts) {
   return { type: "env", value: "OPERATOR_PRIVATE_KEY" };
 }
 
+/** Honest error when mint/pair/rotate/transfer have no owner signer. */
+export const OWNER_SIGNER_REQUIRED =
+  "Owner actions need a signing key (--key-file / OPERATOR_PRIVATE_KEY) or the browser door that created this address. A read-only profile can still run whoami, bots, fund, and doctor.";
+
 /**
  * Resolve the operator signing key with Anvil guard.
  *
@@ -133,11 +137,7 @@ export function resolveOperatorKey(argv = [], opts = {}) {
       key = normalizePrivateKey(ANVIL_DEFAULT_PRIVATE_KEY);
       source = "anvil-default (local RPC)";
     } else {
-      throw new Error(
-        "Operator private key required for non-local RPC. Set OPERATOR_PRIVATE_KEY, " +
-          "pass --key / --key-file, or configure ~/.clanker/operator.json key pointer. " +
-          "Anvil account #0 is not used on public networks.",
-      );
+      throw new Error(OWNER_SIGNER_REQUIRED);
     }
   }
 
@@ -216,7 +216,11 @@ export function resolveReadIdentity(argv = [], opts = {}) {
     };
   } catch (err) {
     const msg = err?.message ?? String(err);
-    if (!/private key required|Anvil account #0|Key file not found|Profile keyFile/i.test(msg)) {
+    if (
+      !/private key required|Owner actions need a signing key|Anvil account #0|Key file not found|Profile keyFile/i.test(
+        msg,
+      )
+    ) {
       throw err;
     }
   }

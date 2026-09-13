@@ -4,7 +4,13 @@
 
 import { spawn } from "node:child_process";
 import { getAddress } from "viem";
-import { clankerHome, loadConfig, loadOperator, isLocalRpc } from "./profile.mjs";
+import {
+  clankerHome,
+  loadConfig,
+  loadOperator,
+  isLocalRpc,
+  PRESETS,
+} from "./profile.mjs";
 import { publicClientFromRpc } from "./identity-query.mjs";
 import {
   assessMintBudget,
@@ -53,10 +59,12 @@ export function parseFundFlags(argv) {
   let pollMs = DEFAULT_FUND_POLL_MS;
   let noOpen = false;
   let json = false;
+  let address = null;
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === "--no-open") noOpen = true;
     else if (a === "--json") json = true;
+    else if (a === "--address" && argv[i + 1]) address = argv[++i];
     else if (a === "--timeout" && argv[i + 1]) {
       timeoutMs = Number(argv[++i]);
     } else if (a === "--poll" && argv[i + 1]) {
@@ -69,7 +77,29 @@ export function parseFundFlags(argv) {
   if (!Number.isFinite(pollMs) || pollMs < 100) {
     throw new Error("--poll must be >= 100 (ms)");
   }
-  return { timeoutMs, pollMs, noOpen, json };
+  if (address && !/^0x[0-9a-fA-F]{40}$/.test(address)) {
+    throw new Error("--address must be 0x + 40 hex");
+  }
+  return { timeoutMs, pollMs, noOpen, json, address };
+}
+
+/**
+ * @param {{ operator?: { key?: object|null, label?: string|null }|null, canSign?: boolean }} opts
+ */
+function fundNextHints(opts = {}) {
+  const canSign = opts.canSign ?? Boolean(opts.operator?.key);
+  if (canSign) {
+    return [
+      "clanker doctor",
+      `clanker operator mint ${opts.operator?.label ?? "<label>"} --yes`,
+      "clanker bot mint <bot_label> --yes",
+    ];
+  }
+  return [
+    "clanker doctor",
+    "clanker whoami",
+    "mint/pair/rotate need a signing key or stay on /join",
+  ];
 }
 
 /**
@@ -94,16 +124,31 @@ export async function runFund(argv = [], opts = {}) {
   const now = opts.now ?? (() => Date.now());
   const openUrlImpl = opts.openUrlImpl ?? openUrl;
 
-  if (!config) {
-    throw new Error("config.json missing — run clanker setup");
-  }
-  if (!operator?.owner || !/^0x[0-9a-fA-F]{40}$/.test(operator.owner)) {
-    throw new Error("operator.json incomplete — run clanker setup");
-  }
+  const sepolia = PRESETS.sepolia;
+  let owner;
+  let rpc;
+  let registry;
+  let label = operator?.label ?? null;
 
-  const rpc = config.chainRpcUrl ?? "";
-  const registry = config.registryAddress;
-  const owner = getAddress(operator.owner);
+  if (flags.address) {
+    owner = getAddress(flags.address);
+    rpc = config?.chainRpcUrl ?? sepolia.chainRpcUrl;
+    registry = config?.registryAddress ?? sepolia.registryAddress;
+  } else {
+    if (!config) {
+      throw new Error(
+        "config.json missing — run clanker setup, or pass --address 0x… to fund before setup",
+      );
+    }
+    if (!operator?.owner || !/^0x[0-9a-fA-F]{40}$/.test(operator.owner)) {
+      throw new Error(
+        "operator.json incomplete — run clanker setup, or pass --address 0x…",
+      );
+    }
+    owner = getAddress(operator.owner);
+    rpc = config.chainRpcUrl ?? "";
+    registry = config.registryAddress;
+  }
 
   if (isLocalRpc(rpc)) {
     const payload = {
@@ -138,7 +183,7 @@ export async function runFund(argv = [], opts = {}) {
       registry,
       owner,
       rpc,
-      operatorLabel: operator.label,
+      operatorLabel: label,
     });
 
   let budget = await assess();
@@ -154,7 +199,7 @@ export async function runFund(argv = [], opts = {}) {
     console.log(c.bold("clanker fund"));
     console.log("");
     console.log(`owner:    ${owner}`);
-    console.log(`label:    ${operator.label ?? "(none)"}`);
+    console.log(`label:    ${label ?? "(none)"}`);
     console.log(`registry: ${registry}`);
     console.log(`budget:   ${formatBudgetSummary(budget)}`);
     console.log(`faucet:   ${budget.faucetUrl}`);
@@ -165,11 +210,7 @@ export async function runFund(argv = [], opts = {}) {
   if (budget.funded) {
     if (!flags.json) {
       console.log(c.green("Already funded for remaining mint fees + gas."));
-      nextHint([
-        "clanker doctor",
-        `clanker operator mint ${operator.label ?? "<label>"} --yes`,
-        "clanker bot mint <bot_label> --yes",
-      ]);
+      nextHint(fundNextHints({ operator, canSign: Boolean(operator?.key) }));
     }
     return { exitCode: 0, funded: true, budget };
   }
@@ -218,11 +259,7 @@ export async function runFund(argv = [], opts = {}) {
       } else {
         console.log("");
         console.log(c.green("Funded. Ready to mint."));
-        nextHint([
-          "clanker doctor",
-          `clanker operator mint ${operator.label ?? "<label>"} --yes`,
-          "clanker bot mint <bot_label> --yes",
-        ]);
+        nextHint(fundNextHints({ operator, canSign: Boolean(operator?.key) }));
       }
       return { exitCode: 0, funded: true, budget };
     }
@@ -243,7 +280,7 @@ export async function runFund(argv = [], opts = {}) {
     nextHint([
       `Open ${budget.faucetUrl} and claim again`,
       `Backup: ${budget.backupFaucetUrl}`,
-      "clanker fund",
+      flags.address ? `clanker fund --address ${owner}` : "clanker fund",
     ]);
   }
   return { exitCode: 1, funded: false, budget, timedOut: true };

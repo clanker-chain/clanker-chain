@@ -94,6 +94,10 @@ describe("doctor", () => {
     assert.equal(report.readyWhoami, true);
     assert.equal(report.readyMint, false);
     assert.equal(report.ok, true);
+    const signing = report.checks.find((c) => c.id === "signing");
+    assert.equal(signing.level, "warn");
+    assert.match(signing.message, /read-only profile/);
+    assert.match(signing.message, /fund OK/);
 
     let printed = "";
     const orig = console.log;
