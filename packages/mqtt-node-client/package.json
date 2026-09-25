@@ -10,11 +10,11 @@
     "test": "bun test test/"
   },
   "dependencies": {
-    "mqtt": "^5.15.2"
+    "mqtt": "^5.16.0"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",
-    "@types/node": "^22.10.2",
+    "@types/node": "^22.20.4",
     "typescript": "^5.7.0"
   },
   "overrides": {
