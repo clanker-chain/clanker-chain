@@ -1,15 +1,39 @@
 /**
  * Persist Privy OAuth tokens (never operator hex, never ephemeral auth keys).
  * Prefer macOS Keychain; fall back to mode-0600 ~/.clanker/privy-session.json.
+ *
+ * Keychain items are scoped per resolved CLANKER_HOME so a sandbox profile
+ * cannot pick up (or wipe) the default ~/.clanker session.
  */
 
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { clankerHome } from "./profile.mjs";
 
-const KEYCHAIN_SERVICE = "clanker-privy-session";
-const KEYCHAIN_ACCOUNT = "default";
+export const KEYCHAIN_SERVICE = "clanker-privy-session";
+
+/**
+ * Default on-disk home (ignores CLANKER_HOME). Used to keep the existing
+ * Keychain account name (`default`) for the real profile.
+ */
+export function defaultClankerHome() {
+  return join(homedir(), ".clanker");
+}
+
+/**
+ * Keychain account for this profile home. `default` for ~/.clanker; a short
+ * hash otherwise so sandboxes do not share the production grant.
+ *
+ * @param {string} [home]
+ */
+export function privyKeychainAccount(home = clankerHome()) {
+  const resolved = resolve(home);
+  if (resolved === resolve(defaultClankerHome())) return "default";
+  return createHash("sha256").update(resolved).digest("hex").slice(0, 16);
+}
 
 /**
  * @param {string} [home]
@@ -32,10 +56,20 @@ export function privySessionPath(home = clankerHome()) {
 
 /**
  * @param {string} [home]
+ * @returns {"keychain"|"file"|null}
+ */
+export function locatePrivySession(home = clankerHome()) {
+  if (loadFromKeychain(home)) return "keychain";
+  if (existsSync(privySessionPath(home))) return "file";
+  return null;
+}
+
+/**
+ * @param {string} [home]
  * @returns {PrivySession|null}
  */
 export function loadPrivySession(home = clankerHome()) {
-  const fromKeychain = loadFromKeychain();
+  const fromKeychain = loadFromKeychain(home);
   if (fromKeychain) return fromKeychain;
   const path = privySessionPath(home);
   if (!existsSync(path)) return null;
@@ -56,7 +90,7 @@ export function loadPrivySession(home = clankerHome()) {
  */
 export function savePrivySession(session, home = clankerHome()) {
   const payload = JSON.stringify(session);
-  if (saveToKeychain(payload)) {
+  if (saveToKeychain(payload, home)) {
     // Prefer keychain; remove file copy if present.
     const path = privySessionPath(home);
     if (existsSync(path)) {
@@ -78,7 +112,7 @@ export function savePrivySession(session, home = clankerHome()) {
  * @param {string} [home]
  */
 export function clearPrivySession(home = clankerHome()) {
-  clearKeychain();
+  clearKeychain(home);
   const path = privySessionPath(home);
   if (existsSync(path)) {
     rmSync(path);
@@ -86,9 +120,10 @@ export function clearPrivySession(home = clankerHome()) {
 }
 
 /**
+ * @param {string} [home]
  * @returns {PrivySession|null}
  */
-function loadFromKeychain() {
+function loadFromKeychain(home) {
   if (process.platform !== "darwin") return null;
   const out = spawnSync(
     "security",
@@ -97,7 +132,7 @@ function loadFromKeychain() {
       "-s",
       KEYCHAIN_SERVICE,
       "-a",
-      KEYCHAIN_ACCOUNT,
+      privyKeychainAccount(home),
       "-w",
     ],
     { encoding: "utf8" },
@@ -114,10 +149,11 @@ function loadFromKeychain() {
 
 /**
  * @param {string} payload
+ * @param {string} [home]
  */
-function saveToKeychain(payload) {
+function saveToKeychain(payload, home) {
   if (process.platform !== "darwin") return false;
-  clearKeychain();
+  clearKeychain(home);
   const out = spawnSync(
     "security",
     [
@@ -125,7 +161,7 @@ function saveToKeychain(payload) {
       "-s",
       KEYCHAIN_SERVICE,
       "-a",
-      KEYCHAIN_ACCOUNT,
+      privyKeychainAccount(home),
       "-w",
       payload,
       "-U",
@@ -135,7 +171,10 @@ function saveToKeychain(payload) {
   return out.status === 0;
 }
 
-function clearKeychain() {
+/**
+ * @param {string} [home]
+ */
+function clearKeychain(home) {
   if (process.platform !== "darwin") return;
   spawnSync(
     "security",
@@ -144,7 +183,7 @@ function clearKeychain() {
       "-s",
       KEYCHAIN_SERVICE,
       "-a",
-      KEYCHAIN_ACCOUNT,
+      privyKeychainAccount(home),
     ],
     { encoding: "utf8", stdio: "ignore" },
   );

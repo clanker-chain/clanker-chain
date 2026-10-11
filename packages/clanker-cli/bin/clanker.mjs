@@ -29,6 +29,7 @@ import { runSetup } from "../lib/setup.mjs";
 import { runDoctor } from "../lib/doctor.mjs";
 import { runFund } from "../lib/fund.mjs";
 import { runLogin, runLogout } from "../lib/login.mjs";
+import { runReset } from "../lib/reset.mjs";
 import {
   assessMintBudget,
   formatEthTrim,
@@ -175,6 +176,7 @@ Usage:
   clanker setup [--preset sepolia|local] [--operator <label>] [--address 0x…] [--skip-key] [--bot-key path] [--key-file path] [--force]
   clanker login [--no-open] [--operator <label>] [--json]
   clanker logout [--json]
+  clanker reset [--dry-run] [--session] [--keep-keys] [--openclaw-keys] [--yes] [--json]
   clanker fund [--address 0x…] [--no-open] [--timeout ms] [--json]
   clanker doctor [--json]
   clanker init --preset sepolia|local [--force]
@@ -202,6 +204,7 @@ Profile:
   ~/.clanker/keys/           bot keys (also written to ~/.openclaw/keys/)
 
 Humans: \`clanker login\` (email vault) or \`clanker setup --generate-key\`, then \`fund\` / \`doctor\` / \`whoami\`.
+Repeat a newcomer path: \`clanker reset --dry-run\` then \`clanker reset --yes\` (or \`export CLANKER_HOME=…\` to sandbox).
 Pairing (Policy): both operators run \`clanker pair add\` before DMs deliver on the hub.
 Mutates print a plan and confirm unless --yes or --json.
 whoami is fast by default; pass --with-bots to enrich child bots (or use \`clanker bots\`).
@@ -440,6 +443,7 @@ async function main() {
         try: [
           "Open the printed URL and Approve",
           "Privy dashboard: Enable CLI and agent access → Verification URI https://clanker-chain.com/authorize",
+          "clanker reset --yes   # empty profile if owner mismatch",
           "clanker setup --generate-key   # local key door instead",
         ],
       });
@@ -454,7 +458,24 @@ async function main() {
       exitCliError({
         error: err.message,
         because: "logout could not clear the Privy session",
-        try: ["clanker logout"],
+        try: ["clanker logout", "clanker reset --dry-run"],
+      });
+    }
+  }
+
+  if (cmd === "reset") {
+    try {
+      const { exitCode } = await runReset(rest);
+      process.exit(exitCode);
+    } catch (err) {
+      exitCliError({
+        error: err.message,
+        because: "reset deletes local CLI/Privy state for this CLANKER_HOME only",
+        try: [
+          "clanker reset --dry-run",
+          "clanker reset --yes",
+          "export CLANKER_HOME=$HOME/.clanker-newcomer",
+        ],
       });
     }
   }

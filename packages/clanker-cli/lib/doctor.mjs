@@ -117,6 +117,17 @@ export async function runDoctorChecks(opts = {}) {
         : "read-only profile — whoami/bots/fund OK; mint/pair/rotate need clanker login or a key pointer",
   });
 
+  if (env.OPERATOR_PRIVATE_KEY) {
+    checks.push({
+      id: "env_key",
+      ok: true,
+      level: "warn",
+      message: hasPrivy
+        ? "OPERATOR_PRIVATE_KEY is set and wins over Privy — unset it to test the email vault (clanker reset --dry-run)"
+        : "OPERATOR_PRIVATE_KEY is set — it wins over a later clanker login until you unset it",
+    });
+  }
+
   checks.push({
     id: "foundry",
     ok: true,
@@ -308,19 +319,25 @@ export async function runDoctor(argv = [], opts = {}) {
     );
   }
 
+  const hints = [];
+  if (report.checks.some((ch) => ch.id === "env_key")) {
+    hints.push("unset OPERATOR_PRIVATE_KEY   # wins over Privy until cleared");
+    hints.push("clanker reset --dry-run");
+  }
   if (!report.readyWhoami) {
-    nextHint(["clanker setup", "clanker login"]);
+    hints.push("clanker setup", "clanker login");
   } else if (report.budget && !report.budget.funded && !report.budget.local) {
-    nextHint(["clanker fund", "clanker doctor"]);
+    hints.push("clanker fund", "clanker doctor");
   } else if (!report.readyMint) {
-    nextHint([
+    hints.push(
       "clanker login",
       "clanker whoami",
       "mint/pair/rotate need login or --key-file",
-    ]);
+    );
   } else {
-    nextHint(["clanker whoami", "clanker bots"]);
+    hints.push("clanker whoami", "clanker bots");
   }
+  nextHint(hints);
 
   return { exitCode: report.ok ? 0 : 1, report };
 }
