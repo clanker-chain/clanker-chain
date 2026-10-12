@@ -96,6 +96,6 @@ export function generateAuthorizationSignature(opts) {
   }
   const bytes = new TextEncoder().encode(serialized);
   const sk = importPkcs8PrivateKey(opts.authorizationPrivateKey);
-  const signature = p256.sign(sha256(bytes), sk).toBytes("der");
+  const signature = p256.sign(sha256(bytes), sk, { prehash: false, format: "der" });
   return Buffer.from(signature).toString("base64");
 }
