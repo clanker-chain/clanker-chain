@@ -15,11 +15,8 @@ import {
   pollDeviceToken,
   requestDeviceAuthorization,
 } from "./privy-client.mjs";
-import {
-  clearPrivySession,
-  loadPrivySession,
-  savePrivySession,
-} from "./privy-session.mjs";
+import { loadPrivySession, savePrivySession } from "./privy-session.mjs";
+import { resetLocalState } from "./reset.mjs";
 import { resolvePrivyAppId } from "./privy-constants.mjs";
 import { c, nextHint } from "./ui.mjs";
 
@@ -112,7 +109,7 @@ export async function runLogin(argv = [], opts = {}) {
   if (existing?.owner && getAddress(existing.owner) !== auth.address) {
     throw new Error(
       `Logged-in address ${auth.address} does not match operator.json owner ${existing.owner}. ` +
-        `Use a matching login, or clanker setup --force with the new owner.`,
+        `Use a matching login, clanker setup --force with the new owner, or clanker reset --yes for an empty profile.`,
     );
   }
 
@@ -171,20 +168,16 @@ export async function runLogin(argv = [], opts = {}) {
  */
 export async function runLogout(argv = [], opts = {}) {
   const json = argv.includes("--json");
-  const home = opts.home ?? clankerHome(opts.env ?? process.env);
+  const env = opts.env ?? process.env;
+  const home = opts.home ?? clankerHome(env);
   const had = Boolean(loadPrivySession(home));
-  clearPrivySession(home);
-  const operator = loadOperator(home);
-  if (operator?.key?.type === "privy") {
-    writeOperator(
-      {
-        label: operator.label,
-        owner: operator.owner,
-        key: null,
-      },
-      home,
-    );
-  }
+  resetLocalState({
+    home,
+    env,
+    session: true,
+    profile: false,
+    keys: false,
+  });
   if (json) {
     console.log(JSON.stringify({ ok: true, cleared: had }, null, 2));
   } else {
@@ -195,6 +188,7 @@ export async function runLogout(argv = [], opts = {}) {
         "Revoke grants anytime in the Privy dashboard / account settings if needed.",
       ),
     );
+    console.log(c.dim("clanker reset --dry-run  # also list profile files + leftover env"));
   }
   return { exitCode: 0, cleared: had };
 }

@@ -75,7 +75,30 @@ Never stores raw hex keys inside JSON. Flag parity: `--preset`, `--operator`, `-
 
 ### `clanker login` / `logout`
 
-Device-authorization against the same email vault as `/join`. Opens `/authorize`, stores OAuth tokens (Keychain or `~/.clanker/privy-session.json`), never the operator hex. `logout` clears the session (and drops a `privy` key pointer from `operator.json`).
+Device-authorization against the same email vault as `/join`. Opens `/authorize`, stores OAuth tokens (Keychain scoped per `CLANKER_HOME`, or `~/.clanker/privy-session.json`), never the operator hex. `logout` clears the session (and drops a `privy` key pointer from `operator.json`).
+
+### `clanker reset`
+
+Clears **local** CLI state for this `CLANKER_HOME` so you can re-run the newcomer path. Does not delete on-chain names, the Privy account, or browser cookies.
+
+```bash
+clanker reset --dry-run          # inspect (safe)
+clanker reset --yes              # session + config.json + operator.json + op.key + keys/
+clanker reset --session --yes    # same as logout
+```
+
+Prefer a sandbox over wiping the real profile:
+
+```bash
+unset OPERATOR_PRIVATE_KEY PRIVY_APP_ID
+export CLANKER_HOME="$HOME/.clanker-newcomer"
+clanker reset --yes              # no-op if empty
+clanker login
+```
+
+`--keep-keys` leaves `op.key` and `$CLANKER_HOME/keys/`. `--openclaw-keys` also deletes OpenClaw `{bot}.key` files (opt-in). `OPERATOR_PRIVATE_KEY` cannot be unset by the CLI — it is reported as a leftover.
+
+Keychain grants for `~/.clanker` stay on account `default`. A non-default `CLANKER_HOME` uses a separate Keychain item, so sandbox login/reset does not touch the real session.
 
 ### Advanced: Foundry / existing wallet
 
@@ -111,7 +134,8 @@ Prints the detection table plus pass/warn/fail checks (including `GET mqttAuthSe
 | Path | Role |
 |------|------|
 | `~/.clanker/config.json` | Network: `preset`, `registryAddress`, `chainRpcUrl`, `brokerUrl`, `mqttAuthServiceUrl`, `fromBlock` |
-| `~/.clanker/operator.json` | `label`, `owner`, optional key **pointer** (`env` or `keyFile`). Never a raw hex key |
+| `~/.clanker/operator.json` | `label`, `owner`, optional key **pointer** (`env`, `keyFile`, or `privy`). Never a raw hex key |
+| `~/.clanker/privy-session.json` | File fallback for Privy CLI tokens when Keychain is unavailable |
 | `~/.clanker/keys/{bot}.key` | Bot signing key (symlink or copy) |
 | `~/.openclaw/keys/{bot}.key` | Same key. Primary path for published OpenClaw plugins today |
 
@@ -153,6 +177,7 @@ On any other RPC, missing key or Anvil #0 → hard error. After mint / transfer 
 | `clanker setup …` | Interactive or flagged profile wizard (Clack) |
 | `clanker login [--no-open] [--json]` | Privy device grant — email vault for mint/pair |
 | `clanker logout [--json]` | Clear Privy CLI session |
+| `clanker reset [--dry-run] [--session] [--keep-keys] [--openclaw-keys] [--yes] [--json]` | Clear local CLI + Privy session for this `CLANKER_HOME` |
 | `clanker fund [--address 0x…] [--no-open] [--timeout ms] [--json]` | Print ETH budget, open faucet, poll until funded |
 | `clanker doctor [--json]` | Local readiness + balance vs mint fees |
 | `clanker whoami [--json] [--operator <label>] [--address 0x…] [--with-bots]` | Operators for address. Bots only with `--with-bots` |

@@ -54,6 +54,7 @@ clanker pair add org.openclaw.pat --yes
 |---------|----------------|
 | `clanker login` | Approve CLI access to your email vault (`/authorize`) |
 | `clanker logout` | Clear the Privy CLI session |
+| `clanker reset [--dry-run] [--yes]` | Clear local CLI + Privy session for this `CLANKER_HOME` (repeat newcomer tests) |
 | `clanker setup` | Network + operator profile. Sign in, attach an address, or generate `~/.clanker/op.key` |
 | `clanker fund [--address 0x…] [--no-open] [--timeout ms]` | Print ETH budget, open faucet, poll until funded |
 | `clanker doctor [--json]` | Local readiness + balance vs fees + mqtt-auth `/health` |
@@ -64,7 +65,7 @@ clanker pair add org.openclaw.pat --yes
 | `clanker pair list` | List hub allows + mutual status |
 | `clanker bots` | List bots for your operator |
 
-Profile lives under `~/.clanker/` (`config.json`, `operator.json`). Override with `CLANKER_HOME`.
+Profile lives under `~/.clanker/` (`config.json`, `operator.json`). Override with `CLANKER_HOME`. `clanker reset --dry-run` lists leftover local state; `--yes` deletes it for this home only.
 
 ## Non-interactive
 
@@ -76,6 +77,19 @@ clanker setup --preset sepolia \
 ```
 
 `--generate-key` refuses to overwrite an existing `op.key` unless you also pass `--force`.
+
+## Repeat a newcomer path
+
+Past `~/.clanker` / Keychain state will not match a first-time install. Inspect, then sandbox or wipe:
+
+```bash
+clanker reset --dry-run
+export CLANKER_HOME="$HOME/.clanker-newcomer"
+unset OPERATOR_PRIVATE_KEY PRIVY_APP_ID
+clanker login
+```
+
+`reset --yes` deletes the profile under the current `CLANKER_HOME` only. It does not un-mint names or log you out of the browser.
 
 ## Advanced: Foundry / existing wallet
 
