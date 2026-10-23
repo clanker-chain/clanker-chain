@@ -18,9 +18,9 @@
     "@privy-io/react-auth": "^3.42.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "astro": "^7.2.10",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
+    "astro": "^7.4.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "sharp": "^0.35.3",
     "viem": "^2.56.0"
   },
@@ -28,7 +28,7 @@
     "esbuild": true
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.10",
+    "@astrojs/check": "^0.9.11",
     "typescript": "5.9"
   },
   "overrides": {
