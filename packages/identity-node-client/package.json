@@ -11,7 +11,7 @@
     "test": "node --import tsx --test test/eip712.test.ts test/init.test.ts test/verify.test.ts test/registry-client.test.ts"
   },
   "dependencies": {
-    "viem": "^2.57.5"
+    "viem": "^2.57.7"
   },
   "devDependencies": {
     "typescript": "^5.7.0",
