@@ -10,10 +10,10 @@
     "test": "bun test test/"
   },
   "dependencies": {
-    "mqtt": "^5.16.0"
+    "mqtt": "^5.16.1"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.3",
+    "@types/bun": "^1.4.4",
     "@types/node": "^22.20.5",
     "typescript": "^5.7.0"
   },
